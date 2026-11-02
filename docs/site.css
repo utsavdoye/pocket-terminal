@@ -1,4 +1,4 @@
-/* terminal.utsavdoye.com: the same look as the app (light, amber lamp, Plex + JetBrains Mono). */
+/* pocket-terminal.utsavdoye.com: the same look as the app (light, amber lamp, Plex + JetBrains Mono). */
 @font-face { font-family: 'Plex'; src: url('app/fonts/ibm-plex-sans-latin-400-normal.woff2') format('woff2'); font-weight: 400; font-display: swap; }
 @font-face { font-family: 'Plex'; src: url('app/fonts/ibm-plex-sans-latin-500-normal.woff2') format('woff2'); font-weight: 500; font-display: swap; }
 @font-face { font-family: 'Plex'; src: url('app/fonts/ibm-plex-sans-latin-600-normal.woff2') format('woff2'); font-weight: 600; font-display: swap; }

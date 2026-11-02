@@ -1,6 +1,6 @@
 # Pocket Terminal, one-line install for Windows. In PowerShell (no admin needed):
 #
-#   irm https://terminal.utsavdoye.com/install.ps1 | iex
+#   irm https://pocket-terminal.utsavdoye.com/install.ps1 | iex
 #
 # Downloads the latest version from GitHub into ~\.pocket-terminal\app, then runs its installer.
 # Run it again any time to update. Your pairing stays (it lives in ~\.pocket-terminal).

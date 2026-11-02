@@ -10,7 +10,7 @@
   <img alt="No server needed" src="https://img.shields.io/badge/server-not%20needed-4FD1A1?style=flat-square&labelColor=171B2D">
 </p>
 
-<p align="center"><b><a href="https://terminal.utsavdoye.com">terminal.utsavdoye.com</a></b> · <b><a href="https://terminal.utsavdoye.com/app/#demo">▶ Try the live demo on your phone</a></b>, no install needed.</p>
+<p align="center"><b><a href="https://pocket-terminal.utsavdoye.com">pocket-terminal.utsavdoye.com</a></b> · <b><a href="https://pocket-terminal.utsavdoye.com/app/#demo">▶ Try the live demo on your phone</a></b>, no install needed.</p>
 
 <p align="center">
   <a href="#-quick-start">Quick start</a> ·
@@ -34,8 +34,8 @@ for your commands, then goes back to sleep.
 
 ```bash
 npx pocket-terminal                                                                  # any computer with Node.js
-curl -fsSL https://terminal.utsavdoye.com/install.sh | bash      # macOS, Linux
-irm https://terminal.utsavdoye.com/install.ps1 | iex             # Windows (PowerShell)
+curl -fsSL https://pocket-terminal.utsavdoye.com/install.sh | bash      # macOS, Linux
+irm https://pocket-terminal.utsavdoye.com/install.ps1 | iex             # Windows (PowerShell)
 ```
 
 <p align="center">
@@ -140,10 +140,10 @@ Set it up in **⋯ → Settings → AI helper**.
 ## 🚀 Quick start
 
 You need a **Mac, a Windows 10/11 PC or a Linux computer** with [Node.js 18.20+](https://nodejs.org), and a phone.
-It takes about 5 minutes. Want to look first? **[Try the demo](https://terminal.utsavdoye.com/app/#demo)**, nothing to install.
+It takes about 5 minutes. Want to look first? **[Try the demo](https://pocket-terminal.utsavdoye.com/app/#demo)**, nothing to install.
 
 ### 1. The phone app
-The app lives at **[terminal.utsavdoye.com/app](https://terminal.utsavdoye.com/app/)**. Nothing to do here:
+The app lives at **[pocket-terminal.utsavdoye.com/app](https://pocket-terminal.utsavdoye.com/app/)**. Nothing to do here:
 the installer uses it automatically.
 
 > **Want your own copy instead?** The app's code is what handles your key, so the most careful setup is
@@ -166,13 +166,13 @@ Works the same on macOS, Linux and Windows. No npm? Use the line for your system
 <tr><td>
 
 ```bash
-curl -fsSL https://terminal.utsavdoye.com/install.sh | bash
+curl -fsSL https://pocket-terminal.utsavdoye.com/install.sh | bash
 ```
 
 </td><td>
 
 ```powershell
-irm https://terminal.utsavdoye.com/install.ps1 | iex
+irm https://pocket-terminal.utsavdoye.com/install.ps1 | iex
 ```
 
 </td></tr>

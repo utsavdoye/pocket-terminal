@@ -48,7 +48,7 @@ Fixes are released as soon as possible and credited in the [changelog](CHANGELOG
 
 ## If someone takes over your GitHub account
 
-The phone app is a website served from your repository (GitHub Pages, at terminal.utsavdoye.com). Like every web app,
+The phone app is a website served from your repository (GitHub Pages, at pocket-terminal.utsavdoye.com). Like every web app,
 **whoever controls where it's hosted controls its code.** A hijacked account could publish a
 changed app that, the next time you unlock it, sends your phone's key elsewhere. The program on
 your computer stays unchanged, but the stolen key would let the attacker use it.
@@ -59,7 +59,7 @@ Protect the account, because it is the root of trust:
 2. **Protect `main`**: Settings → Rules → Rulesets → new branch ruleset for `main`, with
    *Block force pushes* and *Restrict deletions* on.
 3. **Pages only from `main`** (Settings → Pages), so no other branch can change the app.
-4. **Protect the domain too.** The app is served at `terminal.utsavdoye.com`, so whoever controls its DNS
+4. **Protect the domain too.** The app is served at `pocket-terminal.utsavdoye.com`, so whoever controls its DNS
    (the Vercel account that holds `utsavdoye.com`) could point it elsewhere. Turn on two-factor login there as well.
 5. **Review sign-in alerts** and remove apps you don't use under Settings → Applications.
 6. **If you suspect anything:** run `node pair.js --remove all` on your computer. Every phone is

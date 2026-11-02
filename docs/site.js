@@ -1,4 +1,4 @@
-// terminal.utsavdoye.com: install tabs (opens on your system), copy buttons, gentle reveal on scroll.
+// pocket-terminal.utsavdoye.com: install tabs (opens on your system), copy buttons, gentle reveal on scroll.
 (function () {
   var tabs = document.querySelectorAll('.tabs [data-os]'), panes = document.querySelectorAll('.pane[data-os]');
   function pick(os) {

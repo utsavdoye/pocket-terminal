@@ -1,7 +1,7 @@
 #!/bin/bash
 # Pocket Terminal, one-line install for macOS and Linux:
 #
-#   curl -fsSL https://terminal.utsavdoye.com/install.sh | bash
+#   curl -fsSL https://pocket-terminal.utsavdoye.com/install.sh | bash
 #
 # Downloads the latest version from GitHub into ~/.pocket-terminal/app, then runs its installer.
 # Run it again any time to update. Your pairing stays (it lives in ~/.pocket-terminal).
@@ -10,7 +10,7 @@ REPO="${POCKET_REPO:-utsavdoye/pocket-terminal}"
 BRANCH="${POCKET_BRANCH:-main}"
 DEST="$HOME/.pocket-terminal/app"
 
-case "$(uname)" in Darwin|Linux) ;; *) echo "This is for macOS and Linux. On Windows run in PowerShell:"; echo "  irm https://terminal.utsavdoye.com/install.ps1 | iex"; exit 1;; esac
+case "$(uname)" in Darwin|Linux) ;; *) echo "This is for macOS and Linux. On Windows run in PowerShell:"; echo "  irm https://pocket-terminal.utsavdoye.com/install.ps1 | iex"; exit 1;; esac
 if ! command -v node >/dev/null; then
   echo "Pocket Terminal needs Node.js 18.20 or newer. Install it, then run this line again:"
   if [ "$(uname)" = "Darwin" ]; then echo "  https://nodejs.org (LTS), or: brew install node"

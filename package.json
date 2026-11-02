@@ -34,7 +34,7 @@
     "pwa",
     "end-to-end-encryption"
   ],
-  "homepage": "https://terminal.utsavdoye.com",
+  "homepage": "https://pocket-terminal.utsavdoye.com",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/utsavdoye/pocket-terminal.git"
@@ -42,6 +42,6 @@
   "bugs": {
     "url": "https://github.com/utsavdoye/pocket-terminal/issues"
   },
-  "author": "Utsav Doye (https://terminal.utsavdoye.com)",
+  "author": "Utsav Doye (https://pocket-terminal.utsavdoye.com)",
   "license": "MIT"
 }

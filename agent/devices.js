@@ -13,7 +13,7 @@ const { startDirect } = require('./direct');
 const webpush = require('./lib/webpush');
 const { newSecret } = require('./lib/crypto');
 
-const DEFAULT_APP = 'https://terminal.utsavdoye.com/app/';
+const DEFAULT_APP = 'https://pocket-terminal.utsavdoye.com/app/';
 
 function startDevices({ core, power, log, dir }) {
   const FILE = path.join(dir, 'direct.json');
@@ -75,7 +75,7 @@ function startDevices({ core, power, log, dir }) {
       const params = new URLSearchParams({ watch: sh.secret, name: cfg.name || os.hostname() });
       if ((cfg.boards || []).join(',') !== 'https://ntfy.sh') params.set('boards', (cfg.boards || []).join(','));
       log(`live view link made (${minutes} min)`);
-      const app = !cfg.appUrl || /^https:\/\/utsavdoye(20122005)?\.github\.io\/pocket-terminal\/?$/i.test(cfg.appUrl) ? DEFAULT_APP : cfg.appUrl; // the official app moved
+      const app = !cfg.appUrl || /^https:\/\/(utsavdoye(20122005)?\.github\.io\/pocket-terminal|terminal\.utsavdoye\.com\/app)\/?$/i.test(cfg.appUrl) ? DEFAULT_APP : cfg.appUrl; // the official app moved
       return { id: sh.id, link: app.replace(/#.*$/, '') + '#' + params, expires: sh.expires };
     },
     shares: () => sharesAll().filter((s) => s.deviceId === deviceId).map((s) => ({ id: s.id, expires: s.expires, sid: s.key.split(':').slice(1).join(':') })),
