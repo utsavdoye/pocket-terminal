@@ -12,6 +12,7 @@
 - **Files:** browse, download to the phone, upload from it (up to 250 MB).
 - **Share a live view:** an expiring, view-only link to one terminal.
 - **Voice** in Ask.
+- **On npm:** `npx pocket-terminal` installs or updates on any system; `pair`, `list`, `remove`, `logs`, `uninstall` too.
 - **One-line install and update** for macOS, Linux and Windows. **Linux laptops** get the power brain
   (systemd-inhibit + rtcwake) and a systemd user service. Windows reads battery from one long-lived
   PowerShell instead of starting a new one every 20 s.

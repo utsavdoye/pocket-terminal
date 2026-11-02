@@ -26,6 +26,11 @@ const FILE = path.join(DIR, 'direct.json');
 const DEFAULT_APP = 'https://utsavdoye20122005.github.io/pocket-terminal/';
 const DEFAULT_BOARDS = ['https://ntfy.sh'];
 const INVITE_MINUTES = 10;
+// Hints say how YOU started it: through npx, or from the agent folder.
+const VIA_NPX = !!process.env.POCKET_VIA_NPX;
+const CMD = VIA_NPX ? 'npx pocket-terminal pair' : 'node pair.js';
+const LIST = VIA_NPX ? 'npx pocket-terminal list' : 'node pair.js --list';
+const REMOVE = VIA_NPX ? 'npx pocket-terminal remove' : 'node pair.js --remove';
 
 const args = process.argv.slice(2);
 const arg = (name) => { const i = args.indexOf(name); return i >= 0 ? args[i + 1] : null; };
@@ -43,9 +48,9 @@ const save = () => { fs.mkdirSync(DIR, { recursive: true, mode: 0o700 }); const 
 save();
 
 if (flag('--list')) {
-  if (!cfg.devices.length) console.log('No phones paired yet. Run:  node pair.js');
+  if (!cfg.devices.length) console.log(`No phones paired yet. Run:  ${CMD}`);
   cfg.devices.forEach((d, i) => console.log(`${i + 1}. ${d.name}  (paired ${new Date(d.added).toLocaleString([], { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })})`));
-  if (cfg.devices.length > 1) console.log('The last one is the newest. Remove one with:  node pair.js --remove <number>');
+  if (cfg.devices.length > 1) console.log(`The last one is the newest. Remove one with:  ${REMOVE} <number>`);
   process.exit(0);
 }
 if (flag('--remove')) {
@@ -55,7 +60,7 @@ if (flag('--remove')) {
   const n = /^\d+$/.test(who) ? Number(who) : 0;
   cfg.devices = who === 'all' ? [] : cfg.devices.filter((d, i) => i + 1 !== n && norm(d.name) !== who && d.id !== who);
   save();
-  console.log(before === cfg.devices.length ? `No phone called "${who}". See: node pair.js --list` : `Removed. ${cfg.devices.length} phone(s) can still connect. It takes effect within a few seconds.`);
+  console.log(before === cfg.devices.length ? `No phone called "${who}". See: ${LIST}` : `Removed. ${cfg.devices.length} phone(s) can still connect. It takes effect within a few seconds.`);
   process.exit(0);
 }
 
@@ -90,7 +95,7 @@ function finish(code, msg) {
 }
 const post = (obj) => board.publish(seal(ik, { id: msgId(), ts: Date.now(), from: 'mac', ...obj })).catch(() => {});
 
-setTimeout(() => finish(1, `\nThe code expired. Run  node pair.js  for a new one.`), INVITE_MINUTES * 60e3).unref();
+setTimeout(() => finish(1, `\nThe code expired. Run  ${CMD}  for a new one.`), INVITE_MINUTES * 60e3).unref();
 
 board.stream(async (text) => {
   const m = open(ik, text);
@@ -101,7 +106,7 @@ board.stream(async (text) => {
   joins.set(m.nonce, m);
   if (joins.size > 1) {
     for (const j of joins.values()) await post({ type: 'denied', for: j.nonce, why: 'Two phones tried this code. Make a new one on your computer.' });
-    return finish(1, '\n⚠️  A second phone tried to use this QR code, so someone else may have seen it.\n   Nothing was paired. Run  node pair.js  again, somewhere private.');
+    return finish(1, `\n⚠️  A second phone tried to use this QR code, so someone else may have seen it.\n   Nothing was paired. Run  ${CMD}  again, somewhere private.`);
   }
   if (asking) return;
   asking = true;
@@ -121,7 +126,7 @@ board.stream(async (text) => {
     await post({ type: 'welcome', for: m.nonce, wrap: wrapFor(m.pub, m.nonce, { secret: dev.secret, name: cfg.name, boards: cfg.boards, device: name }) });
     console.log(`\n✅ Paired "${name}". It can connect now.`);
     console.log(`Notifications (optional): in the ntfy app, subscribe to  ${derive(dev.secret).notifyTopic}`);
-    console.log(`Lock this phone out later with:  node pair.js --remove "${name}"`);
+    console.log(`Lock this phone out later with:  ${REMOVE} "${name}"`);
     finish(0);
   });
 });

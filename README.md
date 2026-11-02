@@ -3,6 +3,7 @@
 </p>
 
 <p align="center">
+  <a href="https://www.npmjs.com/package/pocket-terminal"><img alt="npm" src="https://img.shields.io/npm/v/pocket-terminal?style=flat-square&color=F4B740&labelColor=171B2D"></a>
   <a href="LICENSE"><img alt="MIT license" src="https://img.shields.io/badge/license-MIT-F4B740?style=flat-square&labelColor=171B2D"></a>
   <img alt="macOS and Windows" src="https://img.shields.io/badge/runs%20on-macOS%20%7C%20Windows-F4B740?style=flat-square&labelColor=171B2D">
   <img alt="End-to-end encrypted" src="https://img.shields.io/badge/end--to--end-encrypted-4FD1A1?style=flat-square&labelColor=171B2D">
@@ -32,6 +33,7 @@ you to run or pay for**. When the computer is asleep, it wakes itself every minu
 for your commands, then goes back to sleep.
 
 ```bash
+npx pocket-terminal                                                                  # any computer with Node.js
 curl -fsSL https://utsavdoye20122005.github.io/pocket-terminal/install.sh | bash      # macOS, Linux
 irm https://utsavdoye20122005.github.io/pocket-terminal/install.ps1 | iex             # Windows (PowerShell)
 ```
@@ -153,6 +155,12 @@ the installer uses it automatically.
 
 One line. Run it again any time to update; your pairing stays.
 
+```bash
+npx pocket-terminal
+```
+
+Works the same on macOS, Linux and Windows. No npm? Use the line for your system:
+
 <table>
 <tr><th>macOS and Linux (Terminal)</th><th>Windows (PowerShell, no admin needed)</th></tr>
 <tr><td>
@@ -210,12 +218,12 @@ That's it. Open the app and you'll see your computer **awake, connected directly
 | Open my dev server | **⋯ → Local websites**, tap the port (or type it) |
 | Download or upload a file | **⋯ → Files**: tap a file to download, **Upload here** to send one |
 | Let someone watch | **⋯ → Terminals → Share live view**, pick how long, send the link. **Stop sharing** ends it at once |
-| Pair another phone | `node pair.js` (in the `agent` folder), a fresh one-time QR code |
-| See which phones can connect | `node pair.js --list` |
-| Lock one phone out | `node pair.js --remove "iPhone (Safari)"` (or `--remove all`). Works within seconds |
-| See what it's doing | `tail -f ~/.pocket-terminal/agent.log` |
-| Update | Run the install line again |
-| Uninstall | `bash ~/.pocket-terminal/app/agent/uninstall.sh` (Mac, Linux) · `uninstall.ps1` in the same folder (Windows); add `--purge` / `-Purge` to delete the key |
+| Pair another phone | `npx pocket-terminal pair` (or `node pair.js` in the `agent` folder): a fresh one-time QR code |
+| See which phones can connect | `npx pocket-terminal list` |
+| Lock one phone out | `npx pocket-terminal remove 2` (a number from the list, a name, or `all`). Works within seconds |
+| See what it's doing | `npx pocket-terminal logs` |
+| Update | `npx pocket-terminal@latest`, or run your install line again |
+| Uninstall | `npx pocket-terminal uninstall` (add `--purge` to delete the pairing key too) |
 
 ## 🔐 Security
 
@@ -308,6 +316,7 @@ phone buzzes with the question. Tap the notification and answer.
 ## 🗂️ Project layout
 
 ```
+cli.js            npx pocket-terminal: copies the agent to ~/.pocket-terminal/app, runs its installer
 agent/            runs on your computer
   agent.js          starts everything
   direct.js         direct link + encrypted mailbox (WebRTC via node-datachannel)

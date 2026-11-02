@@ -1,0 +1,33 @@
+name: Publish to npm
+
+# Make a GitHub release (tag like v7.0.1) and this publishes that version to npm,
+# with a provenance badge that proves the package was built from this repository.
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: read
+  id-token: write # for npm provenance
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          registry-url: https://registry.npmjs.org
+      - name: Tag matches package.json
+        run: |
+          TAG="${GITHUB_REF_NAME#v}"
+          PKG="$(node -p "require('./package.json').version")"
+          [ "$TAG" = "$PKG" ] || { echo "Release tag v$TAG but package.json says $PKG. Bump the version first."; exit 1; }
+      - name: Unit tests
+        run: npm ci --no-fund --no-audit && npm test
+        working-directory: agent
+      - name: Publish
+        run: npm publish --provenance --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
