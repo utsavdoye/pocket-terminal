@@ -5,7 +5,7 @@ from playwright.sync_api import sync_playwright
 R = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 S = tempfile.mkdtemp()
 svc = subprocess.Popen(['node', 'test/run-services.js', '8890', '8891', S + '/board.json'], stdout=subprocess.PIPE, text=True, cwd=R)
-ports = json.loads(svc.stdout.readline()); APP = f"http://localhost:{ports['app']}/"
+ports = json.loads(svc.stdout.readline()); APP = f"http://localhost:{ports['app']}/app/"
 ok = True
 def wait(pg, js, timeout=8000):  # the app's CSP blocks eval, so poll with evaluate instead of wait_for_function
     end = time.time() + timeout / 1000

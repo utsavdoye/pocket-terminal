@@ -6,7 +6,7 @@
 #   3. starts the agent now and at every login (macOS: launchd, Linux: systemd user service)
 #   4. shows a QR code: scan it with your phone to pair
 #
-# One line, no git needed:  curl -fsSL https://utsavdoye20122005.github.io/pocket-terminal/install.sh | bash
+# One line, no git needed:  curl -fsSL https://terminal.utsavdoye.com/install.sh | bash
 set -e
 cd "$(dirname "$0")"
 DIR="$(pwd)"
@@ -57,13 +57,13 @@ fi
 sudo -n /usr/bin/pmset -a disablesleep 0 && echo "Power control ready ✅"
 
 step 3/4 "Pairing key"
-# The original repo uses the official app (utsavdoye20122005.github.io/pocket-terminal).
+# The original repo uses the official app (terminal.utsavdoye.com/app).
 # If you forked it, your phone app lives on YOUR GitHub Pages. Use it automatically.
 APP_ARGS=()
 ORIGIN="$(git -C "$DIR/.." remote get-url origin 2>/dev/null || true)"
-if [[ "$ORIGIN" =~ github\.com[:/]([^/]+)/([^/.]+)(\.git)?$ ]] && [[ ! "$ORIGIN" =~ [Uu]tsav[Dd]oye20122005/pocket-terminal ]]; then
+if [[ "$ORIGIN" =~ github\.com[:/]([^/]+)/([^/.]+)(\.git)?$ ]] && [[ ! "$ORIGIN" =~ [Uu]tsav[Dd]oye(20122005)?/pocket-terminal ]]; then
   OWNER="$(echo "${BASH_REMATCH[1]}" | tr '[:upper:]' '[:lower:]')"; REPO="${BASH_REMATCH[2]}"
-  APP_ARGS=(--app-url "https://$OWNER.github.io/$REPO/")
+  APP_ARGS=(--app-url "https://$OWNER.github.io/$REPO/app/")
 fi
 "$NODE" pair.js --list "${APP_ARGS[@]}" >/dev/null   # saves the settings; pairing comes at the end
 

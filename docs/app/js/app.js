@@ -10,7 +10,7 @@ import { search, riskOf, needsFill, askAi, PROVIDERS } from './helper.js';
 import { setupTools } from './tools.js';
 
 const $ = (id) => document.getElementById(id);
-const APP_VERSION = '7.0';
+const APP_VERSION = '7.0.1';
 // Demo mode (#demo): the whole app with sample data and a pretend shell. Connects to nothing,
 // and never touches this phone's real pairing, history or keys.
 const DEMO = location.hash === '#demo';
@@ -962,7 +962,7 @@ function demoShell(m) {
   }
   if (m.t === 'switch') { term.reset(); term.write(PROMPT); return reply({ t: 'switched', sid: m.sid }); }
   if (m.t === 'shares') return reply({ t: 'shares', list: [] });
-  if (m.t === 'share') return reply({ t: 'share', id: 'demo', link: location.origin + location.pathname + '#watch=this-is-only-a-demo', expires: now + m.minutes * 60e3 });
+  if (m.t === 'share') return reply({ t: 'share', id: 'demo', link: 'https://terminal.utsavdoye.com/app/#watch=only-a-demo', expires: now + m.minutes * 60e3 });
   if (m.t === 'push-test' || m.t === 'push-sub') return reply({ t: 'push-tested', how: 'none' });
   if (m.t === 'ports') return reply({ t: 'ports', id: m.id, list: [{ port: 3000, name: 'node' }, { port: 5173, name: 'vite' }, { port: 8000, name: 'python3' }] });
   if (m.t === 'ls') {

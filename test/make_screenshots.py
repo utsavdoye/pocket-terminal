@@ -8,7 +8,7 @@ OUT = os.path.join(R, 'docs', 'screenshots'); os.makedirs(OUT, exist_ok=True)
 S = tempfile.mkdtemp(); os.makedirs(S + '/home'); demo = S + '/projects'; os.makedirs(demo + '/pocket-terminal'); os.makedirs(demo + '/estatedesk')
 for f in ['README.md', 'notes.txt', 'deploy.sh']: open(f'{demo}/{f}', 'w').write('x\n')
 svc = subprocess.Popen(['node', 'test/run-services.js', '8820', '8821', S + '/board.json'], cwd=R, stdout=subprocess.PIPE, text=True)
-ports = json.loads(svc.stdout.readline()); BOARD = f"http://127.0.0.1:{ports['board']}"; APP = f"http://localhost:{ports['app']}/"
+ports = json.loads(svc.stdout.readline()); BOARD = f"http://127.0.0.1:{ports['board']}"; APP = f"http://localhost:{ports['app']}/app/"
 json.dump({'percent': 82, 'onCharger': True, 'lid': True}, open(S + '/sim.json', 'w'))
 json.dump({'checkInMinutes': 2, 'idleMinutes': 0.05}, open(S + '/home/power.json', 'w'))
 env = dict(os.environ, POCKET_HOME=S + '/home', POCKET_APP_URL=APP, SHELL='/bin/bash', HOME=S)

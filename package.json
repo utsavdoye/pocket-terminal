@@ -1,6 +1,6 @@
 {
   "name": "pocket-terminal",
-  "version": "7.0.0",
+  "version": "7.0.1",
   "description": "Your computer's terminal on your phone, from anywhere, even with the lid closed. Run AI agents, get notified, open localhost. Direct and end-to-end encrypted.",
   "bin": {
     "pocket-terminal": "cli.js"
@@ -34,14 +34,14 @@
     "pwa",
     "end-to-end-encryption"
   ],
-  "homepage": "https://github.com/UtsavDoye20122005/pocket-terminal#readme",
+  "homepage": "https://terminal.utsavdoye.com",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/UtsavDoye20122005/pocket-terminal.git"
+    "url": "git+https://github.com/utsavdoye/pocket-terminal.git"
   },
   "bugs": {
-    "url": "https://github.com/UtsavDoye20122005/pocket-terminal/issues"
+    "url": "https://github.com/utsavdoye/pocket-terminal/issues"
   },
-  "author": "Utsav Doye (https://github.com/UtsavDoye20122005)",
+  "author": "Utsav Doye (https://terminal.utsavdoye.com)",
   "license": "MIT"
 }

@@ -1,5 +1,10 @@
 # Changelog
 
+## 7.0.1 (2026-11-02)
+- First release published to npm automatically from GitHub (trusted publishing, with provenance).
+- New home: **terminal.utsavdoye.com** (a website with install steps for every system); the phone app moved to **terminal.utsavdoye.com/app**. Pair your phone again once.
+- GitHub moved to github.com/utsavdoye/pocket-terminal.
+
 ## 7.0 (2026-11-02)
 - **AI agents from your phone:** when a program stops to ask (Claude Code's "Do you want to proceed?",
   `[y/N]`, "Press Enter"), a **Needs you** bar appears with one-tap answers, and your phone gets a notification.

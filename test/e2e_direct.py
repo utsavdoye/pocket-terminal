@@ -5,7 +5,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__))); import pairing_h
 from playwright.sync_api import sync_playwright
 S=os.environ.get('E2E_DIR') or __import__('tempfile').mkdtemp(); os.makedirs(S+'/home', exist_ok=True); R=os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 svc=subprocess.Popen(['node','test/run-services.js','8810','8811',S+'/board.json'],cwd=R,stdout=subprocess.PIPE,text=True)
-ports=json.loads(svc.stdout.readline()); BOARD=f"http://127.0.0.1:{ports['board']}"; APP=f"http://localhost:{ports['app']}/"
+ports=json.loads(svc.stdout.readline()); BOARD=f"http://127.0.0.1:{ports['board']}"; APP=f"http://localhost:{ports['app']}/app/"
 json.dump({'percent':70,'onCharger':True,'lid':True},open(S+'/sim.json','w'))
 json.dump({'checkInMinutes':0.4,'idleMinutes':0.05},open(S+'/home/power.json','w'))
 env=dict(os.environ,POCKET_HOME=S+'/home',POCKET_APP_URL=APP)

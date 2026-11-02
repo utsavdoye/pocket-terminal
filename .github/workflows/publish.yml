@@ -4,7 +4,7 @@ name: Publish to npm
 # It uses npm "trusted publishing": no token is stored anywhere. npm checks that the request
 # really comes from this workflow in this repository, and adds a provenance badge automatically.
 # One-time setup: npmjs.com → pocket-terminal → Settings → Trusted Publisher → GitHub Actions,
-# user UtsavDoye20122005, repository pocket-terminal, workflow publish.yml.
+# user utsavdoye, repository pocket-terminal, workflow publish.yml.
 on:
   release:
     types: [published]

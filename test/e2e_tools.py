@@ -14,7 +14,7 @@ open(S+'/site/app.js','w').write('document.title="site-js-ran";'); open(S+'/site
 site=http.server.ThreadingHTTPServer(('127.0.0.1',0),functools.partial(http.server.SimpleHTTPRequestHandler,directory=S+'/site')); SITE=site.server_address[1]
 threading.Thread(target=site.serve_forever,daemon=True).start()
 svc=subprocess.Popen(['node','test/run-services.js','8884','8885',S+'/board.json'],cwd=R,stdout=subprocess.PIPE,text=True)
-ports=json.loads(svc.stdout.readline()); BOARD=f"http://127.0.0.1:{ports['board']}"; APP=f"http://localhost:{ports['app']}/"
+ports=json.loads(svc.stdout.readline()); BOARD=f"http://127.0.0.1:{ports['board']}"; APP=f"http://localhost:{ports['app']}/app/"
 push=subprocess.Popen(['node','test/push-receiver.js'],cwd=R,stdout=subprocess.PIPE,text=True); SUB=json.loads(push.stdout.readline())
 pushed=[]; threading.Thread(target=lambda: [pushed.append(json.loads(l)) for l in push.stdout],daemon=True).start()
 env=dict(os.environ,POCKET_HOME=S+'/home',POCKET_APP_URL=APP,SHELL='/bin/bash')

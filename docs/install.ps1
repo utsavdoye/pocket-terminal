@@ -1,12 +1,12 @@
 # Pocket Terminal, one-line install for Windows. In PowerShell (no admin needed):
 #
-#   irm https://utsavdoye20122005.github.io/pocket-terminal/install.ps1 | iex
+#   irm https://terminal.utsavdoye.com/install.ps1 | iex
 #
 # Downloads the latest version from GitHub into ~\.pocket-terminal\app, then runs its installer.
 # Run it again any time to update. Your pairing stays (it lives in ~\.pocket-terminal).
 $ErrorActionPreference = 'Stop'
 $ProgressPreference = 'SilentlyContinue' # makes the download much faster
-$repo = if ($env:POCKET_REPO) { $env:POCKET_REPO } else { 'UtsavDoye20122005/pocket-terminal' }
+$repo = if ($env:POCKET_REPO) { $env:POCKET_REPO } else { 'utsavdoye/pocket-terminal' }
 $branch = if ($env:POCKET_BRANCH) { $env:POCKET_BRANCH } else { 'main' }
 $home2 = Join-Path $HOME '.pocket-terminal'
 $dest = Join-Path $home2 'app'

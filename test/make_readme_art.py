@@ -5,8 +5,8 @@ from playwright.sync_api import sync_playwright
 R = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SHOTS = os.path.join(R, 'docs', 'screenshots'); OUT = os.path.join(R, 'docs', 'readme')
 def img(name): return 'data:image/png;base64,' + base64.b64encode(open(f'{SHOTS}/{name}.png', 'rb').read()).decode()
-icon = 'data:image/svg+xml;base64,' + base64.b64encode(open(f'{R}/docs/icon.svg', 'rb').read()).decode()
-FONT = 'data:font/woff2;base64,' + base64.b64encode(open(f'{R}/docs/fonts/jetbrains-mono-latin-700-normal.woff2', 'rb').read()).decode()
+icon = 'data:image/svg+xml;base64,' + base64.b64encode(open(f'{R}/docs/app/icon.svg', 'rb').read()).decode()
+FONT = 'data:font/woff2;base64,' + base64.b64encode(open(f'{R}/docs/app/fonts/jetbrains-mono-latin-700-normal.woff2', 'rb').read()).decode()
 
 BASE = f"""<style>
 @font-face {{ font-family: JB; src: url({FONT}) format('woff2'); font-weight: 700; }}

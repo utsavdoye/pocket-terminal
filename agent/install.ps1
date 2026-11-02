@@ -2,7 +2,7 @@
 # Run in PowerShell (no admin needed):
 #   powershell -ExecutionPolicy Bypass -File install.ps1
 # One line, no git needed:
-#   irm https://utsavdoye20122005.github.io/pocket-terminal/install.ps1 | iex
+#   irm https://terminal.utsavdoye.com/install.ps1 | iex
 #
 #   1. installs the agent's packages
 #   2. allows wake-up alarms so the PC can check in while asleep
@@ -41,12 +41,12 @@ if ((powercfg /a | Out-String) -match 'S0 Low Power Idle') {
 Write-Host 'Power settings ready.'
 
 Step '3/4' 'Pairing key'
-# The original repo uses the official app (utsavdoye20122005.github.io/pocket-terminal).
+# The original repo uses the official app (terminal.utsavdoye.com/app).
 # If you forked it, your phone app lives on YOUR GitHub Pages. Use it automatically.
 $appArgs = @()
 $origin = ''
 try { $origin = (git -C (Split-Path $PSScriptRoot) remote get-url origin 2>$null) } catch {}
-if ($origin -match 'github\.com[:/]([^/]+)/([^/.]+)' -and $origin -notmatch 'utsavdoye20122005/pocket-terminal') { $appArgs = @('--app-url', "https://$($Matches[1].ToLower()).github.io/$($Matches[2])/") }
+if ($origin -match 'github\.com[:/]([^/]+)/([^/.]+)' -and $origin -notmatch 'utsavdoye(20122005)?/pocket-terminal') { $appArgs = @('--app-url', "https://$($Matches[1].ToLower()).github.io/$($Matches[2])/app/") }
 & $node pair.js --list @appArgs | Out-Null
 
 Step '4/4' 'Starting the agent now and at every sign-in'
