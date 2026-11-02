@@ -1,14 +1,17 @@
 name: Publish to npm
 
-# Make a GitHub release (tag like v7.0.1) and this publishes that version to npm,
-# with a provenance badge that proves the package was built from this repository.
+# Make a GitHub release (tag like v7.0.1) and this publishes that version to npm.
+# It uses npm "trusted publishing": no token is stored anywhere. npm checks that the request
+# really comes from this workflow in this repository, and adds a provenance badge automatically.
+# One-time setup: npmjs.com → pocket-terminal → Settings → Trusted Publisher → GitHub Actions,
+# user UtsavDoye20122005, repository pocket-terminal, workflow publish.yml.
 on:
   release:
     types: [published]
 
 permissions:
   contents: read
-  id-token: write # for npm provenance
+  id-token: write # lets npm verify this workflow (trusted publishing)
 
 jobs:
   publish:
@@ -17,8 +20,9 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
           registry-url: https://registry.npmjs.org
+      - run: npm install -g npm@latest # trusted publishing needs npm 11.5.1 or newer
       - name: Tag matches package.json
         run: |
           TAG="${GITHUB_REF_NAME#v}"
@@ -28,6 +32,4 @@ jobs:
         run: npm ci --no-fund --no-audit && npm test
         working-directory: agent
       - name: Publish
-        run: npm publish --provenance --access public
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: npm publish --access public
