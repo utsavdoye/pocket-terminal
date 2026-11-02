@@ -49,6 +49,7 @@ class PowerBrain {
     this.wantedByPhone = !!v; this.tick();
   }
   setJobs(n) { this.jobsRunning = n; this.tick(); }
+  setBusy(n) { this.programsBusy = n; this.tick(); } // terminal programs still working (an AI agent, a build)
   setConnected(v) {
     this.connected = !!v;
     if (v) { this.firstContact = true; this.connectedAt = this.sys.now(); setTimeout(() => this.tick(), 5500); }
@@ -84,6 +85,8 @@ class PowerBrain {
     // it only counts for 15 minutes after it connected or you last typed.
     if (this.wantedByPhone && now - Math.max(this.phoneSince || 0, this.lastActivity) < 15 * 60e3) r.push('phone connected');
     if (this.jobsRunning > 0) r.push('job running');
+    // …but not forever: a program that never stops printing (top, tail -f) stops counting 2 h after you last used it.
+    if (this.programsBusy > 0 && now - Math.max(this.lastActivity, this.phoneLeft || 0, this.phoneSince || 0) < 2 * 3600e3) r.push('program running');
     if (now - this.lastActivity < s.idleMinutes * 60e3) r.push('recent typing');
     if (checking) r.push('checking in');
     return r;

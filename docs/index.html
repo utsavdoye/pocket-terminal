@@ -112,6 +112,10 @@
     </div>
   </div>
 
+  <div class="needs" id="needs" hidden role="status">
+    <div class="needs-text"><b id="needsTitle">Needs you</b><span id="needsLine"></span></div>
+    <div class="needs-btns" id="needsBtns"></div>
+  </div>
   <div class="quick" id="quick" hidden>
     <div class="chips" id="chips"></div>
   </div>
@@ -143,6 +147,11 @@
         <button data-tab="ask"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.8 4.7L18.5 9.5l-4.7 1.8L12 16l-1.8-4.7L5.5 9.5l4.7-1.8z"/></svg><span><b>Ask AI</b><small>Find a command, or describe it in plain English</small></span></button>
       </div>
       <div class="group">
+        <button data-tab="sessions"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="14" rx="2"/><path d="M7 9l3 2.5L7 14"/><path d="M13 14h4"/><path d="M8 21h8"/></svg><span><b>Terminals</b><small>What's running, switch, share a live view</small></span><em class="count" id="sessCount"></em></button>
+        <button data-tab="files"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg><span><b>Files</b><small>Download to this phone, upload from it</small></span></button>
+        <button data-tab="web"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M3 12h18"/><path d="M12 3a14 14 0 0 1 0 18a14 14 0 0 1 0-18z"/></svg><span><b>Local websites</b><small>Open localhost:3000 on this phone</small></span></button>
+      </div>
+      <div class="group">
         <button data-tab="power"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="7" width="16" height="10" rx="2"/><path d="M22 11v2"/><path d="M7 10v4"/></svg><span><b>Power and battery</b><small>How it sleeps and wakes up</small></span></button>
         <button data-tab="settings"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg><span><b>Settings</b><small>AI helper, notifications, lock, unpair</small></span></button>
       </div>
@@ -151,6 +160,7 @@
     <div class="pane" id="pane-ask">
       <form class="row2" id="askForm">
         <input class="field-in plain" id="askIn" placeholder="find big files in Downloads" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" enterkeyhint="search">
+        <button class="btn ghost mic" id="micBtn" type="button" aria-label="Say it"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0"/><path d="M12 18v3"/></svg></button>
         <button class="btn" id="askGo">Ask AI</button>
       </form>
       <p class="hint" id="askHint">Say what you want in plain English, or type the part of a command you remember.</p>
@@ -176,6 +186,33 @@
         <button class="btn">Save</button>
       </form>
     </div>
+    <div class="pane" id="pane-sessions">
+      <p class="hint">Terminals on your computer. Programs keep running when you close the app, and it tells you when one finishes or needs an answer.</p>
+      <div class="list" id="sessList"></div>
+      <div class="field" style="margin-top:12px"><div>Share for<small>The link stops working after this</small></div>
+        <div class="seg" id="shareMins"><button data-v="30">30m</button><button data-v="60" class="on">1h</button><button data-v="240">4h</button><button data-v="1440">1d</button></div></div>
+      <div class="row2" style="margin-top:12px"><button class="btn ghost" id="sessNew" type="button">+ New terminal</button><button class="btn ghost" id="shareBtn" type="button">Share live view</button></div>
+      <div class="item sharebox" id="shareBox" hidden>
+        <div class="top"><b>View-only link to this terminal</b><span class="tag warn" id="shareLeft"></span></div>
+        <p class="ex">Anyone with the link can watch this terminal live until it expires. They can't type or run anything.</p>
+        <input class="field-in cmdedit" id="shareLink" readonly aria-label="Live view link">
+        <div class="acts"><button class="btn small" id="shareSend" type="button">Share link</button><button class="btn small ghost" id="shareCopy" type="button">Copy</button><button class="btn small danger" id="shareStop" type="button">Stop sharing</button></div>
+      </div>
+    </div>
+    <div class="pane" id="pane-files">
+      <div class="crumbs" id="crumbs"></div>
+      <div class="row2 filebar"><button class="btn small ghost" id="fileUp" type="button">⬆ Upload here</button><label class="toggle small"><input type="checkbox" id="fileHidden"> Hidden files</label></div>
+      <input type="file" id="filePick" multiple hidden>
+      <div class="xfer" id="xfer" hidden><div class="xbar"><i id="xferBar"></i></div><span id="xferText"></span><button class="x" id="xferStop" type="button">Cancel</button></div>
+      <div class="item saved" id="saved" hidden><div class="top"><b id="savedName"></b><span class="tag done">downloaded</span></div><div class="acts"><button class="btn small" id="savedShare" type="button">Save or share…</button><button class="btn small ghost" id="savedOpen" type="button">Open</button></div></div>
+      <div class="list files" id="fileList"></div>
+    </div>
+    <div class="pane" id="pane-web">
+      <p class="hint">Websites running on your computer, opened here through the same encrypted link. Only your computer's own localhost is reachable.</p>
+      <form class="row2" id="webForm"><input class="field-in" id="webPort" placeholder="3000" inputmode="numeric" pattern="[0-9]*" maxlength="5" aria-label="Port"><button class="btn">Open</button></form>
+      <div class="sub">Running now</div>
+      <div class="list" id="portList"><div class="empty">Looking…</div></div>
+    </div>
     <div class="pane" id="pane-power">
       <div class="stat">
         <div><small>Battery</small><span id="pBatt">–</span></div>
@@ -197,7 +234,8 @@
     </div>
     <div class="pane" id="pane-settings">
       <div class="field"><div>Connection<small id="connInfo">–</small></div><button class="btn small ghost" id="retryDirect">Reconnect</button></div>
-      <div class="field"><div>Notifications<small>Install the free <b>ntfy</b> app and subscribe to <code id="notifyTopic"></code></small></div>
+      <div class="field"><div>Phone notifications<small id="pushInfo">When a program finishes or needs your answer.</small></div><button class="btn small ghost" id="pushBtn">Turn on</button></div>
+      <div class="field"><div>Backup: ntfy app<small>Install the free <b>ntfy</b> app and subscribe to <code id="notifyTopic"></code></small></div>
         <button class="btn small ghost" id="copyTopic">Copy</button></div>
       <div class="field"><div>AI helper<small id="aiInfo">Off</small></div><button class="btn small ghost" id="aiSetup">Set up</button></div>
       <form class="aiform" id="aiForm" hidden>
@@ -217,6 +255,16 @@
       <div class="field"><div>Unpair this phone<small>Removes the key from this phone. To lock it out from the computer instead, run <code>node pair.js --remove</code>.</small></div><button class="btn small danger" id="unpair">Unpair</button></div>
     </div>
   </div>
+</div>
+<div class="preview" id="preview" hidden>
+  <header class="pvbar">
+    <button class="iconbtn" id="pvClose" aria-label="Close"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+    <div class="pvurl"><i class="lock"></i><span id="pvUrl">localhost:3000</span></div>
+    <button class="iconbtn" id="pvBack" aria-label="Back"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg></button>
+    <button class="iconbtn" id="pvReload" aria-label="Reload"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12a8 8 0 1 1-2.3-5.7"/><path d="M20 4v5h-5"/></svg></button>
+  </header>
+  <div class="pvload" id="pvLoad"><i></i></div>
+  <iframe id="pvFrame" title="Local website" referrerpolicy="no-referrer"></iframe>
 </div>
 <div class="toast" id="toast" role="status"></div>
 <div class="pastebox" id="pasteBox" hidden>

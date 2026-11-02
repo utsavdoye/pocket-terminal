@@ -21,6 +21,8 @@ Fixes are released as soon as possible and credited in the [changelog](CHANGELOG
 | steals your locked phone | try PINs | get past 10 wrong PINs (the key is wiped) or stay paired after `pair.js --remove` |
 | takes over your GitHub account | change the phone app hosted from your repo | change the program on your computer (it never updates itself) |
 | changes a dependency on npm | publish a bad version | reach you: the installer uses `npm ci` with exact versions and a lockfile |
+| gets a live-view link you shared | watch that one terminal until the link expires or you stop it | type, run commands, open files or websites, see other terminals, or keep watching after **Stop sharing** |
+| works at Apple / Google push | see that a notification was sent to your phone, and when | read it: it's encrypted for your phone, and signed by your computer so nobody else can send to that address |
 
 ## What protects you
 
@@ -39,6 +41,9 @@ Fixes are released as soon as possible and credited in the [changelog](CHANGELOG
 | **Computer: no self-updates** | The program on your computer only changes when *you* run `git pull`. Nothing is downloaded or updated in the background. |
 | **Dependencies** | 4 runtime dependencies, exact versions, installed with `npm ci` from the lockfile. Dependabot and CodeQL watch the repo. |
 | **Logs and notifications** | Command text and output are never written to the log (readable only by you). ntfy pings are content-free ("Command finished ✅"). |
+| **Live-view links** | A fresh random key per link, valid 5 min to 1 day. The computer gives that key exactly one role, *watch this one terminal*: it ignores typing, resizing, commands, files, websites, notifications and sharing from it. Removing a phone ends its links. |
+| **Phone notifications** | Standard Web Push (RFC 8291/8292): each one is encrypted for your phone (P-256 + AES-128-GCM) and signed with this computer's own VAPID key. Only Apple, Google, Mozilla and Microsoft push addresses are accepted. |
+| **Files and local websites** | Only over the direct link, only for paired phones. The website proxy only reaches this computer's own `localhost`; it never forwards cookies. File and page contents are never logged. |
 | **AI helper (optional)** | Off by default. Your key is stored encrypted with the phone's key. Only what you type in **Ask** (and, for *Fix with AI*, that command and the end of its output) goes to the provider you chose. Suggestions never run by themselves and pass a local danger check that doesn't trust the AI's label. |
 
 ## If someone takes over your GitHub account
@@ -76,3 +81,7 @@ phone at your own copy.
   with enough computing power. Use 8 or more if that matters to you.
 - **Malware already on your computer or phone.**
 - **Commands you choose to run.** It's your shell: `rm -rf ~` works.
+- **Local websites you open in the app.** Their pages run inside the app (same browser origin), so a
+  malicious page on your own `localhost` could act as the app. Only open your own dev servers.
+- **A live-view link you sent to the wrong person.** Anyone with it can watch until it expires.
+  Tap **Stop sharing** and it stops working at once.

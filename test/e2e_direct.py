@@ -70,5 +70,11 @@ finally:
   except Exception: pass
   time.sleep(1.2)
   notes=json.load(open(S+'/board.json')); text=json.dumps(notes)
-  print('14 board saw', len(notes), 'notes; any plaintext leaked?', any(w in text for w in ['echo','p2p','job-direct','TestMac','sdp','candidate']))
+  # Every note must be sealed ("pt1." + ciphertext) or a content-free ping for the ntfy app.
+  # (Words are only searched outside the ciphertext: random base64 can contain "sdp" by chance.)
+  FREE={'Command finished ✅','Your terminal needs you 👋','A program finished ✅','Notifications work ✅'}
+  leaks=[n['message'][:60] for n in notes if not (n['message'].startswith('pt1.') or n['message'] in FREE or n['message'].startswith('Command failed ❌'))]
+  leaks+=[w for n in notes for w in ['echo','p2p','job-direct','TestMac','sdp','candidate'] if w in n['topic'] or (not n['message'].startswith('pt1.') and w in n['message'])]
+  if leaks: print('   LEAK:', leaks[:3])
+  print('14 board saw', len(notes), 'notes; any plaintext leaked?', bool(leaks))
   svc.terminate()

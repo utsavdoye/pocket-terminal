@@ -18,18 +18,24 @@ const os = require('os');
 const ndc = require('node-datachannel');
 const { derive, seal, open, msgId } = require('./lib/crypto');
 const { Board, MAX_NOTE } = require('./lib/board');
+const files = require('./lib/files');
+const preview = require('./lib/preview');
+const webpush = require('./lib/webpush');
 
 const DEFAULT_ICE = ['stun:stun.l.google.com:19302', 'stun:stun.cloudflare.com:3478'];
 const FRESH = { hello: 3 * 60e3, offer: 90e3, settings: 24 * 3600e3 };
 
-function startDirect({ cfg, core, power, log, dir }) {
+// cfg.role: 'owner' (a paired phone: full access) or 'viewer' (a share link: watch one session, nothing else).
+// x: shared helpers from devices.js (push keys and subscriptions, share links).
+function startDirect({ cfg, core, power, log, dir, x = {} }) {
+  const viewer = cfg.role === 'viewer';
   const keys = derive(cfg.secret);
   const STATE = path.join(dir, cfg.stateFile || 'direct-state.json');
   let state = {}; try { state = JSON.parse(fs.readFileSync(STATE, 'utf8')); } catch {}
   const seen = new Set(state.seen || []);
   const board = new Board(cfg.boards || ['https://ntfy.sh'], keys.topic, { log, since: state.since || {} });
   const maxCmdAge = (cfg.maxCommandAgeMinutes || 60) * 60e3;
-  const peers = new Set();
+  const peers = new Map(); // send -> { key: the session it shows }
   let lastStatus = { state: null, at: 0, checkIn: null };
   let phoneWaitingTimer = null;
 
@@ -88,50 +94,129 @@ function startDirect({ cfg, core, power, log, dir }) {
         dc.sendMessage(JSON.stringify({ ...msg, out: msg.out.slice(-Math.floor(max / 2)) }));
       }
     };
+    // Wait while more than 1 MB is queued on the link (big files and pages).
+    const waiters = [];
+    try { dc.setBufferedAmountLowThreshold(256 * 1024); dc.onBufferedAmountLow(() => waiters.splice(0).forEach((r) => r())); } catch {}
+    const drain = () => (dc.isOpen() && dc.bufferedAmount() > 1024 * 1024
+      ? new Promise((r) => { waiters.push(r); setTimeout(r, 5000); }) : Promise.resolve());
+    const info = { key: null, seen: Date.now() }; // seen: the app pings every 5 s while it's on screen
+
     // The phone says which terminal session it is continuing ("attach"). Older phones don't:
-    // after a moment they get the shared session.
+    // after a moment they get the shared session. A viewer always gets the shared session.
     let sess = null, attachTimer = null, size = {};
     const deviceKey = cfg.deviceId || keys.topic.slice(3, 11);
-    const bind = (sid) => {
+    const keyFor = (sid) => `${deviceKey}:${String(sid || 'shared').replace(/[^\w-]/g, '').slice(0, 40) || 'shared'}`;
+    const show = (s) => {
+      if (sess) sess.clients.delete(send);
+      sess = s; info.key = s.key; sess.clients.add(send);
+      send({ t: 'reset', d: sess.screen() });
+      const sz = sess.size(); if (sz) send({ t: 'size', ...sz });
+    };
+    const bind = (sid, { fresh = true } = {}) => {
       if (sess) return sess;
       clearTimeout(attachTimer);
-      const key = `${deviceKey}:${String(sid || 'shared').replace(/[^\w-]/g, '').slice(0, 40) || 'shared'}`;
-      core.dropOthers(deviceKey + ':', key); // this phone started fresh: close its old idle terminals
-      sess = core.session(key); sess.clients.add(send);
-      log(`terminal: ${sess.hasShell() ? 'continuing' : 'new'} session ${key.split(':')[1].slice(0, 6)}`);
-      send({ t: 'hi', os: process.platform });
-      send({ t: 'reset', d: sess.screen() });
+      if (viewer) { show(core.session(cfg.watchKey)); send({ t: 'hi', os: process.platform, viewer: true, name: cfg.name || os.hostname() }); return sess; }
+      const key = keyFor(sid);
+      if (fresh) core.dropOthers(deviceKey + ':', key); // this phone started fresh: close its old terminals that sit idle
+      const s = core.session(key);
+      log(`terminal: ${s.hasShell() ? 'continuing' : 'new'} session ${key.split(':')[1].slice(0, 6)}`);
+      send({ t: 'hi', os: process.platform, push: x.pushKey || null, sid: key.slice(deviceKey.length + 1) });
+      show(s);
       if (power) send({ t: 'power', ...power.status() });
       return sess;
     };
     const onOpen = () => {
-      peers.add(send);
-      power && power.setPhoneWanting(true);
-      log(`phone connected directly (${peers.size} open)`);
-      attachTimer = setTimeout(() => { bind(null); if (size.cols) sess.resize(size.cols | 0, size.rows | 0); }, 1500);
+      peers.set(send, info);
+      if (!viewer) power && power.setPhoneWanting(true);
+      log(`${viewer ? 'viewer' : 'phone'} connected directly (${peers.size} open)`);
+      attachTimer = setTimeout(() => { bind(null); if (size.cols && !viewer) sess.resize(size.cols | 0, size.rows | 0); }, 1500);
     };
     if (dc.isOpen()) onOpen(); else dc.onOpen(onOpen);
+
+    const gets = new Map(), puts = new Map();
+    const fail = (t, id, e) => send({ t, id, error: String((e && e.message) || e).replace(/^E[A-Z]+: /, '').slice(0, 200) });
     dc.onMessage((raw) => {
       let m; try { m = JSON.parse(String(raw)); } catch { return; }
-      if (m.t === 'attach') { bind(m.sid); const c = m.cols || size.cols, r = m.rows || size.rows; if (c) sess.resize(c | 0, r | 0); }
-      else if (m.t === 'i' && typeof m.d === 'string') bind(null).input(m.d);
-      else if (m.t === 'r') { if (sess) sess.resize(m.cols | 0, m.rows | 0); else size = { cols: m.cols, rows: m.rows }; } // size before attach: keep it
-      else if (m.t === 'cmd') core.runJob(String(m.id), m.cmd, (r) => deliver(r));
-      else if (m.t === 'settings') applySettings(m.power);
-      else if (m.t === 'ping') send({ t: 'pong' });
+      info.seen = Date.now();
+      if (m.t === 'ping') return send({ t: 'pong' });
+      if (viewer) { if (m.t === 'attach') bind(null); return; } // watching only: nothing else is allowed
+      switch (m.t) {
+        case 'attach': { bind(m.sid, { fresh: m.fresh !== false }); const c = m.cols || size.cols, r = m.rows || size.rows; if (c) sess.resize(c | 0, r | 0); break; }
+        case 'i': if (typeof m.d === 'string') bind(null).input(m.d); break;
+        case 'r': if (sess) sess.resize(m.cols | 0, m.rows | 0); else size = { cols: m.cols, rows: m.rows }; break; // size before attach: keep it
+        case 'cmd': core.runJob(String(m.id), m.cmd, (r) => deliver(r)); break;
+        case 'settings': applySettings(m.power); break;
+        // --- sessions: everything this phone has running on the computer ---
+        case 'sessions': send({ t: 'sessions', list: core.list(deviceKey + ':'), current: sess ? sess.key.slice(deviceKey.length + 1) : null }); break;
+        case 'switch': {
+          const s = core.session(keyFor(m.sid)); show(s);
+          if (m.cols) s.resize(m.cols | 0, m.rows | 0);
+          send({ t: 'switched', sid: s.key.slice(deviceKey.length + 1) }); break;
+        }
+        case 'close-session': if (keyFor(m.sid) !== (sess && sess.key)) core.close(keyFor(m.sid)); send({ t: 'sessions', list: core.list(deviceKey + ':'), current: sess ? sess.key.slice(deviceKey.length + 1) : null }); break;
+        // --- notifications ---
+        case 'push-sub': if (x.saveSub && m.sub && webpush.allowedEndpoint(m.sub.endpoint) && m.sub.keys) { x.saveSub(m.sub); send({ t: 'push-ok', quiet: !!m.quiet }); } else fail('push-ok', null, 'That notification address is not allowed'); break;
+        case 'push-off': x.removeSub && x.removeSub(m.endpoint); send({ t: 'push-ok', off: true }); break;
+        case 'push-test': notify({ kind: 'test', key: sess && sess.key }, true).then((how) => send({ t: 'push-tested', how })); break;
+        // --- localhost preview ---
+        case 'ports': preview.listPorts().then((list) => send({ t: 'ports', id: m.id, list })).catch((e) => fail('ports', m.id, e)); break;
+        case 'http': preview.proxy(m, { send, drain }).catch((e) => fail('http-h', m.id, e)); break;
+        // --- files ---
+        case 'ls': files.list(m.path, { hidden: !!m.hidden }).then((r) => send({ t: 'ls', id: m.id, ...r })).catch((e) => fail('ls', m.id, e)); break;
+        case 'get': { const st = { cancelled: false }; gets.set(m.id, st); files.sendFile(m.id, m.path, { send, drain, cancelled: () => st.cancelled || !dc.isOpen() }).catch((e) => fail('get-h', m.id, e)).finally(() => gets.delete(m.id)); break; }
+        case 'get-cancel': { const st = gets.get(m.id); if (st) st.cancelled = true; break; }
+        case 'put': try { const r = files.receiver(m.dir, m.name, Number(m.size)); puts.set(m.id, r); send({ t: 'put-ok', id: m.id, path: r.path }); } catch (e) { fail('put-ok', m.id, e); } break;
+        case 'put-c': { const r = puts.get(m.id); if (!r) break; try { r.write(m.d); } catch (e) { r.abort(); puts.delete(m.id); fail('put-done', m.id, e); } break; }
+        case 'put-end': { const r = puts.get(m.id); if (!r) break; puts.delete(m.id); r.end().then((p) => { log('file received'); send({ t: 'put-done', id: m.id, path: p }); }).catch((e) => fail('put-done', m.id, e)); break; }
+        case 'put-cancel': { const r = puts.get(m.id); if (r) { r.abort(); puts.delete(m.id); } break; }
+        // --- share a live view of one session ---
+        case 'share': if (x.share && sess) { const r = x.share(sess.key, Number(m.minutes) || 60); send({ t: 'share', ...r }); } break;
+        case 'shares': send({ t: 'shares', list: x.shares ? x.shares() : [] }); break;
+        case 'unshare': x.unshare && x.unshare(String(m.id)); send({ t: 'shares', list: x.shares ? x.shares() : [] }); break;
+      }
     });
     dc.onClosed(() => {
       clearTimeout(attachTimer);
+      for (const st of gets.values()) st.cancelled = true;
+      for (const r of puts.values()) r.abort();
       peers.delete(send); sess && sess.clients.delete(send);
-      power && power.setPhoneWanting(peers.size > 0);
-      log(`phone disconnected (${peers.size} open)`);
+      if (!viewer) power && power.setPhoneWanting(peers.size > 0);
+      log(`${viewer ? 'viewer' : 'phone'} disconnected (${peers.size} open)`);
       try { pc.close(); } catch {}
     });
   }
 
+  // --- "your terminal needs you": a phone notification, unless you're looking at that session ---
+  const lastAlert = new Map();
+  async function notify(ev, force = false) {
+    if (viewer) return 'none';
+    // Watching = showing that terminal AND heard from in the last 12 s (a closed app's link can linger ~30 s).
+    const watching = [...peers.values()].some((p) => p.key === ev.key && Date.now() - p.seen < 12e3);
+    if (watching && !force) return 'none';
+    if (!force && Date.now() - (lastAlert.get(ev.key + ev.kind) || 0) < 20e3) return 'none';
+    lastAlert.set(ev.key + ev.kind, Date.now());
+    const prog = ev.program ? ev.program[0].toUpperCase() + ev.program.slice(1) : 'Your terminal';
+    const sid = ev.key ? ev.key.split(':').slice(1).join(':') : '';
+    const msg = ev.kind === 'input' ? { title: `${prog} needs you`, body: ev.text || 'It is waiting for your answer.' }
+      : ev.kind === 'done' ? { title: `${prog} finished`, body: `after ${ev.seconds >= 120 ? Math.round(ev.seconds / 60) + ' min' : ev.seconds + ' s'}. Tap to see the result.` }
+      : ev.kind === 'quiet' ? { title: 'Your terminal went quiet', body: ev.text || 'It may be done, or waiting for you.' }
+      : { title: 'Notifications work ✅', body: `${cfg.name || os.hostname()} can reach this phone.` };
+    const subs = x.subs ? x.subs() : [];
+    let how = 'none';
+    for (const sub of subs) {
+      const r = await webpush.send(x.pushKeys, sub, { ...msg, sid, kind: ev.kind, tag: `pt-${sid}` }, { topic: `pt${sid}` });
+      if (r === 'gone') x.removeSub(sub.endpoint); if (r === 'ok') how = 'push';
+    }
+    if (how === 'none' && cfg.notify !== false) { // no phone notifications set up: the ntfy app, without any details
+      await board.publish(ev.kind === 'input' ? 'Your terminal needs you 👋' : ev.kind === 'test' ? 'Notifications work ✅' : 'A program finished ✅', keys.notifyTopic, { Title: 'Pocket Terminal' }).then(() => { how = 'ntfy'; }).catch(() => {});
+    }
+    if (how !== 'none') log(`notified the phone (${ev.kind}, ${how})`);
+    return how;
+  }
+
   // --- results: over the direct link if open, otherwise as an encrypted note ---
   async function deliver(r) {
-    if (peers.size) { for (const s of peers) s({ t: 'result', ...r }); return; }
+    if (peers.size) { for (const s of peers.keys()) s({ t: 'result', ...r }); return; }
     let out = r.out;
     for (;;) { // shrink the output until the note fits on the board
       const sealed = seal(keys, { id: msgId(), ts: Date.now(), from: 'mac', type: 'result', cid: r.id, code: r.code, out });
@@ -153,7 +238,7 @@ function startDirect({ cfg, core, power, log, dir }) {
     power.update(next);
     try { fs.writeFileSync(path.join(dir, 'power.json'), JSON.stringify(power.s, null, 2), { mode: 0o600 }); } catch {}
     log('power settings updated ' + JSON.stringify(next));
-    for (const s of peers) s({ t: 'power', ...power.status() });
+    for (const s of peers.keys()) s({ t: 'power', ...power.status() });
   }
 
   // --- reading the mailbox ---
@@ -163,7 +248,9 @@ function startDirect({ cfg, core, power, log, dir }) {
     seen.add(m.id); saveState();
     const age = Date.now() - Number(m.ts);
     if (!(age > -2 * 60e3)) return; // clocks wildly off: ignore
+    if (viewer && m.type !== 'hello' && m.type !== 'offer') return; // a viewer can only connect and watch
     if (m.type === 'hello' && age < FRESH.hello) {
+      if (viewer) { postStatus('online', { force: true }); return; }
       // Phone opened the app: stay awake ~2 min so it can connect.
       power && power.setPhoneWanting(true);
       clearTimeout(phoneWaitingTimer);
@@ -191,9 +278,11 @@ function startDirect({ cfg, core, power, log, dir }) {
       await postStatus('sleeping');
       board.stop(); power && power.setConnected(false); saveState();
     },
-    onPower: (s) => { for (const p of peers) p({ t: 'power', ...s }); },
+    onPower: (s) => { if (!viewer) for (const p of peers.keys()) p({ t: 'power', ...s }); },
+    alert: (ev) => notify(ev),
+    closeAll: () => { for (const p of peers.keys()) p({ t: 'share-ended' }); },
     stop: () => { board.stop(); saveState(); },
-    revoke: async () => { for (const p of peers) p({ t: 'revoked' }); await post('revoked'); },
+    revoke: async () => { for (const p of peers.keys()) p({ t: 'revoked' }); await post('revoked'); },
   };
 }
 

@@ -22,9 +22,9 @@ const LID_FILE = path.join(DIR, 'windows-lid.json');
 const TASK = 'PocketTerminalWake';
 const AWAY_SECONDS = 10 * 60;
 
-// One PowerShell call reads battery + idle time; cached for 20 s (PowerShell is slow to start).
-const PROBE = `
-$b = Get-CimInstance Win32_Battery | Select-Object -First 1 EstimatedChargeRemaining,BatteryStatus
+// Battery + idle time. Starting PowerShell is slow and costs CPU, so ONE hidden PowerShell stays
+// running and prints a fresh reading every 10 s; we just read its latest line.
+const PROBE_SETUP = `
 Add-Type -TypeDefinition @'
 using System; using System.Runtime.InteropServices;
 public static class PtIdle {
@@ -32,8 +32,11 @@ public static class PtIdle {
   [DllImport("user32.dll")] static extern bool GetLastInputInfo(ref L l);
   public static uint Seconds() { L l = new L(); l.cbSize = (uint)Marshal.SizeOf(l); GetLastInputInfo(ref l); return ((uint)Environment.TickCount - l.dwTime) / 1000; }
 }
-'@
+'@`;
+const PROBE_ONCE = `$b = Get-CimInstance Win32_Battery | Select-Object -First 1 EstimatedChargeRemaining,BatteryStatus
 @{ percent = $b.EstimatedChargeRemaining; status = $b.BatteryStatus; idle = [PtIdle]::Seconds() } | ConvertTo-Json -Compress`;
+const PROBE = PROBE_SETUP + '\n' + PROBE_ONCE;
+const PROBE_LOOP = PROBE_SETUP + '\nwhile ($true) { ' + PROBE_ONCE.replace(/\n/g, '; ') + '; [Console]::Out.Flush(); Start-Sleep -Seconds 10 }';
 
 // BatteryStatus: 1 discharging, 4 low, 5 critical → on battery. Everything else → plugged in.
 function parseProbe(text) {
@@ -60,10 +63,24 @@ function taskTime(d) {
   return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`;
 }
 
-let cache = null, cacheAt = 0;
+let cache = null, cacheAt = 0, prober = null;
+function startProber() {
+  prober = spawn(PS, ['-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-Command', PROBE_LOOP], { windowsHide: true, stdio: ['ignore', 'pipe', 'ignore'] });
+  let buf = '';
+  prober.stdout.on('data', (d) => {
+    buf += d; const lines = buf.split(/\r?\n/); buf = lines.pop();
+    for (const l of lines) if (l.trim().startsWith('{')) { cache = parseProbe(l); cacheAt = Date.now(); }
+  });
+  prober.on('error', () => { prober = null; });
+  prober.on('exit', () => { prober = null; });
+}
+process.on('exit', () => { if (prober) prober.kill(); });
 async function probe() {
-  if (cache && Date.now() - cacheAt < 20e3) return cache;
-  const r = await ps(PROBE, 20e3);
+  if (!prober) startProber();
+  if (cache && Date.now() - cacheAt < 30e3) return cache;
+  for (let i = 0; i < 40 && !(cache && Date.now() - cacheAt < 30e3); i++) await new Promise((r) => setTimeout(r, 250)); // first reading
+  if (cache && Date.now() - cacheAt < 30e3) return cache;
+  const r = await ps(PROBE, 20e3); // the long-lived one is stuck: ask once directly
   cache = parseProbe(r.out); cacheAt = Date.now();
   return cache;
 }
@@ -110,7 +127,7 @@ const sys = {
     "$a = New-ScheduledTaskAction -Execute 'cmd.exe' -Argument '/c exit'; " +
     `Register-ScheduledTask -TaskName '${TASK}' -Trigger $t -Settings $s -Action $a -Force | Out-Null`),
   cancelWake: async () => ps(`Unregister-ScheduledTask -TaskName '${TASK}' -Confirm:$false -ErrorAction SilentlyContinue`),
-  sleepNow: async () => { cache = null; return ps("Add-Type -AssemblyName System.Windows.Forms; [System.Windows.Forms.Application]::SetSuspendState('Suspend', $false, $false) | Out-Null"); },
+  sleepNow: async () => { cache = null; cacheAt = 0; return ps("Add-Type -AssemblyName System.Windows.Forms; [System.Windows.Forms.Application]::SetSuspendState('Suspend', $false, $false) | Out-Null"); },
 };
 
 module.exports = { sys, parseProbe, parseLidAction, taskTime };

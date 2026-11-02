@@ -7,7 +7,7 @@ foreach ($t in 'PocketTerminalAgent', 'PocketTerminalWake') {
   Unregister-ScheduledTask -TaskName $t -Confirm:$false -ErrorAction SilentlyContinue
 }
 Get-CimInstance Win32_Process -Filter "Name='wscript.exe' OR Name='node.exe' OR Name='powershell.exe'" |
-  Where-Object { $_.CommandLine -like '*start-agent.vbs*' -or $_.CommandLine -like '*pocket-terminal*agent.js*' -or $_.CommandLine -like '*SetThreadExecutionState*' } |
+  Where-Object { $_.CommandLine -like '*start-agent.vbs*' -or $_.CommandLine -like '*pocket-terminal*agent.js*' -or $_.CommandLine -like '*SetThreadExecutionState*' -or $_.CommandLine -like '*PtIdle*' } |
   ForEach-Object { Invoke-CimMethod -InputObject $_ -MethodName Terminate | Out-Null }
 # Put "what closing the lid does" back to how it was before installing.
 $lid = Join-Path $Dir 'windows-lid.json'

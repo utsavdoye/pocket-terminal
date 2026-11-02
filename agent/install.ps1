@@ -1,6 +1,8 @@
 # Pocket Terminal: Windows installer. Safe to run again any time.
 # Run in PowerShell (no admin needed):
 #   powershell -ExecutionPolicy Bypass -File install.ps1
+# One line, no git needed:
+#   irm https://utsavdoye20122005.github.io/pocket-terminal/install.ps1 | iex
 #
 #   1. installs the agent's packages
 #   2. allows wake-up alarms so the PC can check in while asleep
@@ -18,6 +20,12 @@ if ($LASTEXITCODE) { Write-Host "Your Node.js is too old ($(& $node -v)). Instal
 New-Item -ItemType Directory -Force $Dir | Out-Null
 
 Step '1/4' 'Installing packages'
+# An update: stop the running agent first (Windows locks files that are in use).
+Stop-ScheduledTask -TaskName 'PocketTerminalAgent' -ErrorAction SilentlyContinue
+Get-CimInstance Win32_Process -Filter "Name='wscript.exe' OR Name='node.exe' OR Name='powershell.exe'" |
+  Where-Object { $_.CommandLine -like '*start-agent.vbs*' -or $_.CommandLine -like '*pocket-terminal*agent.js*' -or $_.CommandLine -like '*PtIdle*' } |
+  ForEach-Object { Invoke-CimMethod -InputObject $_ -MethodName Terminate | Out-Null }
+Start-Sleep -Milliseconds 500
 npm ci --omit=dev --no-fund --no-audit --loglevel=error
 if ($LASTEXITCODE) { Write-Host 'npm ci failed. See the messages above.'; exit 1 }
 
@@ -54,10 +62,6 @@ Do
 Loop
 "@ | Set-Content -Encoding ASCII $vbs
 
-# Stop an older copy if one is running.
-Get-CimInstance Win32_Process -Filter "Name='wscript.exe' OR Name='node.exe'" |
-  Where-Object { $_.CommandLine -like '*start-agent.vbs*' -or $_.CommandLine -like "*$PSScriptRoot*agent.js*" } |
-  ForEach-Object { Invoke-CimMethod -InputObject $_ -MethodName Terminate | Out-Null }
 
 $action = New-ScheduledTaskAction -Execute 'wscript.exe' -Argument "`"$vbs`""
 $trigger = New-ScheduledTaskTrigger -AtLogOn -User $env:USERNAME
@@ -65,7 +69,7 @@ $settings = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoi
 Register-ScheduledTask -TaskName 'PocketTerminalAgent' -Action $action -Trigger $trigger -Settings $settings -Force | Out-Null
 Start-ScheduledTask -TaskName 'PocketTerminalAgent'
 Start-Sleep -Seconds 4
-if ((Test-Path $log) -and (Select-String -Path $log -Pattern 'mailbox ready' -Quiet)) { Write-Host 'Agent running.' -ForegroundColor Green }
+if ((Test-Path $log) -and (Select-String -Path $log -Pattern 'agent running' -Quiet)) { Write-Host 'Agent running.' -ForegroundColor Green }
 else { Write-Host "Agent started. If something's off, see: $log" }
 
 Write-Host ''

@@ -1,10 +1,12 @@
 #!/bin/bash
-# Pocket Terminal: Mac installer. Safe to run again any time.
+# Pocket Terminal: Mac and Linux installer. Safe to run again any time (that's also how you update).
 #
 #   1. installs the agent's packages
-#   2. lets the power brain manage sleep (asks for your Mac password once)
-#   3. starts the agent now and at every login
+#   2. lets the power brain manage sleep (asks for your password once)
+#   3. starts the agent now and at every login (macOS: launchd, Linux: systemd user service)
 #   4. shows a QR code: scan it with your phone to pair
+#
+# One line, no git needed:  curl -fsSL https://utsavdoye20122005.github.io/pocket-terminal/install.sh | bash
 set -e
 cd "$(dirname "$0")"
 DIR="$(pwd)"
@@ -14,12 +16,20 @@ PLIST="$HOME/Library/LaunchAgents/$LABEL.plist"
 LOG="$HOME_DIR/agent.log"
 step() { printf "\n\033[1;34m[%s]\033[0m %s\n" "$1" "$2"; }
 
-[ "$(uname)" = "Darwin" ] || { echo "Pocket Terminal's agent runs on macOS."; exit 1; }
+OS="$(uname)"
+[ "$OS" = "Darwin" ] || [ "$OS" = "Linux" ] || { echo "This installer is for macOS and Linux. On Windows use install.ps1."; exit 1; }
 NODE="$(command -v node || true)"
-[ -z "$NODE" ] && { echo "Install Node.js 18.20+ first: https://nodejs.org (LTS). Then run this again."; exit 1; }
+if [ -z "$NODE" ]; then
+  echo "Pocket Terminal needs Node.js 18.20 or newer."
+  if [ "$OS" = "Darwin" ]; then echo "  Install it from https://nodejs.org (LTS), or: brew install node"
+  else echo "  Ubuntu/Debian: sudo apt install -y nodejs npm   (or the LTS from https://nodejs.org)"; echo "  Fedora: sudo dnf install -y nodejs   Arch: sudo pacman -S nodejs npm"; fi
+  echo "Then run this again."; exit 1
+fi
 "$NODE" -e 'const [a,b]=process.versions.node.split(".").map(Number); process.exit(a>18||(a===18&&b>=20)?0:1)' \
   || { echo "Your Node.js is too old ($("$NODE" -v)). Install the LTS from https://nodejs.org"; exit 1; }
 mkdir -p "$HOME_DIR"; chmod 700 "$HOME_DIR"
+
+if [ "$OS" = "Linux" ]; then exec bash "$DIR/install-linux.sh" "$@"; fi
 
 # Older Pocket Terminal versions: stop them so only one runs.
 for old in com.pocketterm.server com.pocketterminal.local; do
@@ -28,6 +38,7 @@ for old in com.pocketterm.server com.pocketterminal.local; do
 done
 
 step 1/4 "Installing packages"
+launchctl bootout "gui/$(id -u)/$LABEL" 2>/dev/null || true   # an update: stop the running agent first
 npm ci --omit=dev --no-fund --no-audit --loglevel=error
 
 step 2/4 "Letting the power brain manage sleep"
@@ -83,7 +94,7 @@ PL
 launchctl bootout "gui/$(id -u)/$LABEL" 2>/dev/null || true
 launchctl bootstrap "gui/$(id -u)" "$PLIST"
 sleep 3
-if grep -q "mailbox ready" "$LOG" 2>/dev/null; then echo "Agent running ✅"; else echo "Agent started. If something's off, see: $LOG"; fi
+if grep -q "agent running" "$LOG" 2>/dev/null; then echo "Agent running ✅"; else echo "Agent started. If something's off, see: $LOG"; fi
 
 echo
 "$NODE" pair.js

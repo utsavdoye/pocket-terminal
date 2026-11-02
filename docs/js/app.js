@@ -7,19 +7,22 @@
 import { derive, seal, open, randomId, lockSecret, unlockSecret, newPairKey, pairCode, unwrapJoin, VAULT_ROUNDS } from './crypto.js';
 import { Board, MAX_NOTE } from './board.js';
 import { search, riskOf, needsFill, askAi, PROVIDERS } from './helper.js';
+import { setupTools } from './tools.js';
 
 const $ = (id) => document.getElementById(id);
-const APP_VERSION = '6.2';
+const APP_VERSION = '7.0';
 // Demo mode (#demo): the whole app with sample data and a pretend shell. Connects to nothing,
 // and never touches this phone's real pairing, history or keys.
 const DEMO = location.hash === '#demo';
+// View-only mode (#watch=…): someone shared a live view of their terminal with you.
+const VIEW = /(^#|&)watch=/.test(location.hash);
 const DEMO_KEEP = new Set(['theme', 'font']);
 const DEFAULT_BOARDS = ['https://ntfy.sh'];
 const ICE = [{ urls: ['stun:stun.l.google.com:19302', 'stun:stun.cloudflare.com:3478'] }];
 const store = {
   get(k, d = null) { try { const v = localStorage.getItem('pt_' + k); return v === null ? d : JSON.parse(v); } catch { return d; } },
-  set(k, v) { if (DEMO && !DEMO_KEEP.has(k)) return; try { localStorage.setItem('pt_' + k, JSON.stringify(v)); } catch {} },
-  del(k) { if (DEMO) return; try { localStorage.removeItem('pt_' + k); } catch {} },
+  set(k, v) { if ((DEMO || VIEW) && !DEMO_KEEP.has(k)) return; try { localStorage.setItem('pt_' + k, JSON.stringify(v)); } catch {} },
+  del(k) { if (DEMO || VIEW) return; try { localStorage.removeItem('pt_' + k); } catch {} },
 };
 const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
 const ago = (t) => { if (!t) return 'never'; const s = Math.round((Date.now() - t) / 1000);
@@ -38,7 +41,12 @@ let pendingPair = null;
 async function boot() {
   if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
   if (DEMO) return startDemo();
+  if (VIEW) return startViewer();
   const h = new URLSearchParams(location.hash.slice(1));
+  if (h.get('s')) { // opened from a notification: show that terminal
+    setSid(h.get('s')); attachFresh = false;
+    history.replaceState(null, '', location.pathname + location.search);
+  }
   if (h.get('join') || h.get('pair')) {
     history.replaceState(null, '', location.pathname + location.search); // remove the code from the address bar
     if (!h.get('join')) { showNone(); toast('That is an old pairing code. Run  node pair.js  on your computer for a new one.'); return; }
@@ -272,7 +280,8 @@ function start(session) {
   mac.name = S.name;
   show('app');
   $('notifyTopic').textContent = S.notifyTopic;
-  setupTerminal(); setupUi(); loadAi();
+  setupTerminal(); setupUi();
+  if (!S.viewer) loadAi();
   board = new Board(S.boards, S.topic, onNoteText, () => paint());
   board.start('12h'); // read the last 12 h: Mac status, answers to old commands
   setTimeout(() => connect(), 400);
@@ -324,8 +333,9 @@ function gatherDone(p, ms) {
     p.addEventListener('icegatheringstatechange', () => { if (p.iceGatheringState === 'complete') { clearTimeout(t); res(); } });
   });
 }
+let ended = false;
 async function connect({ hello = true } = {}) {
-  if (DEMO) return;
+  if (DEMO || ended) return;
   if (dc && dc.readyState === 'open') return;
   if (Date.now() - lastAttempt < 5000) return;
   lastAttempt = Date.now();
@@ -369,8 +379,9 @@ function scheduleRetry() {
 
 // One terminal session per app launch: switching apps and coming back continues it; a fresh
 // launch (the app was closed) gets a fresh terminal. sessionStorage ends when the app is closed.
-let SID = null;
+let SID = null, attachFresh = true;
 try { SID = sessionStorage.getItem('pt_sid'); if (!SID) { SID = randomId(); sessionStorage.setItem('pt_sid', SID); } } catch { SID = randomId(); }
+function setSid(v) { SID = String(v).replace(/[^\w-]/g, '').slice(0, 40) || SID; try { sessionStorage.setItem('pt_sid', SID); } catch {} }
 // Typing or pasting while the link is coming back is kept and sent once it's back (if within 60 s).
 let pending = [], pendingToast = 0;
 function flushPending() {
@@ -382,7 +393,8 @@ function wire(ch) {
   ch.onopen = () => {
     dc = ch; linkState = 'direct'; clearTimeout(answerTimer); clearTimeout(openTimer); clearTimeout(retryTimer); retryN = 0;
     mac.state = 'online'; mac.ts = Date.now(); lastPong = Date.now();
-    sendTerm({ t: 'attach', sid: SID, cols: term.cols, rows: term.rows }); // first, before any resize
+    sendTerm({ t: 'attach', sid: SID, fresh: attachFresh, cols: term.cols, rows: term.rows }); // first, before any resize
+    attachFresh = true;
     fit.fit(); sendTerm({ t: 'r', cols: term.cols, rows: term.rows });
     flushPending();
     paint();
@@ -395,14 +407,22 @@ function wire(ch) {
     setTimeout(() => { if (document.visibilityState === 'visible') connect(); }, 2000);
   };
 }
+// Replies to a request (files, websites…) go to whoever asked; everything else to whoever cares.
+const listeners = new Map(), handlers = {};
+const on = (t, fn) => { (handlers[t] = handlers[t] || []).push(fn); };
+let pushKey = null;
 function handleMsg(m) {
+    if (m.id && listeners.has(m.id)) { listeners.get(m.id)(m); return; }
     if (m.t === 'o') term.write(m.d);
+    else if (m.t === 'size') { if (S.viewer) viewerSize(m.cols, m.rows); }
+    else if (m.t === 'share-ended') { term.write('\r\n\x1b[33m[The live view ended. Ask for a new link to keep watching.]\x1b[0m\r\n'); ended = true; try { dc && dc.close(); pc && pc.close(); } catch {} board.stop(); linkState = 'ended'; paint(); }
     else if (m.t === 'reset') { term.reset(); if (m.d) term.write(m.d); }
     else if (m.t === 'power') { livePower = m; paint(); }
     else if (m.t === 'pong') { lastPong = Date.now(); if (pingSent) { rtt = Math.round(performance.now() - pingSent); pingSent = 0; paintPing(); } }
-    else if (m.t === 'hi') { if (m.os) setOs(m.os); }
+    else if (m.t === 'hi') { if (m.os) setOs(m.os); pushKey = m.push || null; }
     else if (m.t === 'revoked') revoked();
     else if (m.t === 'result') gotResult(m.id, m.code, m.out);
+    (handlers[m.t] || []).forEach((fn) => { try { fn(m); } catch (e) { console.error(e); } });
 }
 const sendTerm = (m) => { if (dc && dc.readyState === 'open') dc.send(JSON.stringify(m)); };
 
@@ -430,7 +450,8 @@ function paint() {
   let look = 'off', ring = 0, status = '', banner = null;
   const queued = jobs.filter((j) => j.status === 'waiting').length;
   const queuedText = queued ? ` ${queued} command${queued > 1 ? 's' : ''} will run then.` : '';
-  if (linkState === 'direct') { look = 'awake'; ring = 1; status = 'Live · encrypted'; }
+  if (linkState === 'ended') { status = 'Live view ended'; }
+  else if (linkState === 'direct') { look = 'awake'; ring = 1; status = S.viewer ? 'Live · view only' : 'Live · encrypted'; }
   else if (linkState === 'connecting' && !(mac.state === 'sleeping' && nci)) { look = 'connecting'; ring = 0.25; status = 'Connecting…'; }
   else if (linkState === 'noboard' || board.up.size === 0) {
     status = 'Offline';
@@ -441,11 +462,12 @@ function paint() {
   } else if (mac.state === 'sleeping' && nci) {
     look = 'asleep'; ring = 1 - Math.max(0, Math.min(1, (nci - Date.now()) / ((mac.checkIn || 2) * 60e3))); // the lamp line fills up towards the check-in
     status = `Asleep · wakes in ${until(nci)}`;
-    banner = [`${name} is asleep`, `It checks in by itself in ${until(nci)} and connects on its own. Anything you send now runs then.${queuedText}`, true, []];
+    banner = [`${name} is asleep`, S.viewer ? `It checks in by itself in ${until(nci)}, then the live view continues.` : `It checks in by itself in ${until(nci)} and connects on its own. Anything you send now runs then.${queuedText}`, !S.viewer, []];
   } else {
     status = mac.ts ? `Last seen ${ago(mac.ts)}` : 'Waiting…';
     const longWait = retryN >= 4 ? " Still nothing? Check that it's on and online. If you removed this phone there, open ⋯ → Settings → Unpair and pair again." : '';
-    banner = [`Waiting for ${name}`, `It connects as soon as it wakes up. Commands you send now run then.${queuedText}${longWait}`, true, []];
+    banner = S.viewer ? [`Waiting for ${name}`, 'The live view comes back by itself when it wakes up.', false, []]
+      : [`Waiting for ${name}`, `It connects as soon as it wakes up. Commands you send now run then.${queuedText}${longWait}`, true, []];
   }
   $('macName').textContent = name;
   $('presence').className = 'presence ' + look;
@@ -491,7 +513,10 @@ function applyMods(d) {
   return o;
 }
 function clearMods() { for (const k in mods) { mods[k] = false; modBtn[k] && modBtn[k].classList.remove('on'); } }
+const inputHooks = [];
 function input(d) {
+  if (S.viewer) return;
+  inputHooks.forEach((fn) => fn(d));
   if (dc && dc.readyState === 'open') return sendTerm({ t: 'i', d });
   if (pending.reduce((n, p) => n + p.d.length, 0) + d.length > 16e3) return toast("Not connected. Too much to hold; try again when it's back.");
   pending.push({ d, at: Date.now() });
@@ -504,6 +529,7 @@ function setupTerminal() {
     theme: termTheme() });
   document.addEventListener('pt-theme', () => { term.options.theme = termTheme(); });
   fit = new FitAddon.FitAddon(); term.loadAddon(fit); term.open($('term')); setupTouchScroll();
+  if (S.viewer) { term.options.disableStdin = true; term.options.cursorBlink = false; fit = { fit: () => viewerSize() }; }
   term.onData((d) => input(applyMods(d)));
   term.onResize(() => sendTerm({ t: 'r', cols: term.cols, rows: term.rows }));
   const setFont = (n) => { size = Math.max(9, Math.min(24, n)); term.options.fontSize = size; store.set('font', size); fit.fit(); };
@@ -610,7 +636,7 @@ function renderChips() {
 }
 
 // ---------- power ----------
-const reasonText = { 'on charger': "it's charging", 'phone connected': 'your phone is connected', 'job running': 'a command is running', 'recent typing': 'you typed recently', 'checking in': "it's checking in", 'instant mode': 'Instant mode is on' };
+const reasonText = { 'on charger': "it's charging", 'phone connected': 'your phone is connected', 'job running': 'a command is running', 'recent typing': 'you typed recently', 'checking in': "it's checking in", 'instant mode': 'Instant mode is on', 'program running': 'a program is still working' };
 function paintPower(p, nci) {
   const s = (p && p.settings) || {};
   $('pBatt').textContent = p && p.percent != null ? `${p.percent}%${p.onCharger ? ' ⚡' : ''}` : '–';
@@ -747,7 +773,8 @@ function setupAsk() {
 }
 
 // ---------- UI wiring ----------
-const PAGE_TITLES = { home: 'Menu', queue: 'Send a command', snippets: 'Saved commands', ask: 'Ask AI', power: 'Power and battery', settings: 'Settings' };
+const PAGE_TITLES = { home: 'Menu', queue: 'Send a command', snippets: 'Saved commands', ask: 'Ask AI', power: 'Power and battery', settings: 'Settings', sessions: 'Terminals', files: 'Files', web: 'Local websites' };
+const pageHooks = {};
 let sheetTab = null;
 function openSheet(tab) {
   closeQuick();
@@ -765,6 +792,7 @@ function openSheet(tab) {
   $('sheet').classList.add('show');
   if (tab === 'queue') setTimeout(() => $('qcmd').focus(), 50);
   if (tab === 'ask') { paintAsk(); setTimeout(() => $('askIn').focus(), 50); }
+  pageHooks[tab] && pageHooks[tab]();
 }
 function closeSheet() {
   const sh = $('sheet'); if (!sh.classList.contains('show') || sh.classList.contains('closing')) return;
@@ -857,7 +885,44 @@ function setupUi() {
     $('lockNow').onclick = $('unpair').onclick = leave;
     $('unpair').textContent = 'Leave demo'; $('lockNow').textContent = 'Leave';
   }
+  if (S.viewer) {
+    const tag = document.createElement('span'); tag.className = 'tick watch'; tag.textContent = 'View only'; $('ping').before(tag);
+  }
+  let switchReq = null;
+  tools = setupTools({
+    $, esc, ago, toast, store, isIOS, standalone,
+    live: () => !!(dc && dc.readyState === 'open'), send: sendTerm, on,
+    listen: (id, fn) => listeners.set(id, fn), unlisten: (id) => listeners.delete(id), newId: randomId,
+    sid: () => SID, setSid, size: () => ({ cols: term.cols, rows: term.rows }),
+    input, focus: () => term.focus(), relayout: () => requestAnimationFrame(() => fit.fit()),
+    openSheet, closeSheet, pageOpen: (t) => $('sheet').classList.contains('show') && sheetTab === t,
+    onPage: (t, fn) => { pageHooks[t] = fn; }, onInput: (fn) => inputHooks.push(fn),
+    pushKey: () => pushKey, drain, ask: () => doAsk(), demo: DEMO,
+    onSwitchRequest: (fn) => { switchReq = fn; },
+    openSession: (sid) => { if (dc && dc.readyState === 'open' && switchReq) switchReq(sid); else { setSid(sid); attachFresh = false; } },
+  });
   renderJobs(); renderSnips();
+}
+let tools = null;
+// Wait while the link has more than 1 MB queued (uploads).
+function drain() {
+  if (!dc || !dc.bufferedAmount || dc.bufferedAmount < 1048576) return Promise.resolve();
+  return new Promise((r) => { const t = setTimeout(r, 5000); dc.bufferedAmountLowThreshold = 262144; dc.addEventListener('bufferedamountlow', () => { clearTimeout(t); r(); }, { once: true }); });
+}
+
+// ---------- view-only: someone shared a live view with you ----------
+let vcols = 80, vrows = 24;
+function viewerSize(c, r) {
+  if (c) { vcols = c; vrows = r; }
+  const w = $('term').clientWidth - 18; if (w <= 0) return;
+  term.options.fontSize = Math.max(5, Math.min(15, Math.floor((w / vcols) / 0.602 * 10) / 10));
+  if (term.cols !== vcols || term.rows !== vrows) term.resize(vcols, vrows);
+}
+async function startViewer() {
+  const h = new URLSearchParams(location.hash.slice(1));
+  document.body.classList.add('viewer');
+  let k; try { k = await derive(h.get('watch')); } catch { showNone(); $('noneErr').textContent = 'That live view link is broken.'; return; }
+  start({ key: k.key, topic: k.topic, notifyTopic: k.notifyTopic, boards: okBoards(h.get('boards')) || DEFAULT_BOARDS, name: (h.get('name') || 'a computer').slice(0, 40), viewer: true });
 }
 
 // ---------- demo mode ----------
@@ -866,7 +931,7 @@ function setupUi() {
 const C = { dim: '\x1b[90m', b: '\x1b[1m', g: '\x1b[32m', y: '\x1b[33m', bl: '\x1b[34m', c: '\x1b[36m', r: '\x1b[31m', x: '\x1b[0m' };
 const PROMPT = `${C.g}utsav@MacBook-Pro${C.x} ${C.bl}~${C.x} %% `.replace('%%', '%');
 const DEMO_OUT = {
-  help: `Try: ${C.b}ls${C.x}, ${C.b}git status${C.x}, ${C.b}df -h${C.x}, ${C.b}uptime${C.x}, ${C.b}pmset -g batt${C.x}, ${C.b}whoami${C.x}, ${C.b}date${C.x}, ${C.b}clear${C.x}\r\nOr ${C.b}pmset sleepnow${C.x} to watch it fall asleep and wake up again.`,
+  help: `Try ${C.b}claude${C.x} (a pretend AI agent asks for permission), ${C.b}ls${C.x}, ${C.b}git status${C.x}, ${C.b}df -h${C.x}, ${C.b}uptime${C.x}, ${C.b}pmset -g batt${C.x}, ${C.b}whoami${C.x}, ${C.b}date${C.x}, ${C.b}clear${C.x}\r\nOr ${C.b}pmset sleepnow${C.x} to watch it fall asleep and wake up again.`,
   ls: `${C.bl}${C.b}Claude_Work${C.x}  ${C.bl}${C.b}Desktop${C.x}  ${C.bl}${C.b}Documents${C.x}  ${C.bl}${C.b}Downloads${C.x}  ${C.bl}${C.b}pocket-terminal${C.x}  notes.md`,
   pwd: '/Users/utsav', whoami: 'utsav',
   uptime: '14:02  up 3 days,  4:11, 2 users, load averages: 1.42 1.37 1.29',
@@ -889,6 +954,36 @@ function demoShell(m) {
   if (m.t === 'ping') return setTimeout(() => handleMsg({ t: 'pong' }), 18 + Math.random() * 20);
   if (m.t === 'cmd') return setTimeout(() => { const r = demoRun(m.cmd); handleMsg({ t: 'result', id: m.id, code: r.code, out: plain(r.out) }); }, 900);
   if (m.t === 'settings') { livePower.settings = { ...livePower.settings, ...m.power }; return setTimeout(() => handleMsg({ t: 'power', ...livePower }), 200); }
+  const reply = (r, ms = 120) => setTimeout(() => handleMsg(r), ms);
+  const now = Date.now();
+  if (m.t === 'sessions' || m.t === 'close-session') {
+    if (m.t === 'close-session') demoSess = demoSess.filter((x) => x.sid !== m.sid);
+    return reply({ t: 'sessions', current: SID, list: demoSess.map((x) => ({ ...x, sid: x.sid === 'main' ? SID : x.sid })) });
+  }
+  if (m.t === 'switch') { term.reset(); term.write(PROMPT); return reply({ t: 'switched', sid: m.sid }); }
+  if (m.t === 'shares') return reply({ t: 'shares', list: [] });
+  if (m.t === 'share') return reply({ t: 'share', id: 'demo', link: location.origin + location.pathname + '#watch=this-is-only-a-demo', expires: now + m.minutes * 60e3 });
+  if (m.t === 'push-test' || m.t === 'push-sub') return reply({ t: 'push-tested', how: 'none' });
+  if (m.t === 'ports') return reply({ t: 'ports', id: m.id, list: [{ port: 3000, name: 'node' }, { port: 5173, name: 'vite' }, { port: 8000, name: 'python3' }] });
+  if (m.t === 'ls') {
+    const home = '/Users/utsav', p = m.path === '~' ? home : m.path;
+    const tree = { [home]: [{ n: 'Claude_Work', d: true }, { n: 'Desktop', d: true }, { n: 'Downloads', d: true }, { n: 'notes.md', d: false, s: 1840 }],
+      [home + '/Claude_Work']: [{ n: 'Projects', d: true }, { n: 'resume.pdf', d: false, s: 184320 }],
+      [home + '/Claude_Work/Projects']: [{ n: 'pocket-terminal', d: true }, { n: 'tiny-calc', d: true }] };
+    return reply({ t: 'ls', id: m.id, path: p, parent: p === '/' ? null : p.replace(/\/[^/]+$/, '') || '/', home, sep: '/', entries: tree[p] || [{ n: 'README.md', d: false, s: 2210 }, { n: 'src', d: true }] });
+  }
+  if (m.t === 'get') {
+    const text = `# Hello from the demo\n\nThis file came from the pretend computer: ${m.path}\n`;
+    reply({ t: 'get-h', id: m.id, name: m.path.split('/').pop(), size: text.length });
+    return reply({ t: 'get-c', id: m.id, n: 0, d: btoa(unescape(encodeURIComponent(text))), end: true }, 500);
+  }
+  if (m.t === 'put') return reply({ t: 'put-ok', id: m.id, path: '/Users/utsav/' + m.name });
+  if (m.t === 'put-end') return reply({ t: 'put-done', id: m.id, path: '/Users/utsav/uploaded-file' }, 300);
+  if (m.t === 'http') {
+    const html = `<!doctype html><meta name="viewport" content="width=device-width,initial-scale=1"><body style="font:17px -apple-system,system-ui,sans-serif;margin:0;background:linear-gradient(160deg,#fff7e6,#fff);min-height:100vh;display:grid;place-items:center;text-align:center"><div><div style="font-size:54px">🚀</div><h1 style="margin:8px 0">My app</h1><p style="color:#666">Running on localhost:${m.port}<br>(in the demo, this page is pretend)</p></div>`;
+    reply({ t: 'http-h', id: m.id, status: 200, headers: { 'content-type': 'text/html; charset=utf-8' } });
+    return reply({ t: 'http-c', id: m.id, n: 0, d: btoa(unescape(encodeURIComponent(html))), end: true }, 200);
+  }
   if (m.t !== 'i') return;
   let d = m.d;
   while (d.length) {
@@ -904,11 +999,17 @@ function demoShell(m) {
     }
     if (d[0] === '\x1b') { d = d.replace(/^\x1b(\[[0-9;]*[~A-Za-z])?/, ''); continue; }
     const ch = d[0]; d = d.slice(1);
+    if (demoWaiting) {
+      demoWaiting = false;
+      const ans = ch === '1' || ch === '\r' || ch === 'y' ? `${C.g}✓${C.x} Edited src/app.js (1 line)` : ch === '2' ? `${C.g}✓${C.x} Edited src/app.js. Won't ask again this session.` : `${C.y}✗${C.x} Skipped. Tell Claude what to do instead.`;
+      out(`\r\n${ans}\r\n${C.dim}Done in 6s.${C.x}\r\n` + PROMPT); d = d.replace(/^\r/, ''); continue;
+    }
     if (ch === '\r') {
       const c = demoLine.trim(); demoLine = '';
       if (c) { demoHist.push(c); demoHi = demoHist.length; }
       if (c === 'clear') { out('\x1b[2J\x1b[H' + PROMPT); continue; }
       if (c === 'pmset sleepnow') { out('\r\n'); demoSleep(); continue; }
+      if (c === 'claude' || c.startsWith('claude ')) { out('\r\n'); demoAgent(); continue; }
       out('\r\n' + (c ? demoRun(c).out + '\r\n' : '') + PROMPT);
     } else if (ch === '\x7f' || ch === '\b') { if (demoLine) { demoLine = demoLine.slice(0, -1); out('\b \b'); } }
     else if (ch === '\x03') { demoLine = ''; out('^C\r\n' + PROMPT); }
@@ -919,6 +1020,18 @@ function demoShell(m) {
     } else if (ch >= ' ') { demoLine += ch; out(ch); }
   }
 }
+let demoSess = [
+  { sid: 'main', program: null, busy: false, running: true, waiting: false, lastOut: Date.now(), viewers: 1, line: 'utsav@MacBook-Pro ~ %' },
+  { sid: 'build1', program: 'npm', busy: true, running: true, waiting: false, lastOut: Date.now() - 20e3, viewers: 0, line: 'webpack compiled successfully in 812 ms' },
+];
+function demoAgent() {
+  const lines = [`${C.c}✻${C.x} Reading app.js…`, `${C.c}✻${C.x} Planning the change…`, '',
+    `${C.b}Edit file${C.x}  src/app.js`, `${C.dim}  - const total = a - b${C.x}`, `${C.g}  + const total = a + b${C.x}`, '',
+    'Do you want to make this edit to app.js?', `${C.c}❯${C.x} 1. Yes`, `  2. Yes, and don't ask again this session`, '  3. No, and tell Claude what to do differently (esc)'];
+  lines.forEach((l, i) => setTimeout(() => handleMsg({ t: 'o', d: l + '\r\n' }), 350 * (i + 1)));
+  setTimeout(() => { demoWaiting = true; handleMsg({ t: 'alert', kind: 'input', program: 'claude', sid: SID, text: 'Do you want to make this edit to app.js? ❯ 1. Yes' }); }, 350 * (lines.length + 1));
+}
+let demoWaiting = false;
 const demoDc = { readyState: 'open', send: (raw) => demoShell(JSON.parse(raw)), close() {} };
 function demoWake() {
   dc = demoDc; linkState = 'direct'; mac.state = 'online'; mac.ts = Date.now();
@@ -949,7 +1062,7 @@ function startDemo() {
   setupTerminal(); setupUi(); paintAiInfo();
   const tag = document.createElement('span'); tag.className = 'tick demo'; tag.textContent = 'Demo'; $('ping').before(tag);
   linkState = 'connecting'; paint(); setInterval(paint, 1000);
-  term.write(`${C.y}●${C.x} ${C.b}Pocket Terminal demo${C.x}\r\n${C.dim}A pretend computer, nothing real.${C.x}\r\n${C.dim}Type ${C.x}help${C.dim} to start, or tap ⋯${C.x}\r\n\r\n`);
+  term.write(`${C.y}●${C.x} ${C.b}Pocket Terminal demo${C.x}\r\n${C.dim}A pretend computer, nothing real.${C.x}\r\n${C.dim}Type ${C.x}claude${C.dim} or ${C.x}help${C.dim}, or tap ⋯${C.x}\r\n\r\n`);
   setTimeout(() => { demoWake(); handleMsg({ t: 'o', d: PROMPT }); }, 1100);
 }
 
