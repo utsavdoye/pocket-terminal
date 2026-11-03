@@ -1,5 +1,10 @@
 # Changelog
 
+## 7.0.2 (2026-11-03)
+- New website design: dark theme, a live terminal demo, clearer install steps, help and privacy pages.
+- Rewritten README, a sharper demo video and GIF, and a Buy Me a Coffee link for anyone who wants to support the project.
+- Same app and agent as 7.0.1; update only if you want the latest files: `npx pocket-terminal@latest`.
+
 ## 7.0.1 (2026-11-02)
 - First release published to npm automatically from GitHub (trusted publishing, with provenance).
 - New home: **pocket-terminal.utsavdoye.com** (a website with install steps for every system); the phone app moved to **pocket-terminal.utsavdoye.com/app**. Pair your phone again once.
