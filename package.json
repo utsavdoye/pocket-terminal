@@ -1,7 +1,7 @@
 {
   "name": "pocket-terminal",
   "version": "7.0.2",
-  "description": "Your computer's terminal on your phone, from anywhere, even with the lid closed. Run AI agents, get notified, open localhost. Direct and end-to-end encrypted.",
+  "description": "Your computer's terminal on your phone, from anywhere, even with the lid closed. Answer AI coding agents, get notified, open localhost. Direct and end-to-end encrypted.",
   "bin": {
     "pocket-terminal": "cli.js"
   },
@@ -30,6 +30,10 @@
     "p2p",
     "claude-code",
     "ai-agent",
+    "aider",
+    "gemini-cli",
+    "codex",
+    "ai-coding-agent",
     "localhost",
     "pwa",
     "end-to-end-encryption"

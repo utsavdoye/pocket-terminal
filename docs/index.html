@@ -4,9 +4,9 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://gc.zgo.at; style-src 'self'; font-src 'self'; img-src 'self' data: https://pocket-terminal.goatcounter.com; media-src 'self'; connect-src 'self' https://api.github.com https://api.npmjs.org https://pocket-terminal.goatcounter.com; base-uri 'none'; form-action 'none'">
-<title>Pocket Terminal: control your laptop's terminal from your phone, even with the lid closed</title>
-<meta name="description" content="Answer Claude Code, run commands and open localhost on your laptop from your phone, from any network, even with the lid closed. Free, open source, end-to-end encrypted. macOS, Windows, Linux.">
-<meta name="keywords" content="remote terminal from phone, claude code on phone, mobile terminal, ssh alternative, access laptop from phone, localhost on phone, open source, webrtc terminal">
+<title>Pocket Terminal: your laptop's terminal and AI agents on your phone, even with the lid closed</title>
+<meta name="description" content="Answer AI coding agents like Claude Code, Codex and Gemini CLI, run commands and open localhost on your laptop from your phone, from any network, even with the lid closed. Free, open source, end-to-end encrypted. macOS, Windows, Linux.">
+<meta name="keywords" content="remote terminal from phone, ai coding agent on phone, claude code on phone, codex cli on phone, mobile terminal, ssh alternative, access laptop from phone, localhost on phone, open source, webrtc terminal">
 <link rel="canonical" href="https://pocket-terminal.utsavdoye.com/">
 <meta name="theme-color" content="#08080A">
 <meta name="color-scheme" content="dark">
@@ -23,7 +23,7 @@
 <meta property="og:image:alt" content="Pocket Terminal: a terminal on a laptop and the phone that answers it">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="Pocket Terminal: your laptop's terminal, in your pocket">
-<meta name="twitter:description" content="Answer Claude Code from your phone, even with the lid closed. Free and open source.">
+<meta name="twitter:description" content="Answer your AI coding agents from your phone, even with the lid closed. Free and open source.">
 <meta name="twitter:image" content="https://pocket-terminal.utsavdoye.com/og.png">
 <link rel="icon" href="favicon.ico" sizes="any">
 <link rel="icon" href="favicon.svg" type="image/svg+xml">
@@ -38,7 +38,7 @@
 {"@type":"FAQPage","mainEntity":[
 {"@type":"Question","name":"Is Pocket Terminal free? Is there a server?","acceptedAnswer":{"@type":"Answer","text":"Free and open source (MIT). There is no server you run or pay for, and none that can read your data. A free public message board passes a few encrypted hello notes so the two devices can find each other; your live terminal goes directly between them."}},
 {"@type":"Question","name":"How is it different from SSH or Tailscale?","acceptedAnswer":{"@type":"Answer","text":"Those assume your computer is awake and reachable. Pocket Terminal is built around a laptop that is asleep in your bag: it wakes itself briefly to check for work, runs it, replies, and sleeps again. Nothing to set up on your router, no account."}},
-{"@type":"Question","name":"Can it run Claude Code with my laptop closed?","acceptedAnswer":{"@type":"Answer","text":"Yes. While a program is still working, the computer stays awake (on battery too, above 20%, for up to 2 hours after you last used it). When the agent stops to ask, your phone buzzes with the question. Tap it and answer."}},
+{"@type":"Question","name":"Can AI coding agents keep running with my laptop closed?","acceptedAnswer":{"@type":"Answer","text":"Yes. While a program is still working, the computer stays awake (on battery too, above 20%, for up to 2 hours after you last used it). When an agent like Claude Code, Codex or Gemini CLI stops to ask, your phone buzzes with the question. Tap it and answer."}},
 {"@type":"Question","name":"What does it cost in battery?","acceptedAnswer":{"@type":"Answer","text":"Each check-in is a few seconds awake. Overnight that is typically a few percent. It never stays awake below 20% and stops waking below 10%."}},
 {"@type":"Question","name":"I lost my phone. What now?","acceptedAnswer":{"@type":"Answer","text":"On your computer run npx pocket-terminal list, then npx pocket-terminal remove followed by the number. That phone is locked out within seconds, and its PIN-locked key is useless."}},
 {"@type":"Question","name":"Which systems does it work on?","acceptedAnswer":{"@type":"Answer","text":"Computer: macOS, Windows 10 and 11, and Linux. Phone: iPhone and Android, as an app you add to your home screen."}}
@@ -66,7 +66,7 @@
     <div class="wrap">
       <a class="pill" href="https://github.com/utsavdoye/pocket-terminal/releases"><span class="tag">NEW</span>v7: localhost on your phone <span class="arr">→</span></a>
       <h1>Your terminal,<br><span class="accent">in your pocket.</span></h1>
-      <p class="lede">Answer <strong>Claude Code</strong>, run commands and open <strong>localhost</strong> on your laptop from your phone. From any network, <strong>even with the lid closed</strong>. Free, open source, end-to-end encrypted.</p>
+      <p class="lede">Answer your <strong>AI coding agents</strong>, run commands and open <strong>localhost</strong> on your laptop from your phone. From any network, <strong>even with the lid closed</strong>. Free, open source, end-to-end encrypted.</p>
       <div class="cta">
         <a class="btn btn-amber" href="#install">Install in one line <span class="arr">→</span></a>
         <a class="btn btn-ghost" href="app/#demo">Try the live demo</a>
@@ -77,7 +77,7 @@
 
     <div class="stage">
       <div class="stage-grid">
-        <div class="win" role="img" aria-label="A terminal on the laptop: Claude Code asks permission to edit a file, the phone answers, and the tests pass">
+        <div class="win" role="img" aria-label="A terminal on the laptop: an AI coding agent asks permission to edit a file, the phone answers, and the tests pass">
           <div class="win-bar">
             <div class="lights"><i></i><i></i><i></i></div>
             <div class="win-title">utsav@macbook: ~/app (zsh) · 96×24</div>
@@ -86,7 +86,7 @@
           <pre class="term" id="heroTerm" aria-hidden="true"></pre>
         </div>
         <div class="phone">
-          <div class="notif" id="heroNotif" aria-hidden="true"><img src="app/icon-192.png" alt="" width="34" height="34"><div><b>Claude needs you · app</b><span>Do you want to make this edit to auth.ts? Tap to answer.</span></div><small>now</small></div>
+          <div class="notif" id="heroNotif" aria-hidden="true"><img src="app/icon-192.png" alt="" width="34" height="34"><div><b>Your agent needs you · app</b><span>Do you want to make this edit to auth.ts? Tap to answer.</span></div><small>now</small></div>
           <div class="screen"><video autoplay muted loop playsinline preload="metadata" poster="media/poster.webp" aria-label="Demo on the phone: an AI agent asks for permission, one tap answers it, then a local website opens"><source src="media/demo.mp4" type="video/mp4"><source src="media/demo.webm" type="video/webm"></video></div>
         </div>
       </div>
@@ -101,7 +101,7 @@
       </div>
       <div class="works">
         <p>Works with whatever runs in your terminal</p>
-        <ul><li>Claude Code</li><li>Codex CLI</li><li>Aider</li><li>Gemini CLI</li><li>npm run dev</li><li>python train.py</li><li>docker</li><li>psql</li></ul>
+        <ul><li>Claude Code</li><li>Codex CLI</li><li>Gemini CLI</li><li>Aider</li><li>Cursor CLI</li><li>OpenCode</li><li>npm run dev</li><li>python train.py</li><li>docker</li><li>psql</li></ul>
       </div>
     </div>
   </section>
@@ -117,8 +117,8 @@
         <article class="card wide" data-path="~/features/ai-agents"><span class="num">01 / AI AGENTS</span>
           <div class="ico"><svg viewBox="0 0 24 24"><path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z"/></svg></div>
           <h3>Answer AI agents with one tap</h3>
-          <p>Claude Code, Codex or Aider keep working while you're out. When one asks <em>"Do you want to proceed?"</em> your phone buzzes with the question.</p>
-          <div class="snippet"><span class="a">●</span> Claude needs you · app
+          <p>Claude Code, Codex, Gemini CLI, Aider or any other agent keeps working while you're out. When one asks <em>"Do you want to proceed?"</em> your phone buzzes with the question.</p>
+          <div class="snippet"><span class="a">●</span> codex needs you · app
   Do you want to make this edit to auth.ts?
   <span class="g">❯ 1. Yes</span>   2. No</div>
         </article>
@@ -320,7 +320,7 @@
       </div>
       <details><summary>Is it really free? Is there a server?</summary><p>Free and open source (MIT). There's no server you run or pay for, and none that can read your data. A free public message board passes a few encrypted "hello" notes so the two devices can find each other; your live terminal goes directly between them.</p></details>
       <details><summary>How is it different from SSH or Tailscale?</summary><p>Those assume your computer is awake and reachable. Pocket Terminal is built around a laptop that's asleep in your bag: it wakes itself briefly to check for work, runs it, replies, and sleeps again. Nothing to set up on your router, no account.</p></details>
-      <details><summary>Can it run Claude Code with my laptop closed?</summary><p>Yes. While a program is still working, the computer stays awake (on battery too, above 20%, for up to 2 hours after you last used it). When the agent stops to ask, your phone buzzes with the question. Tap it and answer.</p></details>
+      <details><summary>Can AI coding agents keep running with my laptop closed?</summary><p>Yes. While a program is still working, the computer stays awake (on battery too, above 20%, for up to 2 hours after you last used it). When an agent like Claude Code, Codex or Gemini CLI stops to ask, your phone buzzes with the question. Tap it and answer.</p></details>
       <details><summary>What does it cost in battery?</summary><p>Each check-in is a few seconds awake. Overnight that's typically a few percent. It never stays awake below 20% and stops waking below 10%.</p></details>
       <details><summary>I lost my phone. What now?</summary><p>On your computer run <code>npx pocket-terminal list</code>, then <code>npx pocket-terminal remove &lt;number&gt;</code>. That phone is locked out within seconds, and its PIN-locked key is useless.</p></details>
       <details><summary>Which systems does it work on?</summary><p>Computer: macOS, Windows 10/11, and Linux (laptops get the lid-closed features; servers simply stay awake). Phone: iPhone and Android, as an app you add to your home screen.</p></details>

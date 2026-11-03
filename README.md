@@ -22,7 +22,7 @@
 **Pocket Terminal** puts your computer's terminal on your phone. It works from any network, and it
 keeps working when the laptop is asleep in your bag with the lid closed.
 
-Start Claude Code, close the laptop, leave. When the agent stops to ask *"Do you want to make this
+Start your AI coding agent (Claude Code, Codex, Gemini CLI, Aider or any other), close the laptop, leave. When the agent stops to ask *"Do you want to make this
 edit?"*, your phone buzzes and you answer with one tap. The same connection opens your
 `localhost:3000`, moves files, and tells you when a long build finishes.
 
@@ -40,7 +40,7 @@ npx pocket-terminal
 ## Features
 
 **For AI agents**
-- Phone notification when Claude Code, Codex, Aider or any program asks a question, with one-tap answers.
+- Phone notification when an AI agent (Claude Code, Codex, Gemini CLI, Aider…) or any program asks a question, with one-tap answers.
 - "It's done" alerts when a build, download or training run finishes or goes quiet.
 - The computer stays awake while a program is working, even on battery with the lid closed.
 
@@ -56,7 +56,7 @@ npx pocket-terminal
 - Ask in plain English ("free up port 3000") and get the right command for your system, explained, with a safety label. Works offline for 70+ common commands; optional AI with your own key.
 
 <p align="center">
-  <img src="docs/screenshots/agent.png" alt="Claude Code asks for permission and the phone shows one-tap answers" width="23%">
+  <img src="docs/screenshots/agent.png" alt="An AI coding agent asks for permission and the phone shows one-tap answers" width="23%">
   <img src="docs/screenshots/terminals.png" alt="Running terminals and a view-only share link" width="23%">
   <img src="docs/screenshots/localhost.png" alt="The computer's localhost:3000 open on the phone" width="23%">
   <img src="docs/screenshots/files.png" alt="Files: download from the computer, upload from the phone" width="23%">

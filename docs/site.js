@@ -33,15 +33,16 @@
     $$('.card, .shots figure, .step, .box, .checks li, details, .tablewrap, .install').forEach(function (el, i) { el.classList.add('reveal'); el.style.transitionDelay = (i % 3) * 70 + 'ms'; io.observe(el); });
   }
 
-  // ---------- the hero: a Claude Code session on a laptop with the lid shut ----------
+  // ---------- the hero: an AI coding agent on a laptop with the lid shut (a different agent each loop) ----------
   var term = $('#heroTerm'), notif = $('#heroNotif');
   if (term) {
     var P = '<span class="p">utsav@macbook</span> <span class="d">~/app</span> % ';
+    var agents = [['claude', 'Claude'], ['codex', 'Codex'], ['gemini', 'Gemini']], ai = 0;
     var script = [
-      ['type', 'claude "fix the failing login test"'],
+      ['type', '@ "fix the failing login test"'],
       ['out', '', 250],
-      ['out', '<span class="a">✻</span> Reading src/auth.ts', 600],
-      ['out', '<span class="a">✻</span> Running npm test  <span class="del">1 failing</span>', 800],
+      ['out', '<span class="a">●</span> Reading src/auth.ts', 600],
+      ['out', '<span class="a">●</span> Running npm test  <span class="del">1 failing</span>', 800],
       ['out', '', 200],
       ['out', '<span class="b">Edit</span> src/auth.ts', 300],
       ['out', '<span class="del">-  if (user = null) return</span>', 160],
@@ -49,7 +50,7 @@
       ['out', '', 160],
       ['out', 'Do you want to make this edit to auth.ts?', 260],
       ['out', '<span class="sel">❯ 1. Yes</span>', 120],
-      ['out', '  2. No, tell Claude what to do instead', 120],
+      ['out', '  2. No, tell @@ what to do instead', 120],
       ['out', '', 100],
       ['ask', '<span class="dim">  waiting… lid closed, phone notified</span>', 2600],
       ['out', '<span class="dim">  answered "1" from phone</span>', 700],
@@ -59,24 +60,28 @@
     ];
     var lines = [], typed = '', CUR = '<span class="cursor"></span>';
     var draw = function (prompt) { term.innerHTML = lines.join('\n') + (prompt ? (lines.length ? '\n' : '') + P + typed + CUR : ''); };
+    var title = notif && notif.querySelector('b');
     var run = function () {
+      var ag = agents[ai++ % agents.length];
+      var fill = function (t) { return t.replace('@@', ag[1]).replace('@ ', ag[0] + ' '); };
+      if (title) title.textContent = ag[1] + ' needs you · app';
       lines = []; typed = ''; if (notif) notif.classList.remove('show');
       var i = 0;
       var step = function () {
         var s = script[i++]; if (!s) return;
         if (s[0] === 'type') {
-          var k = 0, txt = s[1];
+          var k = 0, txt = fill(s[1]);
           (function t() { typed = txt.slice(0, ++k); draw(true); if (k < txt.length) setTimeout(t, 35 + Math.random() * 45); else setTimeout(function () { lines.push(P + txt); typed = ''; draw(false); step(); }, 450); })();
         } else if (s[0] === 'ask') {
           lines.push(s[1]); draw(false); if (notif) notif.classList.add('show'); setTimeout(function () { lines.pop(); if (notif) notif.classList.remove('show'); step(); }, s[2]);
         } else if (s[0] === 'done') {
           draw(true); setTimeout(run, s[2]);
-        } else { lines.push(s[1]); draw(false); setTimeout(step, s[2]); }
+        } else { lines.push(fill(s[1])); draw(false); setTimeout(step, s[2]); }
       };
       step();
     };
     if (reduce) { // a still frame instead of the animation
-      lines = [P + 'claude "fix the failing login test"', '', '<span class="a">✻</span> Running npm test  <span class="del">1 failing</span>', '', 'Do you want to make this edit to auth.ts?', '<span class="sel">❯ 1. Yes</span>', '  2. No, tell Claude what to do instead'];
+      lines = [P + 'claude "fix the failing login test"', '', '<span class="a">●</span> Running npm test  <span class="del">1 failing</span>', '', 'Do you want to make this edit to auth.ts?', '<span class="sel">❯ 1. Yes</span>', '  2. No, tell the agent what to do instead'];
       draw(false); if (notif) notif.classList.add('show');
     } else if ('IntersectionObserver' in window) {
       var started = false;
