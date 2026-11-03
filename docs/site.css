@@ -94,7 +94,7 @@ h1 .accent { background: linear-gradient(90deg, #FFD27A, var(--amber) 45%, var(-
 .stage::before { content: ''; position: absolute; left: 6%; right: 6%; top: -60px; height: 460px; z-index: -1; pointer-events: none;
   background: radial-gradient(50% 55% at 50% 65%, rgba(255, 138, 61, .32), rgba(245, 184, 67, .1) 50%, transparent 75%); filter: blur(12px); }
 .stage::after { content: ''; position: absolute; left: 15%; right: 15%; top: -1px; height: 1px; background: linear-gradient(90deg, transparent, rgba(255, 205, 120, .9), transparent); }
-.stage-grid { display: grid; grid-template-columns: minmax(0, 1fr) 292px; gap: 28px; align-items: center; }
+.stage-grid { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 28px; align-items: center; }
 
 .win { background: rgba(13, 13, 16, .94); border-radius: 14px; box-shadow: 0 0 0 1px var(--line-2) inset, 0 40px 80px rgba(0,0,0,.6); overflow: hidden; text-align: left; }
 .win-bar { display: flex; align-items: center; gap: 12px; height: 40px; padding: 0 14px; background: linear-gradient(rgba(255,255,255,.05), rgba(255,255,255,.02)); border-bottom: 1px solid var(--line); }
@@ -111,10 +111,10 @@ h1 .accent { background: linear-gradient(90deg, #FFD27A, var(--amber) 45%, var(-
 .term .a { color: var(--amber); } .term .b { color: #fff; font-weight: 600; } .term .sel { color: var(--cyan); }
 .cursor { display: inline-block; width: .6em; height: 1.15em; background: var(--amber); vertical-align: -.2em; animation: blink 1.05s steps(1) infinite; }
 
-.phone { position: relative; width: 292px; border-radius: 46px; padding: 10px; background: linear-gradient(#27272C, #111114); box-shadow: 0 0 0 1px var(--line-3) inset, 0 50px 90px rgba(0,0,0,.7), 0 0 80px rgba(245, 160, 60, .12); }
-.phone .screen { position: relative; width: 100%; padding-top: 216.4%; border-radius: 37px; overflow: hidden; background: #F4F5F7; transform: translateZ(0); -webkit-mask-image: -webkit-radial-gradient(white, black); }
+.phone { position: relative; width: 340px; border-radius: 54px; padding: 11px; background: linear-gradient(#27272C, #111114); box-shadow: 0 0 0 1px var(--line-3) inset, 0 50px 90px rgba(0,0,0,.7), 0 0 80px rgba(245, 160, 60, .12); }
+.phone .screen { position: relative; width: 100%; padding-top: 216.75%; border-radius: 44px; overflow: hidden; background: #F4F5F7; transform: translateZ(0); -webkit-mask-image: -webkit-radial-gradient(white, black); }
 .phone video { position: absolute; inset: 0; display: block; width: 100%; height: 100%; max-width: none; object-fit: cover; object-position: top center; background: #F4F5F7; }
-.notif { position: absolute; left: -36px; right: 14px; top: 54px; z-index: 3; display: flex; align-items: flex-start; gap: 11px; padding: 11px 13px; border-radius: 18px; background: rgb(30, 30, 35); box-shadow: 0 0 0 1px var(--line-2) inset, 0 20px 40px rgba(0,0,0,.55); text-align: left;
+.notif { position: absolute; left: 21px; right: 21px; top: 21px; z-index: 3; display: flex; align-items: flex-start; gap: 11px; padding: 11px 13px; border-radius: 18px; background: rgb(30, 30, 35); box-shadow: 0 0 0 1px var(--line-2) inset, 0 20px 40px rgba(0,0,0,.55); text-align: left;
   opacity: 0; transform: translateY(-14px) scale(.96); transition: opacity .35s var(--ease), transform .5s cubic-bezier(.2, .9, .25, 1.15); }
 .notif.show { opacity: 1; transform: none; }
 .notif img { width: 34px; height: 34px; border-radius: 9px; flex: none; }
@@ -331,8 +331,7 @@ details p { margin: 0 0 22px; color: var(--muted); max-width: 46em; }
   .stage { margin-top: 48px; width: calc(100% - 24px); }
   .win-status { display: none; }
   .term { height: 340px; font-size: 11.5px; padding: 14px; }
-  .phone { width: 250px; border-radius: 40px; } .phone .screen { border-radius: 31px; }
-  .notif { left: -30px; right: -30px; top: 44px; }
+  .phone { width: 280px; border-radius: 46px; padding: 9px; } .phone .screen { border-radius: 37px; } .notif { left: 15px; right: 15px; top: 15px; padding: 9px 11px; gap: 9px; border-radius: 15px; } .notif img { width: 28px; height: 28px; border-radius: 7px; } .notif b { font-size: 12px; } .notif span { font-size: 11.5px; }
   .stats b { font-size: 22px; } .stats div { padding: 20px 16px; }
   .bento, .shots, .steps, .grid2, .grid3 { grid-template-columns: 1fr; }
   .shots { gap: 40px; } .shots figure { width: 78%; margin: 0 auto; }
