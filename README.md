@@ -227,7 +227,7 @@ Contributions are welcome; read [CONTRIBUTING.md](CONTRIBUTING.md) first.
 ## Support the project
 
 Pocket Terminal is free and built in spare time. If it saves you trips back to your laptop, you can
-[sponsor its development](https://github.com/sponsors/utsavdoye) or simply star the repo so others find it.
+[buy me a coffee](https://buymeacoffee.com/utsavdoye) or simply star the repo so others find it.
 
 ## License
 
