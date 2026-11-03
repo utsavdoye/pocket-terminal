@@ -4,249 +4,353 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://gc.zgo.at; style-src 'self'; font-src 'self'; img-src 'self' data: https://pocket-terminal.goatcounter.com; media-src 'self'; connect-src 'self' https://api.github.com https://api.npmjs.org https://pocket-terminal.goatcounter.com; base-uri 'none'; form-action 'none'">
-<title>Pocket Terminal: your computer's terminal on your phone</title>
-<meta name="description" content="Run commands, answer Claude Code and open localhost on your laptop from your phone, from anywhere, even with the lid closed. Free, open source, end-to-end encrypted. macOS, Windows and Linux.">
+<title>Pocket Terminal: control your laptop's terminal from your phone, even with the lid closed</title>
+<meta name="description" content="Answer Claude Code, run commands and open localhost on your laptop from your phone, from any network, even with the lid closed. Free, open source, end-to-end encrypted. macOS, Windows, Linux.">
+<meta name="keywords" content="remote terminal from phone, claude code on phone, mobile terminal, ssh alternative, access laptop from phone, localhost on phone, open source, webrtc terminal">
 <link rel="canonical" href="https://pocket-terminal.utsavdoye.com/">
-<meta name="theme-color" content="#F4F5F7">
+<meta name="theme-color" content="#08080A">
+<meta name="color-scheme" content="dark">
+<meta name="author" content="Utsav Doye">
+<meta name="robots" content="index, follow, max-image-preview:large">
 <meta property="og:type" content="website">
-<meta property="og:title" content="Pocket Terminal: your computer's terminal on your phone">
-<meta property="og:description" content="Run commands, answer AI agents and open localhost from your phone, even with the lid closed. Free, open source, end-to-end encrypted.">
+<meta property="og:site_name" content="Pocket Terminal">
+<meta property="og:title" content="Pocket Terminal: your laptop's terminal, in your pocket">
+<meta property="og:description" content="Answer AI agents, run commands and open localhost from your phone, even with the lid closed. Free, open source, end-to-end encrypted.">
 <meta property="og:url" content="https://pocket-terminal.utsavdoye.com/">
 <meta property="og:image" content="https://pocket-terminal.utsavdoye.com/og.png">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
-<meta property="og:image:alt" content="Pocket Terminal: your terminal, in your pocket">
-<meta property="og:site_name" content="Pocket Terminal">
-<meta name="twitter:image" content="https://pocket-terminal.utsavdoye.com/og.png">
+<meta property="og:image:alt" content="Pocket Terminal: a terminal on a laptop and the phone that answers it">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="author" content="Utsav Doye">
+<meta name="twitter:title" content="Pocket Terminal: your laptop's terminal, in your pocket">
+<meta name="twitter:description" content="Answer Claude Code from your phone, even with the lid closed. Free and open source.">
+<meta name="twitter:image" content="https://pocket-terminal.utsavdoye.com/og.png">
 <link rel="icon" href="favicon.ico" sizes="any">
 <link rel="icon" href="favicon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
-<script data-goatcounter="https://pocket-terminal.goatcounter.com/count" async src="https://gc.zgo.at/count.js"></script>
+<link rel="preload" href="fonts/Geist-Variable.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="fonts/GeistMono-Variable.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="site.css">
-<script type="application/ld+json">{"@context":"https://schema.org","@type":"SoftwareApplication","name":"Pocket Terminal","applicationCategory":"DeveloperApplication","operatingSystem":"macOS, Windows, Linux, iOS, Android","offers":{"@type":"Offer","price":"0","priceCurrency":"USD"},"url":"https://pocket-terminal.utsavdoye.com/","downloadUrl":"https://www.npmjs.com/package/pocket-terminal","author":{"@type":"Person","name":"Utsav Doye","url":"https://utsavdoye.com"},"license":"https://opensource.org/licenses/MIT"}</script>
+<script data-goatcounter="https://pocket-terminal.goatcounter.com/count" async src="https://gc.zgo.at/count.js"></script>
+<script type="application/ld+json">{"@context":"https://schema.org","@graph":[
+{"@type":"SoftwareApplication","name":"Pocket Terminal","description":"Use your computer's terminal from your phone, from any network, even with the laptop lid closed. Answer AI coding agents, open localhost, move files. End-to-end encrypted.","applicationCategory":"DeveloperApplication","operatingSystem":"macOS, Windows, Linux, iOS, Android","softwareVersion":"7.0.1","offers":{"@type":"Offer","price":"0","priceCurrency":"USD"},"url":"https://pocket-terminal.utsavdoye.com/","downloadUrl":"https://www.npmjs.com/package/pocket-terminal","installUrl":"https://pocket-terminal.utsavdoye.com/#install","screenshot":"https://pocket-terminal.utsavdoye.com/screenshots/agent.png","image":"https://pocket-terminal.utsavdoye.com/og.png","codeRepository":"https://github.com/utsavdoye/pocket-terminal","license":"https://opensource.org/licenses/MIT","author":{"@type":"Person","name":"Utsav Doye","url":"https://utsavdoye.com"}},
+{"@type":"WebSite","name":"Pocket Terminal","url":"https://pocket-terminal.utsavdoye.com/"},
+{"@type":"FAQPage","mainEntity":[
+{"@type":"Question","name":"Is Pocket Terminal free? Is there a server?","acceptedAnswer":{"@type":"Answer","text":"Free and open source (MIT). There is no server you run or pay for, and none that can read your data. A free public message board passes a few encrypted hello notes so the two devices can find each other; your live terminal goes directly between them."}},
+{"@type":"Question","name":"How is it different from SSH or Tailscale?","acceptedAnswer":{"@type":"Answer","text":"Those assume your computer is awake and reachable. Pocket Terminal is built around a laptop that is asleep in your bag: it wakes itself briefly to check for work, runs it, replies, and sleeps again. Nothing to set up on your router, no account."}},
+{"@type":"Question","name":"Can it run Claude Code with my laptop closed?","acceptedAnswer":{"@type":"Answer","text":"Yes. While a program is still working, the computer stays awake (on battery too, above 20%, for up to 2 hours after you last used it). When the agent stops to ask, your phone buzzes with the question. Tap it and answer."}},
+{"@type":"Question","name":"What does it cost in battery?","acceptedAnswer":{"@type":"Answer","text":"Each check-in is a few seconds awake. Overnight that is typically a few percent. It never stays awake below 20% and stops waking below 10%."}},
+{"@type":"Question","name":"I lost my phone. What now?","acceptedAnswer":{"@type":"Answer","text":"On your computer run npx pocket-terminal list, then npx pocket-terminal remove followed by the number. That phone is locked out within seconds, and its PIN-locked key is useless."}},
+{"@type":"Question","name":"Which systems does it work on?","acceptedAnswer":{"@type":"Answer","text":"Computer: macOS, Windows 10 and 11, and Linux. Phone: iPhone and Android, as an app you add to your home screen."}}
+]}]}</script>
 </head>
 <body>
+<a class="skip" href="#main">Skip to content</a>
 
 <header class="nav">
   <div class="wrap navin">
-    <a class="brand" href="#top"><img src="favicon.svg" alt="" width="28" height="28"><span>Pocket Terminal</span></a>
+    <a class="brand" href="#top" aria-label="Pocket Terminal home"><img src="favicon.svg" alt="" width="28" height="28"><span>Pocket Terminal</span><span class="v">v7</span></a>
     <nav class="links" aria-label="Sections">
-      <a href="#features">Features</a><a href="#install">Install</a><a href="#compare">Compare</a><a href="#security">Security</a><a href="help.html">Help</a>
-      <a href="https://github.com/utsavdoye/pocket-terminal" class="gh">GitHub <span class="stars" data-stars></span></a>
+      <a href="#features">Features</a><a href="#install">Install</a><a href="#compare">Compare</a><a href="#security">Security</a><a href="#faq">FAQ</a><a href="help.html">Help</a>
     </nav>
-    <a class="btn small" href="app/">Open the app</a>
+    <div class="navend">
+      <a class="btn btn-ghost btn-sm gh-btn" href="https://github.com/utsavdoye/pocket-terminal" aria-label="Pocket Terminal on GitHub"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8Z"/></svg>Star<span class="count" data-stars></span></a>
+      <a class="btn btn-primary btn-sm" href="app/">Open the app <span class="arr">→</span></a>
+    </div>
   </div>
 </header>
 
-<main id="top">
-  <!-- hero -->
-  <section class="hero">
-    <div class="wrap herogrid">
-      <div class="herotext">
-        <p class="eyebrow"><span class="dot"></span>Free · Open source · macOS, Windows, Linux</p>
-        <h1>Your computer's terminal,<br><em>in your pocket.</em></h1>
-        <p class="lede">Run commands, answer Claude Code, open <code>localhost:3000</code>. From your phone, from anywhere, even with the laptop shut in your bag. Direct and end-to-end encrypted.</p>
-        <div class="cta">
-          <a class="btn" href="#install">Install in one line</a>
-          <a class="btn ghost" href="app/#demo">Try the demo →</a>
-        </div>
-        <div class="cmd hero-cmd"><span class="pr">$</span><code>npx pocket-terminal</code><button class="copy" data-copy="npx pocket-terminal" type="button" aria-label="Copy">Copy</button></div>
-        <p class="proof" data-proof hidden><a href="https://github.com/utsavdoye/pocket-terminal">★ <b data-stars>–</b> stars on GitHub</a><span>·</span><a href="https://www.npmjs.com/package/pocket-terminal"><b data-dl>–</b> installs this month</a></p>
+<main id="main">
+  <section class="hero" id="top">
+    <div class="bg-grid"></div>
+    <div class="wrap">
+      <a class="pill" href="https://github.com/utsavdoye/pocket-terminal/releases"><span class="tag">NEW</span>v7: localhost on your phone <span class="arr">→</span></a>
+      <h1>Your terminal,<br><span class="accent">in your pocket.</span></h1>
+      <p class="lede">Answer <strong>Claude Code</strong>, run commands and open <strong>localhost</strong> on your laptop from your phone. From any network, <strong>even with the lid closed</strong>. Free, open source, end-to-end encrypted.</p>
+      <div class="cta">
+        <a class="btn btn-amber" href="#install">Install in one line <span class="arr">→</span></a>
+        <a class="btn btn-ghost" href="app/#demo">Try the live demo</a>
       </div>
-      <div class="phone">
-        <div class="lamp"></div>
-        <video autoplay muted loop playsinline preload="metadata" poster="screenshots/agent.webp" width="390" height="844" aria-label="Demo: an AI agent asks for permission, one tap on the phone answers it, then a local website opens"><source src="media/demo.mp4" type="video/mp4"></video>
+      <div class="install-chip"><span class="pr">$</span><code>npx pocket-terminal</code><button class="copy" data-copy="npx pocket-terminal" type="button" aria-label="Copy install command">copy</button></div>
+      <p class="proof" data-proof hidden><a href="https://github.com/utsavdoye/pocket-terminal">★ <b data-stars>–</b> stars</a><span>·</span><a href="https://www.npmjs.com/package/pocket-terminal"><b data-dl>–</b> installs this month</a></p>
+    </div>
+
+    <div class="stage">
+      <div class="stage-grid">
+        <div class="win" role="img" aria-label="A terminal on the laptop: Claude Code asks permission to edit a file, the phone answers, and the tests pass">
+          <div class="win-bar">
+            <div class="lights"><i></i><i></i><i></i></div>
+            <div class="win-title">utsav@macbook: ~/app (zsh) · 96×24</div>
+            <div class="win-status"><span class="chip amber">lid closed</span><span class="chip">battery 64%</span></div>
+          </div>
+          <pre class="term" id="heroTerm" aria-hidden="true"></pre>
+        </div>
+        <div class="phone">
+          <div class="notif" id="heroNotif" aria-hidden="true"><img src="app/icon-192.png" alt="" width="34" height="34"><div><b>Claude needs you · app</b><span>Do you want to make this edit to auth.ts? Tap to answer.</span></div><small>now</small></div>
+          <video autoplay muted loop playsinline preload="metadata" poster="screenshots/agent.webp" width="390" height="844" aria-label="Demo on the phone: an AI agent asks for permission, one tap answers it, then a local website opens"><source src="media/demo.mp4" type="video/mp4"></video>
+        </div>
       </div>
     </div>
-    <div class="wrap stats">
-      <div><b>0</b><span>servers to run or pay for</span></div>
-      <div><b>1 line</b><span>to install or update</span></div>
-      <div><b>~1 min</b><span>to answer, lid closed</span></div>
-      <div><b>E2E</b><span>encrypted, phone to computer</span></div>
+
+    <div class="wrap">
+      <div class="stats">
+        <div><b>0</b><span>servers to run or pay for</span></div>
+        <div><b>1 line</b><span>to install or update</span></div>
+        <div><b>~1 min</b><span>to answer, lid closed</span></div>
+        <div><b>E2E</b><span>encrypted, phone ↔ computer</span></div>
+      </div>
+      <div class="works">
+        <p>Works with whatever runs in your terminal</p>
+        <ul><li>Claude Code</li><li>Codex CLI</li><li>Aider</li><li>Gemini CLI</li><li>npm run dev</li><li>python train.py</li><li>docker</li><li>psql</li></ul>
+      </div>
     </div>
   </section>
 
-  <!-- features -->
   <section id="features" class="sec">
     <div class="wrap">
-      <p class="kicker">What you can do</p>
-      <h2>Everything you'd walk back to your laptop for.</h2>
-      <div class="grid feats">
-        <article class="card hl"><i class="ic">✦</i><h3>Answer AI agents</h3><p>Claude Code, Codex or Aider keep working while you're out. When one asks <em>"Do you want to proceed?"</em> your phone buzzes. Answer with one tap.</p></article>
-        <article class="card"><i class="ic">◉</i><h3>"It's done" notifications</h3><p>Long build, big download, model training: get a notification when it finishes or needs you. Sent straight from your computer, encrypted.</p></article>
-        <article class="card"><i class="ic">⌁</i><h3>Your localhost, anywhere</h3><p>Run <code>npm run dev</code> on the laptop, open it on your phone from any network. No tunnels, no deploys.</p></article>
-        <article class="card"><i class="ic">☾</i><h3>Lid closed? Still works</h3><p>On charger it answers instantly. On battery it sleeps and wakes every minute or two to check for you, then sleeps again.</p></article>
-        <article class="card"><i class="ic">⇅</i><h3>Files both ways</h3><p>Grab a file or a database backup from your computer. Upload a photo into a project folder.</p></article>
-        <article class="card"><i class="ic">👁</i><h3>Share a live view</h3><p>Send a view-only link. A friend or teammate watches your terminal live and can't type a thing. It expires.</p></article>
-        <article class="card"><i class="ic">?</i><h3>Ask in plain English</h3><p>"Free up port 3000" or half a command you remember becomes the right command for your system, explained. Or just say it.</p></article>
-        <article class="card"><i class="ic">⇄</i><h3>Any network</h3><p>Phone on mobile data, laptop on college Wi-Fi. No router settings, no port forwarding, no account to sign up for.</p></article>
+      <div class="head">
+        <p class="kicker">Features</p>
+        <h2>Everything you'd walk back to your laptop for.</h2>
+        <p class="sub">Hover a card. Each one is a thing people actually get up from the sofa to do.</p>
+      </div>
+      <div class="bento">
+        <article class="card wide" data-path="~/features/ai-agents"><span class="num">01 / AI AGENTS</span>
+          <div class="ico"><svg viewBox="0 0 24 24"><path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z"/></svg></div>
+          <h3>Answer AI agents with one tap</h3>
+          <p>Claude Code, Codex or Aider keep working while you're out. When one asks <em>"Do you want to proceed?"</em> your phone buzzes with the question.</p>
+          <div class="snippet"><span class="a">●</span> Claude needs you · app
+  Do you want to make this edit to auth.ts?
+  <span class="g">❯ 1. Yes</span>   2. No</div>
+        </article>
+        <article class="card wide" data-path="~/features/localhost"><span class="num">02 / LOCALHOST</span>
+          <div class="ico"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="14" rx="2"/><path d="M3 8h18M8 21h8"/></svg></div>
+          <h3>Your localhost, anywhere</h3>
+          <p>Run <code>npm run dev</code> on the laptop and open it on your phone from any network. No tunnels, no deploys, no public URL.</p>
+          <div class="snippet"><span class="a">$</span> npm run dev
+  <span class="g">➜</span>  Local:  <span class="c">http://localhost:3000</span>
+  <span class="g">✓</span> open on phone · 3000</div>
+        </article>
+        <article class="card" data-path="~/features/lid-closed"><span class="num">03 / POWER</span>
+          <div class="ico"><svg viewBox="0 0 24 24"><path d="M20 14.5A8 8 0 0 1 9.5 4 8 8 0 1 0 20 14.5z"/></svg></div>
+          <h3>Lid closed? Still works</h3>
+          <p>On charger it answers instantly. On battery it wakes every minute or two to check for you, then sleeps again.</p>
+        </article>
+        <article class="card" data-path="~/features/notify"><span class="num">04 / NOTIFY</span>
+          <div class="ico"><svg viewBox="0 0 24 24"><path d="M6 8a6 6 0 1 1 12 0c0 7 3 9 3 9H3s3-2 3-9M10 21h4"/></svg></div>
+          <h3>"It's done" alerts</h3>
+          <p>Long build, big download, model training: get told when it finishes or goes quiet. Encrypted for your phone only.</p>
+        </article>
+        <article class="card" data-path="~/features/files"><span class="num">05 / FILES</span>
+          <div class="ico"><svg viewBox="0 0 24 24"><path d="M7 4v16M7 4l-3 3M7 4l3 3M17 20V4M17 20l-3-3M17 20l3-3"/></svg></div>
+          <h3>Files both ways</h3>
+          <p>Grab a file or a database backup from the computer. Upload a photo straight into a project folder.</p>
+        </article>
+        <article class="card" data-path="~/features/share"><span class="num">06 / SHARE</span>
+          <div class="ico"><svg viewBox="0 0 24 24"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg></div>
+          <h3>Share a live view</h3>
+          <p>Send a view-only link. A teammate watches your terminal live and can't type a thing. It expires.</p>
+        </article>
+        <article class="card" data-path="~/features/ask"><span class="num">07 / ASK</span>
+          <div class="ico"><svg viewBox="0 0 24 24"><path d="M4 17l6-5-6-5M12 19h8"/></svg></div>
+          <h3>Ask in plain English</h3>
+          <p>"Free up port 3000" becomes the right command for your system, explained before it runs.</p>
+        </article>
+        <article class="card" data-path="~/features/network"><span class="num">08 / NETWORK</span>
+          <div class="ico"><svg viewBox="0 0 24 24"><path d="M5 12.5a10 10 0 0 1 14 0M8.5 16a5 5 0 0 1 7 0M2 9a15 15 0 0 1 20 0"/><circle cx="12" cy="19.5" r=".8"/></svg></div>
+          <h3>Any network, no setup</h3>
+          <p>Phone on mobile data, laptop on college Wi-Fi. No port forwarding, no account to sign up for.</p>
+        </article>
       </div>
     </div>
   </section>
 
-  <!-- screens -->
-  <section class="sec tint">
-    <div class="wrap">
-      <p class="kicker">On your phone</p>
-      <h2>A real terminal, made for a thumb.</h2>
-      <div class="shots">
-        <figure><picture><source srcset="screenshots/terminals.webp" type="image/webp"><img src="screenshots/terminals.png" alt="Terminals: what's running on the computer and a view-only share link" loading="lazy" width="390" height="844"></picture><figcaption>See what's running. Share a live view.</figcaption></figure>
-        <figure><picture><source srcset="screenshots/localhost.webp" type="image/webp"><img src="screenshots/localhost.png" alt="The computer's localhost:3000 open on the phone" loading="lazy" width="390" height="844"></picture><figcaption>Open your dev server.</figcaption></figure>
-        <figure><picture><source srcset="screenshots/files.webp" type="image/webp"><img src="screenshots/files.png" alt="Files: download from the computer, upload from the phone" loading="lazy" width="390" height="844"></picture><figcaption>Move files either way.</figcaption></figure>
-      </div>
-    </div>
-  </section>
-
-  <!-- how it works -->
   <section class="sec">
     <div class="wrap">
-      <p class="kicker">How it works</p>
-      <h2>Three steps, about five minutes.</h2>
-      <ol class="steps3">
-        <li><b>Install on your computer</b><span>One line. It runs quietly in the background and starts at login.</span></li>
-        <li><b>Scan the QR code</b><span>With the Pocket Terminal app on your phone. Both screens show the same 6-digit code; type <code>y</code> to approve.</span></li>
-        <li><b>Use it anywhere</b><span>Your phone and computer talk directly, end to end encrypted. A free public board only passes the encrypted "hello".</span></li>
-      </ol>
+      <div class="head center">
+        <p class="kicker">On your phone</p>
+        <h2>A real terminal, made for a thumb.</h2>
+      </div>
+      <div class="shots">
+        <figure><div class="shot"><picture><source srcset="screenshots/terminals.webp" type="image/webp"><img src="screenshots/terminals.png" alt="Terminals screen: what's running on the computer and a view-only share link" loading="lazy" width="390" height="844"></picture></div><figcaption>see what's running</figcaption></figure>
+        <figure><div class="shot"><picture><source srcset="screenshots/localhost.webp" type="image/webp"><img src="screenshots/localhost.png" alt="The computer's localhost:3000 open on the phone" loading="lazy" width="390" height="844"></picture></div><figcaption>open your dev server</figcaption></figure>
+        <figure><div class="shot"><picture><source srcset="screenshots/files.webp" type="image/webp"><img src="screenshots/files.png" alt="Files screen: download from the computer, upload from the phone" loading="lazy" width="390" height="844"></picture></div><figcaption>move files either way</figcaption></figure>
+      </div>
     </div>
   </section>
 
-  <!-- install -->
-  <section id="install" class="sec tint">
+  <section class="sec">
     <div class="wrap">
-      <p class="kicker">Install</p>
-      <h2>Step 1: on your computer</h2>
-      <p class="sub">You need <a href="https://nodejs.org">Node.js 18.20 or newer</a>. Run the line again any time to update; your pairing stays.</p>
-      <div class="tabs" role="tablist">
-        <button role="tab" data-os="mac" class="on" type="button">macOS</button>
-        <button role="tab" data-os="win" type="button">Windows</button>
-        <button role="tab" data-os="linux" type="button">Linux</button>
-        <button role="tab" data-os="npm" type="button">npm (any)</button>
+      <div class="head">
+        <p class="kicker">How it works</p>
+        <h2>Three steps. About five minutes.</h2>
       </div>
-      <div class="pane on" data-os="mac">
-        <p>Open <b>Terminal</b> and paste:</p>
-        <div class="cmd"><span class="pr">$</span><code>curl -fsSL https://pocket-terminal.utsavdoye.com/install.sh | bash</code><button class="copy" data-copy="curl -fsSL https://pocket-terminal.utsavdoye.com/install.sh | bash" type="button">Copy</button></div>
-        <ul class="notes"><li>It asks for your Mac password once, so it can keep the Mac reachable with the lid closed. It can only run 4 exact sleep commands.</li><li>No Node.js? <code>brew install node</code>, or the installer from nodejs.org.</li></ul>
+      <div class="steps">
+        <div class="step"><span class="line"><span class="a">$</span> npx pocket-terminal</span><h3>Install on your computer</h3><p>One line. It runs quietly in the background and starts at login.</p></div>
+        <div class="step"><span class="line"><span class="g">✓</span> code 482 913 · approve? y</span><h3>Scan the QR code</h3><p>With the app on your phone. Both screens show the same 6-digit code; type <code>y</code> to approve.</p></div>
+        <div class="step"><span class="line"><span class="g">●</span> connected · direct · encrypted</span><h3>Use it anywhere</h3><p>Phone and computer talk directly. A free public board only passes the encrypted "hello".</p></div>
       </div>
-      <div class="pane" data-os="win">
-        <p>Open <b>PowerShell</b> (no admin needed) and paste:</p>
-        <div class="cmd"><span class="pr">&gt;</span><code>irm https://pocket-terminal.utsavdoye.com/install.ps1 | iex</code><button class="copy" data-copy="irm https://pocket-terminal.utsavdoye.com/install.ps1 | iex" type="button">Copy</button></div>
-        <ul class="notes"><li>Starts at every sign-in, hidden. Works on Windows 10 and 11.</li><li>No Node.js? <code>winget install OpenJS.NodeJS.LTS</code></li></ul>
-      </div>
-      <div class="pane" data-os="linux">
-        <p>Open a terminal and paste:</p>
-        <div class="cmd"><span class="pr">$</span><code>curl -fsSL https://pocket-terminal.utsavdoye.com/install.sh | bash</code><button class="copy" data-copy="curl -fsSL https://pocket-terminal.utsavdoye.com/install.sh | bash" type="button">Copy</button></div>
-        <ul class="notes"><li>Runs as a systemd user service. Laptops get the lid-closed power features too.</li><li>Needs build tools once: <code>sudo apt install -y build-essential python3</code> (the installer tells you if they're missing).</li></ul>
-      </div>
-      <div class="pane" data-os="npm">
-        <p>Same on every system:</p>
-        <div class="cmd"><span class="pr">$</span><code>npx pocket-terminal</code><button class="copy" data-copy="npx pocket-terminal" type="button">Copy</button></div>
-        <ul class="notes"><li>Later: <code>npx pocket-terminal pair</code> (another phone), <code>list</code>, <code>remove 2</code>, <code>logs</code>, <code>uninstall</code>.</li></ul>
-      </div>
-      <p class="after">It finishes by showing a <b>one-time QR code</b>. Keep it open for step 2.</p>
+    </div>
+  </section>
 
-      <h2 class="h2b">Step 2: on your phone</h2>
-      <div class="grid two">
-        <div class="card">
-          <h3>iPhone</h3>
-          <ol class="mini">
+  <section id="install" class="sec">
+    <div class="wrap">
+      <div class="head center">
+        <p class="kicker">Install</p>
+        <h2>Step 1: on your computer.</h2>
+        <p class="sub">Needs <a href="https://nodejs.org">Node.js 18.20+</a>. Run the line again any time to update; your pairing stays.</p>
+      </div>
+      <div class="win install">
+        <div class="win-bar"><div class="lights"><i></i><i></i><i></i></div><div class="win-title">install pocket-terminal</div></div>
+        <div class="tabs" role="tablist">
+          <button role="tab" data-os="mac" class="on" type="button">macOS</button>
+          <button role="tab" data-os="win" type="button">Windows</button>
+          <button role="tab" data-os="linux" type="button">Linux</button>
+          <button role="tab" data-os="npm" type="button">npm · any</button>
+        </div>
+        <div class="pane on" data-os="mac">
+          <p>Open <b>Terminal</b> and paste:</p>
+          <div class="cmd"><span class="pr">$</span><code>curl -fsSL https://pocket-terminal.utsavdoye.com/install.sh | bash</code><button class="copy" data-copy="curl -fsSL https://pocket-terminal.utsavdoye.com/install.sh | bash" type="button">copy</button></div>
+          <ul class="comments"><li>asks for your Mac password once, so it can stay reachable with the lid closed (it can only run 4 exact sleep commands)</li><li>no Node.js? <code>brew install node</code></li></ul>
+        </div>
+        <div class="pane" data-os="win">
+          <p>Open <b>PowerShell</b> (no admin needed) and paste:</p>
+          <div class="cmd"><span class="pr">&gt;</span><code>irm https://pocket-terminal.utsavdoye.com/install.ps1 | iex</code><button class="copy" data-copy="irm https://pocket-terminal.utsavdoye.com/install.ps1 | iex" type="button">copy</button></div>
+          <ul class="comments"><li>starts at every sign-in, hidden · Windows 10 and 11</li><li>no Node.js? <code>winget install OpenJS.NodeJS.LTS</code></li></ul>
+        </div>
+        <div class="pane" data-os="linux">
+          <p>Open a terminal and paste:</p>
+          <div class="cmd"><span class="pr">$</span><code>curl -fsSL https://pocket-terminal.utsavdoye.com/install.sh | bash</code><button class="copy" data-copy="curl -fsSL https://pocket-terminal.utsavdoye.com/install.sh | bash" type="button">copy</button></div>
+          <ul class="comments"><li>runs as a systemd user service · laptops get the lid-closed features too</li><li>needs build tools once: <code>sudo apt install -y build-essential python3</code></li></ul>
+        </div>
+        <div class="pane" data-os="npm">
+          <p>Same on every system:</p>
+          <div class="cmd"><span class="pr">$</span><code>npx pocket-terminal</code><button class="copy" data-copy="npx pocket-terminal" type="button">copy</button></div>
+          <ul class="comments"><li>later: <code>npx pocket-terminal pair</code> · <code>list</code> · <code>remove 2</code> · <code>logs</code> · <code>uninstall</code></li></ul>
+        </div>
+      </div>
+      <p class="after">it ends by showing a <b>one-time QR code</b>. keep it open for step 2.</p>
+
+      <h2 class="h2b">Step 2: on your phone.</h2>
+      <div class="grid2">
+        <div class="box">
+          <h3>iPhone <span class="os">Safari</span></h3>
+          <ol>
             <li>Open <a href="app/"><b>pocket-terminal.utsavdoye.com/app</b></a> in Safari.</li>
             <li>Tap <b>Share</b> → <b>Add to Home Screen</b>.</li>
-            <li>Open <b>Pocket Terminal</b> from your Home Screen, tap <b>Scan QR code</b>.</li>
+            <li>Open <b>Pocket Terminal</b> from the Home Screen, tap <b>Scan QR code</b>.</li>
           </ol>
           <p class="fine">Pair inside the Home Screen app: iPhone keeps it separate from Safari. Notifications need iOS 16.4+.</p>
         </div>
-        <div class="card">
-          <h3>Android</h3>
-          <ol class="mini">
+        <div class="box">
+          <h3>Android <span class="os">Chrome</span></h3>
+          <ol>
             <li>Open <a href="app/"><b>pocket-terminal.utsavdoye.com/app</b></a> in Chrome.</li>
             <li>Tap <b>⋮</b> → <b>Install app</b> (or <b>Add to Home screen</b>).</li>
-            <li>Open it and tap <b>Scan QR code</b>, or just scan the QR with your camera.</li>
+            <li>Open it and tap <b>Scan QR code</b>, or scan with the camera.</li>
           </ol>
           <p class="fine">Notifications work on Android 8 and newer.</p>
         </div>
       </div>
 
-      <h2 class="h2b">Step 3: approve and pick a PIN</h2>
-      <div class="grid three">
-        <div class="card step"><b>1</b><p>Your phone and computer show the <b>same 6-digit code</b>.</p></div>
-        <div class="card step"><b>2</b><p>If they match, type <code>y</code> on the computer.</p></div>
-        <div class="card step"><b>3</b><p>Choose a PIN on the phone. Done: you're connected.</p></div>
+      <h2 class="h2b">Step 3: approve, pick a PIN.</h2>
+      <div class="grid3">
+        <div class="box n"><span class="k">1</span><p>Phone and computer show the <b>same 6-digit code</b>.</p></div>
+        <div class="box n"><span class="k">2</span><p>If they match, type <code>y</code> on the computer.</p></div>
+        <div class="box n"><span class="k">3</span><p>Choose a PIN on the phone. <b>You're connected.</b></p></div>
       </div>
     </div>
   </section>
 
-  <!-- compare -->
   <section id="compare" class="sec">
     <div class="wrap">
-      <p class="kicker">Why not just…</p>
-      <h2>How it compares</h2>
-      <p class="sub">Good tools, built for a different job. Pocket Terminal is built around a laptop that's asleep in your bag.</p>
-      <div class="tablewrap">
-      <table class="compare">
-        <thead><tr><th></th><th class="us">Pocket Terminal</th><th>SSH + Tailscale</th><th>Termius / mobile SSH apps</th><th>ngrok-style tunnels</th></tr></thead>
-        <tbody>
-          <tr><td>Reaches a sleeping laptop (lid closed, battery)</td><td class="us yes">Yes, wakes itself to check in</td><td class="no">No, it must stay awake</td><td class="no">No, it must stay awake</td><td class="no">No</td></tr>
-          <tr><td>Phone buzzes when an AI agent needs you</td><td class="us yes">Yes, one-tap answers</td><td class="no">No</td><td class="no">No</td><td class="no">No</td></tr>
-          <tr><td>Open your localhost on the phone</td><td class="us yes">Yes</td><td class="mid">Yes, by IP address</td><td class="mid">With port forwarding</td><td class="yes">Yes, a public URL</td></tr>
-          <tr><td>Account or server to set up</td><td class="us yes">None</td><td class="mid">Tailscale account + SSH server</td><td class="mid">SSH server + a way in</td><td class="mid">Account</td></tr>
-          <tr><td>Files both ways, view-only sharing</td><td class="us yes">Built in</td><td class="mid">Files via scp</td><td class="mid">Files (SFTP)</td><td class="no">No</td></tr>
-          <tr><td>Price, source</td><td class="us yes">Free, open source</td><td class="mid">Free tier</td><td class="mid">Free tier + paid</td><td class="mid">Free tier + paid</td></tr>
-        </tbody>
-      </table>
+      <div class="head">
+        <p class="kicker">Why not just…</p>
+        <h2>How it compares.</h2>
+        <p class="sub">Good tools, built for a different job. Pocket Terminal is built around a laptop that's asleep in your bag.</p>
       </div>
-      <p class="fine center">Already use SSH or Tailscale? Keep them. Pocket Terminal is for the moments they can't cover.</p>
+      <div class="tablewrap">
+        <table class="compare">
+          <thead><tr><th scope="col"><span class="skip">Feature</span></th><th scope="col" class="us">Pocket Terminal</th><th scope="col">SSH + Tailscale</th><th scope="col">Mobile SSH apps</th><th scope="col">ngrok-style tunnels</th></tr></thead>
+          <tbody>
+            <tr><td>Reaches a sleeping laptop (lid closed, battery)</td><td class="us yes">Yes, wakes itself to check in</td><td class="no">No, must stay awake</td><td class="no">No, must stay awake</td><td class="no">No</td></tr>
+            <tr><td>Phone buzzes when an AI agent needs you</td><td class="us yes">Yes, one-tap answers</td><td class="no">No</td><td class="no">No</td><td class="no">No</td></tr>
+            <tr><td>Open your localhost on the phone</td><td class="us yes">Yes, private</td><td class="mid">Yes, by IP address</td><td class="mid">With port forwarding</td><td class="yes">Yes, a public URL</td></tr>
+            <tr><td>Account or server to set up</td><td class="us yes">None</td><td class="mid">Account + SSH server</td><td class="mid">SSH server + a way in</td><td class="mid">Account</td></tr>
+            <tr><td>Files both ways, view-only sharing</td><td class="us yes">Built in</td><td class="mid">Files via scp</td><td class="mid">Files (SFTP)</td><td class="no">No</td></tr>
+            <tr><td>Price, source</td><td class="us yes">Free, open source</td><td class="mid">Free tier</td><td class="mid">Free tier + paid</td><td class="mid">Free tier + paid</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="fine center">Already use SSH or Tailscale? Keep them. Pocket Terminal covers the moments they can't.</p>
     </div>
   </section>
 
-  <!-- security -->
-  <section id="security" class="sec tint">
+  <section id="security" class="sec">
     <div class="wrap secgrid">
       <div>
         <p class="kicker">Security</p>
         <h2>It's your shell. It's built like it.</h2>
         <p class="sub">Security never depends on the code being secret: it's all <a href="https://github.com/utsavdoye/pocket-terminal">open source</a>. Read the full <a href="https://github.com/utsavdoye/pocket-terminal/blob/main/SECURITY.md">threat model</a>.</p>
+        <div class="win" aria-hidden="true">
+          <div class="win-bar"><div class="lights"><i></i><i></i><i></i></div><div class="win-title">npx pocket-terminal list</div></div>
+<pre class="term"><span class="dim">#  phone            paired      last seen</span>
+1  iPhone 15        12 Oct      <span class="add">now</span>
+2  Pixel 8          02 Nov      3 h ago
+
+<span class="p">utsav@macbook</span> <span class="d">~</span> % npx pocket-terminal remove 2
+<span class="add">✓</span> Pixel 8 locked out. Its key no longer works.</pre>
+        </div>
       </div>
       <ul class="checks">
-        <li><b>End-to-end encrypted.</b> AES-256-GCM notes and a DTLS direct link. Nothing in the middle can read a character.</li>
-        <li><b>Only phones you approve.</b> Each QR code works once, for 10 minutes, and only after you type <code>y</code> next to a matching code.</li>
-        <li><b>Lock any phone out</b> from the computer in seconds. Each phone has its own key.</li>
-        <li><b>PIN-locked on the phone.</b> 10 wrong tries wipe the key.</li>
-        <li><b>Nothing logged.</b> Commands, output and file names never touch the log. Notifications are encrypted for your phone.</li>
-        <li><b>Share links are view-only,</b> enforced on the computer, and they expire.</li>
+        <li><span><b>End-to-end encrypted.</b> AES-256-GCM notes and a DTLS direct link. Nothing in the middle can read a character.</span></li>
+        <li><span><b>Only phones you approve.</b> Each QR code works once, for 10 minutes, and only after you type <code>y</code> next to a matching code.</span></li>
+        <li><span><b>Lock any phone out</b> from the computer in seconds. Each phone has its own key.</span></li>
+        <li><span><b>PIN-locked on the phone.</b> 10 wrong tries wipe the key.</span></li>
+        <li><span><b>Nothing logged.</b> Commands, output and file names never touch the log. Notifications are encrypted for your phone.</span></li>
+        <li><span><b>Share links are view-only,</b> enforced on the computer, and they expire.</span></li>
       </ul>
     </div>
   </section>
 
-  <!-- faq -->
   <section id="faq" class="sec">
     <div class="wrap narrow">
-      <p class="kicker">FAQ</p>
-      <h2>Questions</h2>
+      <div class="head center">
+        <p class="kicker">FAQ</p>
+        <h2>Questions, answered.</h2>
+      </div>
       <details><summary>Is it really free? Is there a server?</summary><p>Free and open source (MIT). There's no server you run or pay for, and none that can read your data. A free public message board passes a few encrypted "hello" notes so the two devices can find each other; your live terminal goes directly between them.</p></details>
       <details><summary>How is it different from SSH or Tailscale?</summary><p>Those assume your computer is awake and reachable. Pocket Terminal is built around a laptop that's asleep in your bag: it wakes itself briefly to check for work, runs it, replies, and sleeps again. Nothing to set up on your router, no account.</p></details>
       <details><summary>Can it run Claude Code with my laptop closed?</summary><p>Yes. While a program is still working, the computer stays awake (on battery too, above 20%, for up to 2 hours after you last used it). When the agent stops to ask, your phone buzzes with the question. Tap it and answer.</p></details>
       <details><summary>What does it cost in battery?</summary><p>Each check-in is a few seconds awake. Overnight that's typically a few percent. It never stays awake below 20% and stops waking below 10%.</p></details>
       <details><summary>I lost my phone. What now?</summary><p>On your computer run <code>npx pocket-terminal list</code>, then <code>npx pocket-terminal remove &lt;number&gt;</code>. That phone is locked out within seconds, and its PIN-locked key is useless.</p></details>
-      <details><summary>Something isn't working</summary><p>The <a href="help.html">help page</a> covers installing, pairing, connecting, notifications and uninstalling. Still stuck? Ask in <a href="https://github.com/utsavdoye/pocket-terminal/discussions">Discussions</a>.</p></details>
       <details><summary>Which systems does it work on?</summary><p>Computer: macOS, Windows 10/11, and Linux (laptops get the lid-closed features; servers simply stay awake). Phone: iPhone and Android, as an app you add to your home screen.</p></details>
+      <details><summary>Something isn't working</summary><p>The <a href="help.html">help page</a> covers installing, pairing, connecting, notifications and uninstalling. Still stuck? Ask in <a href="https://github.com/utsavdoye/pocket-terminal/discussions">Discussions</a>.</p></details>
     </div>
   </section>
 
   <section class="sec final">
     <div class="wrap center">
+      <p class="kicker">Get started</p>
       <h2>Leave the laptop. Keep the terminal.</h2>
-      <div class="cta center"><a class="btn" href="#install">Install in one line</a><a class="btn ghost" href="app/#demo">Try the demo →</a></div>
+      <p class="sub">One line on your computer, one scan on your phone.</p>
+      <div class="cta"><a class="btn btn-amber" href="#install">Install in one line <span class="arr">→</span></a><a class="btn btn-ghost" href="app/#demo">Try the live demo</a></div>
+      <div class="install-chip"><span class="pr">$</span><code>npx pocket-terminal</code><button class="copy" data-copy="npx pocket-terminal" type="button" aria-label="Copy install command">copy</button></div>
     </div>
   </section>
 </main>
 
 <footer class="foot">
-  <div class="wrap footin">
-    <div class="brand"><img src="favicon.svg" alt="" width="22" height="22"><span>Pocket Terminal</span></div>
-    <nav><a href="help.html">Help</a><a href="privacy.html">Privacy</a><a href="https://github.com/utsavdoye/pocket-terminal/discussions">Feedback</a><a href="https://github.com/utsavdoye/pocket-terminal">GitHub</a><a href="https://www.npmjs.com/package/pocket-terminal">npm</a><a href="https://github.com/utsavdoye/pocket-terminal/blob/main/SECURITY.md">Security</a><a href="https://github.com/utsavdoye/pocket-terminal/releases">Changelog</a><a href="app/">Open the app</a></nav>
-    <p>MIT licensed · Built by <a href="https://utsavdoye.com">Utsav Doye</a></p>
+  <div class="wrap">
+    <div class="footgrid">
+      <div class="about">
+        <a class="brand" href="#top"><img src="favicon.svg" alt="" width="24" height="24"><span>Pocket Terminal</span></a>
+        <p>Your computer's terminal on your phone, from anywhere, even with the lid closed. Built by <a href="https://utsavdoye.com">Utsav Doye</a>.</p>
+      </div>
+      <div><h4>Product</h4><ul><li><a href="app/">Open the app</a></li><li><a href="app/#demo">Live demo</a></li><li><a href="#install">Install</a></li><li><a href="https://github.com/utsavdoye/pocket-terminal/releases">Changelog</a></li></ul></div>
+      <div><h4>Help</h4><ul><li><a href="help.html">Help &amp; setup</a></li><li><a href="https://github.com/utsavdoye/pocket-terminal/discussions">Feedback</a></li><li><a href="https://github.com/utsavdoye/pocket-terminal/issues">Report a bug</a></li><li><a href="privacy.html">Privacy</a></li></ul></div>
+      <div><h4>Source</h4><ul><li><a href="https://github.com/utsavdoye/pocket-terminal">GitHub</a></li><li><a href="https://www.npmjs.com/package/pocket-terminal">npm</a></li><li><a href="https://github.com/utsavdoye/pocket-terminal/blob/main/SECURITY.md">Security</a></li><li><a href="https://github.com/utsavdoye/pocket-terminal/blob/main/LICENSE">MIT license</a></li></ul></div>
+    </div>
+    <div class="legal"><span>© 2026 Utsav Doye · MIT</span><span class="status">v7.0.1 · open source</span></div>
   </div>
 </footer>
 <script src="site.js"></script>

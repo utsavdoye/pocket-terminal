@@ -7,7 +7,8 @@
 <title>Page not found · Pocket Terminal</title>
 <meta name="description" content="This page does not exist.">
 <link rel="canonical" href="https://pocket-terminal.utsavdoye.com/">
-<meta name="theme-color" content="#F4F5F7">
+<meta name="theme-color" content="#08080A">
+<meta name="color-scheme" content="dark">
 <meta property="og:title" content="Page not found · Pocket Terminal">
 <meta property="og:description" content="This page does not exist.">
 <meta property="og:image" content="https://pocket-terminal.utsavdoye.com/og.png">
@@ -15,32 +16,47 @@
 <link rel="icon" href="/favicon.ico" sizes="any">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<link rel="preload" href="/fonts/Geist-Variable.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="/site.css">
 <script data-goatcounter="https://pocket-terminal.goatcounter.com/count" async src="https://gc.zgo.at/count.js"></script>
 </head>
 <body>
 <header class="nav">
   <div class="wrap navin">
-    <a class="brand" href="/"><img src="/favicon.svg" alt="" width="28" height="28"><span>Pocket Terminal</span></a>
+    <a class="brand" href="/" aria-label="Pocket Terminal home"><img src="/favicon.svg" alt="" width="28" height="28"><span>Pocket Terminal</span><span class="v">v7</span></a>
     <nav class="links" aria-label="Sections">
-      <a href="/#features">Features</a><a href="/#install">Install</a><a href="/help.html">Help</a><a href="/privacy.html">Privacy</a>
-      <a href="https://github.com/utsavdoye/pocket-terminal" class="gh">GitHub <span class="stars" data-stars></span></a>
+      <a href="/#features">Features</a><a href="/#install">Install</a><a href="/#faq">FAQ</a><a href="/help.html">Help</a><a href="/privacy.html">Privacy</a>
     </nav>
-    <a class="btn small" href="/app/">Open the app</a>
+    <div class="navend">
+      <a class="btn btn-ghost btn-sm gh-btn" href="https://github.com/utsavdoye/pocket-terminal" aria-label="Pocket Terminal on GitHub"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8Z"/></svg>Star<span class="count" data-stars></span></a>
+      <a class="btn btn-primary btn-sm" href="/app/">Open the app <span class="arr">→</span></a>
+    </div>
   </div>
 </header>
-<main class="nf"><div class="wrap">
-  <div class="code">404</div>
+<main class="nf"><div class="bg-grid"></div><div class="wrap">
+  <div class="win" aria-hidden="true">
+    <div class="win-bar"><div class="lights"><i></i><i></i><i></i></div><div class="win-title">zsh · 404</div></div>
+<pre class="term"><span class="p">you@phone</span> <span class="d">~</span> % cd this-page
+<span class="del">cd: no such file or directory: this-page</span>
+<span class="p">you@phone</span> <span class="d">~</span> % cd ~ <span class="cursor"></span></pre>
+  </div>
   <h1>That page isn't here.</h1>
   <p class="sub">Maybe the link is old. Everything lives on the home page.</p>
-  <div class="cta center"><a class="btn" href="/">Go home</a><a class="btn ghost" href="/app/">Open the app</a><a class="btn ghost" href="/help.html">Help</a></div>
+  <div class="cta center"><a class="btn btn-amber" href="/">Go home <span class="arr">→</span></a><a class="btn btn-ghost" href="/app/">Open the app</a><a class="btn btn-ghost" href="/help.html">Help</a></div>
 </div></main>
 
 <footer class="foot">
-  <div class="wrap footin">
-    <div class="brand"><img src="/favicon.svg" alt="" width="22" height="22"><span>Pocket Terminal</span></div>
-    <nav><a href="/help.html">Help</a><a href="/privacy.html">Privacy</a><a href="https://github.com/utsavdoye/pocket-terminal/discussions">Feedback</a><a href="https://github.com/utsavdoye/pocket-terminal">GitHub</a><a href="https://www.npmjs.com/package/pocket-terminal">npm</a><a href="https://github.com/utsavdoye/pocket-terminal/releases">Changelog</a><a href="/app/">Open the app</a></nav>
-    <p>MIT licensed · Built by <a href="https://utsavdoye.com">Utsav Doye</a></p>
+  <div class="wrap">
+    <div class="footgrid">
+      <div class="about">
+        <a class="brand" href="/"><img src="/favicon.svg" alt="" width="24" height="24"><span>Pocket Terminal</span></a>
+        <p>Your computer's terminal on your phone, from anywhere, even with the lid closed. Built by <a href="https://utsavdoye.com">Utsav Doye</a>.</p>
+      </div>
+      <div><h4>Product</h4><ul><li><a href="/app/">Open the app</a></li><li><a href="/app/#demo">Live demo</a></li><li><a href="/#install">Install</a></li><li><a href="https://github.com/utsavdoye/pocket-terminal/releases">Changelog</a></li></ul></div>
+      <div><h4>Help</h4><ul><li><a href="/help.html">Help &amp; setup</a></li><li><a href="https://github.com/utsavdoye/pocket-terminal/discussions">Feedback</a></li><li><a href="https://github.com/utsavdoye/pocket-terminal/issues">Report a bug</a></li><li><a href="/privacy.html">Privacy</a></li></ul></div>
+      <div><h4>Source</h4><ul><li><a href="https://github.com/utsavdoye/pocket-terminal">GitHub</a></li><li><a href="https://www.npmjs.com/package/pocket-terminal">npm</a></li><li><a href="https://github.com/utsavdoye/pocket-terminal/blob/main/SECURITY.md">Security</a></li><li><a href="https://github.com/utsavdoye/pocket-terminal/blob/main/LICENSE">MIT license</a></li></ul></div>
+    </div>
+    <div class="legal"><span>© 2026 Utsav Doye · MIT</span><span class="status">v7.0.1 · open source</span></div>
   </div>
 </footer>
 <script src="/site.js"></script>
