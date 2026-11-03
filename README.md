@@ -1,24 +1,36 @@
 <p align="center">
-  <img src="docs/readme/hero.png" alt="Pocket Terminal: your computer's terminal on your phone, even with the lid closed" width="100%">
+  <img src="docs/app/icon.svg" alt="" width="88" height="88">
+</p>
+<h1 align="center">Pocket Terminal</h1>
+<p align="center"><b>Your computer's terminal on your phone. From anywhere, even with the lid closed.</b><br>
+Answer Claude Code with one tap, get pinged when a build finishes, open <code>localhost:3000</code> on your phone.<br>
+Direct and end-to-end encrypted. No server, no account.</p>
+
+<p align="center">
+  <a href="https://github.com/utsavdoye/pocket-terminal/stargazers"><img alt="GitHub stars" src="https://img.shields.io/github/stars/utsavdoye/pocket-terminal?style=flat-square&color=F5B843&labelColor=171B2D"></a>
+  <a href="https://www.npmjs.com/package/pocket-terminal"><img alt="npm version" src="https://img.shields.io/npm/v/pocket-terminal?style=flat-square&color=F5B843&labelColor=171B2D"></a>
+  <a href="https://www.npmjs.com/package/pocket-terminal"><img alt="npm downloads" src="https://img.shields.io/npm/dm/pocket-terminal?style=flat-square&color=F5B843&labelColor=171B2D"></a>
+  <a href="https://github.com/utsavdoye/pocket-terminal/actions/workflows/test.yml"><img alt="Tests" src="https://img.shields.io/github/actions/workflow/status/utsavdoye/pocket-terminal/test.yml?branch=main&style=flat-square&label=tests&labelColor=171B2D"></a>
+  <a href="LICENSE"><img alt="MIT license" src="https://img.shields.io/badge/license-MIT-F5B843?style=flat-square&labelColor=171B2D"></a>
+  <img alt="macOS, Windows, Linux" src="https://img.shields.io/badge/runs%20on-macOS%20%7C%20Windows%20%7C%20Linux-3DD68C?style=flat-square&labelColor=171B2D">
 </p>
 
 <p align="center">
-  <a href="https://www.npmjs.com/package/pocket-terminal"><img alt="npm" src="https://img.shields.io/npm/v/pocket-terminal?style=flat-square&color=F4B740&labelColor=171B2D"></a>
-  <a href="LICENSE"><img alt="MIT license" src="https://img.shields.io/badge/license-MIT-F4B740?style=flat-square&labelColor=171B2D"></a>
-  <img alt="macOS and Windows" src="https://img.shields.io/badge/runs%20on-macOS%20%7C%20Windows-F4B740?style=flat-square&labelColor=171B2D">
-  <img alt="End-to-end encrypted" src="https://img.shields.io/badge/end--to--end-encrypted-4FD1A1?style=flat-square&labelColor=171B2D">
-  <img alt="No server needed" src="https://img.shields.io/badge/server-not%20needed-4FD1A1?style=flat-square&labelColor=171B2D">
+  <img src="docs/media/demo.gif" alt="Demo: an AI agent asks 'Do you want to make this edit?', one tap on the phone answers it, then the computer's localhost:3000 opens on the phone" width="300">
 </p>
 
-<p align="center"><b><a href="https://pocket-terminal.utsavdoye.com">pocket-terminal.utsavdoye.com</a></b> · <b><a href="https://pocket-terminal.utsavdoye.com/app/#demo">▶ Try the live demo on your phone</a></b>, no install needed.</p>
+```bash
+npx pocket-terminal
+```
 
 <p align="center">
+  <b><a href="https://pocket-terminal.utsavdoye.com">Website</a></b> ·
+  <b><a href="https://pocket-terminal.utsavdoye.com/app/#demo">▶ Live demo</a></b> ·
   <a href="#-quick-start">Quick start</a> ·
   <a href="#-how-it-works">How it works</a> ·
-  <a href="#-lid-closed-battery-safe">Lid closed</a> ·
-  <a href="#-forgot-the-command-just-ask">Ask</a> ·
   <a href="#-security">Security</a> ·
-  <a href="#-faq">FAQ</a>
+  <a href="https://pocket-terminal.utsavdoye.com/help.html">Help</a> ·
+  <a href="https://github.com/utsavdoye/pocket-terminal/discussions">Discussions</a>
 </p>
 
 ---
@@ -32,8 +44,9 @@ for 20 minutes and is now waiting for you to say **yes**.
 you to run or pay for**. When the computer is asleep, it wakes itself every minute or two to check
 for your commands, then goes back to sleep.
 
+No npm? One line for your system:
+
 ```bash
-npx pocket-terminal                                                                  # any computer with Node.js
 curl -fsSL https://pocket-terminal.utsavdoye.com/install.sh | bash      # macOS, Linux
 irm https://pocket-terminal.utsavdoye.com/install.ps1 | iex             # Windows (PowerShell)
 ```

@@ -1,4 +1,5 @@
-# Renders the README images (hero banner + screen gallery) from the real screenshots.
+# Renders the README screen gallery from the real screenshots.
+# (The banner, share image and icons are made from brand/: see brand/README.md.)
 # Run after make_screenshots.py:   python3 test/make_readme_art.py
 import os, base64
 from playwright.sync_api import sync_playwright
@@ -37,7 +38,7 @@ GALLERY = BASE + f"""
 
 with sync_playwright() as p:
     b = p.chromium.launch()
-    for name, html, w, h in [('hero', HERO, 1280, 640), ('screens', GALLERY, 1640, 800)]:
+    for name, html, w, h in [('screens', GALLERY, 1640, 800)]:
         pg = b.new_page(viewport={'width': w, 'height': h}, device_scale_factor=2)
         pg.set_content(html); pg.wait_for_timeout(400)
         el = pg.locator('body > div').first

@@ -22,4 +22,17 @@
       el.classList.add('reveal'); el.style.transitionDelay = (i % 4) * 60 + 'ms'; io.observe(el);
     });
   }
+
+  // Live proof: GitHub stars and npm installs this month (hidden if either service doesn't answer).
+  var fmt = function (n) { return n >= 1000 ? (n / 1000).toFixed(n >= 10000 ? 0 : 1) + 'k' : String(n); };
+  var get = function (u) { return fetch(u).then(function (r) { if (!r.ok) throw 0; return r.json(); }); };
+  Promise.all([get('https://api.github.com/repos/utsavdoye/pocket-terminal').catch(function () { return null; }),
+    get('https://api.npmjs.org/downloads/point/last-month/pocket-terminal').catch(function () { return null; })]).then(function (r) {
+    var stars = r[0] && r[0].stargazers_count, dl = r[1] && r[1].downloads;
+    // Shown only once the numbers help (a "0 stars" badge does the opposite).
+    if (stars >= 10) document.querySelectorAll('[data-stars]').forEach(function (el) { el.textContent = fmt(stars); });
+    if (dl >= 50) document.querySelectorAll('[data-dl]').forEach(function (el) { el.textContent = fmt(dl); });
+    var p = document.querySelector('[data-proof]');
+    if (p && stars >= 10 && dl >= 50) p.hidden = false;
+  });
 })();

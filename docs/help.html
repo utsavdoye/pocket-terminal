@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://gc.zgo.at; style-src 'self'; font-src 'self'; img-src 'self' data: https://pocket-terminal.goatcounter.com; connect-src 'self' https://api.github.com https://api.npmjs.org https://pocket-terminal.goatcounter.com; base-uri 'none'; form-action 'none'">
+<title>Help · Pocket Terminal</title>
+<meta name="description" content="Fixes for installing, pairing, connecting, notifications, local websites and uninstalling Pocket Terminal.">
+<link rel="canonical" href="https://pocket-terminal.utsavdoye.com/help.html">
+<meta name="theme-color" content="#F4F5F7">
+<meta property="og:title" content="Help · Pocket Terminal">
+<meta property="og:description" content="Fixes for installing, pairing, connecting, notifications, local websites and uninstalling Pocket Terminal.">
+<meta property="og:image" content="https://pocket-terminal.utsavdoye.com/og.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="favicon.ico" sizes="any">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="stylesheet" href="site.css">
+<script data-goatcounter="https://pocket-terminal.goatcounter.com/count" async src="https://gc.zgo.at/count.js"></script>
+</head>
+<body>
+<header class="nav">
+  <div class="wrap navin">
+    <a class="brand" href="./"><img src="favicon.svg" alt="" width="28" height="28"><span>Pocket Terminal</span></a>
+    <nav class="links" aria-label="Sections">
+      <a href="#features">Features</a><a href="#install">Install</a><a href="help.html">Help</a><a href="privacy.html">Privacy</a>
+      <a href="https://github.com/utsavdoye/pocket-terminal" class="gh">GitHub <span class="stars" data-stars></span></a>
+    </nav>
+    <a class="btn small" href="app/">Open the app</a>
+  </div>
+</header>
+<main class="doc"><div class="wrap narrow">
+  <p class="kicker">Help</p>
+  <h1>Fix it in a minute</h1>
+  <p class="lede">The common problems and their fixes. Still stuck? Ask in <a href="https://github.com/utsavdoye/pocket-terminal/discussions">Discussions</a> or <a href="https://github.com/utsavdoye/pocket-terminal/issues/new/choose">open an issue</a>.</p>
+  <ul class="toc">
+    <li><a href="#install">Installing</a></li><li><a href="#pair">Pairing</a></li><li><a href="#connect">Can't connect</a></li><li><a href="#sleep">Lid closed &amp; battery</a></li>
+    <li><a href="#notify">Notifications</a></li><li><a href="#web">Local websites</a></li><li><a href="#files">Files</a></li><li><a href="#phones">Phones &amp; sharing</a></li><li><a href="#update">Update &amp; uninstall</a></li><li><a href="#logs">Logs</a></li>
+  </ul>
+
+  <h2 id="install">Installing</h2>
+  <h3>"command not found: node" or "npx: command not found"</h3>
+  <p>Install Node.js 18.20 or newer, then run the install line again: <a href="https://nodejs.org">nodejs.org</a> (LTS), or <code>brew install node</code> on a Mac, or <code>winget install OpenJS.NodeJS.LTS</code> on Windows.</p>
+  <h3>Linux: "make: not found" or "g++: not found"</h3>
+  <p>The terminal part is compiled once on Linux. Install the build tools and run the install line again:</p>
+  <pre><code>sudo apt install -y build-essential python3      # Ubuntu, Debian
+sudo dnf install -y make gcc-c++ python3          # Fedora
+sudo pacman -S --needed base-devel python         # Arch</code></pre>
+  <h3>Mac: it asks for my password</h3>
+  <p>Once, so it can keep the Mac reachable with the lid closed and set wake-up alarms. It can only run four exact <code>pmset</code> sleep commands, nothing else.</p>
+  <h3>Windows: PowerShell says scripts are disabled</h3>
+  <p>Use the one line exactly as shown on the <a href="./#install">install section</a> (<code>irm … | iex</code>), or use <code>npx pocket-terminal</code>. Neither needs admin rights.</p>
+
+  <h2 id="pair">Pairing</h2>
+  <h3>iPhone: I paired, but the Home Screen app asks to pair again</h3>
+  <p>iPhone keeps Home Screen apps separate from Safari. Pair <strong>inside</strong> the Home Screen app: open it, tap <b>Scan QR code</b>.</p>
+  <h3>The QR code doesn't work</h3>
+  <p>Each code works <strong>once</strong>, for <strong>10 minutes</strong>. Make a new one with <code>npx pocket-terminal pair</code>. No camera? Tap <b>Paste pairing link</b> in the app and paste the link the computer prints.</p>
+  <h3>The 6-digit codes don't match</h3>
+  <p>Type <code>n</code> on the computer. Someone else may have scanned your QR. Make a new code somewhere private.</p>
+
+  <h2 id="connect">Can't connect</h2>
+  <h3>It says "Waiting for …"</h3>
+  <ul>
+    <li>Check the computer is on and online. Asleep is fine; it wakes every minute or two and connects by itself.</li>
+    <li>Check the program is running: <code>npx pocket-terminal logs</code> should show recent lines.</li>
+    <li>Restart it: Mac <code>launchctl kickstart -k gui/$(id -u)/com.pocketterminal.agent</code> · Linux <code>systemctl --user restart pocket-terminal</code> · Windows: run the install line again.</li>
+    <li>Removed this phone on the computer? In the app, open ⋯ → Settings → Unpair, and pair again.</li>
+  </ul>
+  <h3>"This network blocks the direct link"</h3>
+  <p>Some college and office Wi-Fi blocks direct connections. Commands still work through the encrypted backup route, a few seconds slower. The live terminal comes back on another network (mobile data usually works).</p>
+
+  <h2 id="sleep">Lid closed &amp; battery</h2>
+  <ul>
+    <li><b>On charger</b> it stays awake and answers instantly, lid closed or not.</li>
+    <li><b>On battery</b> it sleeps and wakes every 1–2 minutes to check for you. Set the interval in the app: ⋯ → Power and battery.</li>
+    <li>Below <b>20%</b> it stops staying awake; below <b>10%</b> it stops waking up, so your battery never dies.</li>
+    <li>Windows can't tell when the lid is closed, so it sleeps after 10 minutes without keyboard or mouse use. Some "Modern Standby" laptops ignore wake-up alarms on battery: keep them plugged in, or use Instant mode.</li>
+  </ul>
+
+  <h2 id="notify">Notifications</h2>
+  <h3>iPhone: "Turn on" does nothing, or nothing arrives</h3>
+  <ul>
+    <li>Needs <b>iOS 16.4 or newer</b> and the app opened from the <b>Home Screen</b> (not Safari).</li>
+    <li>Allow them: iPhone Settings → Notifications → Pocket Terminal.</li>
+    <li>In the app: ⋯ → Settings → Phone notifications → <b>Test</b>.</li>
+  </ul>
+  <h3>When do I get one?</h3>
+  <p>When a program finishes after running a while, or stops to ask you something (an AI agent's "Do you want to proceed?", a <code>[y/N]</code> question), and you're not looking at that terminal. Tap it to open that exact terminal.</p>
+
+  <h2 id="web">Local websites</h2>
+  <ul>
+    <li>Start your dev server first (<code>npm run dev</code>…), then ⋯ → Local websites. Not listed? Type the port.</li>
+    <li>Only your computer's own <code>localhost</code> is reachable.</li>
+    <li>Live reload (WebSockets) doesn't work yet: tap reload to see changes. Links to other ports don't work either.</li>
+  </ul>
+
+  <h2 id="files">Files</h2>
+  <p>⋯ → Files: tap a file to download it to your phone, or <b>Upload here</b> to save a file into the folder you're in. Up to 250 MB each. Needs the live connection (not the backup route).</p>
+
+  <h2 id="phones">Phones &amp; sharing</h2>
+  <pre><code>npx pocket-terminal list          # phones that can connect
+npx pocket-terminal remove 2      # lock phone number 2 out (or a name, or "all")
+npx pocket-terminal pair          # pair another phone</code></pre>
+  <p>Share a live view: ⋯ → Terminals → <b>Share live view</b>, pick how long (30 min to 1 day), send the link. They can watch, not type. <b>Stop sharing</b> ends it at once.</p>
+
+  <h2 id="update">Update &amp; uninstall</h2>
+  <pre><code>npx pocket-terminal@latest        # update (or run your install line again)
+npx pocket-terminal uninstall     # remove it; add --purge to delete the pairing key too</code></pre>
+  <p>Then in the app: ⋯ → Settings → <b>Reload app</b> to get the newest phone app.</p>
+
+  <h2 id="logs">Logs</h2>
+  <p><code>npx pocket-terminal logs</code>, or open <code>~/.pocket-terminal/agent.log</code> (Windows: <code>%USERPROFILE%\.pocket-terminal\agent.log</code>). It never contains your commands, their output, or file names, so it's safe to paste into an issue.</p>
+</div></main>
+
+<footer class="foot">
+  <div class="wrap footin">
+    <div class="brand"><img src="favicon.svg" alt="" width="22" height="22"><span>Pocket Terminal</span></div>
+    <nav><a href="help.html">Help</a><a href="privacy.html">Privacy</a><a href="https://github.com/utsavdoye/pocket-terminal/discussions">Feedback</a><a href="https://github.com/utsavdoye/pocket-terminal">GitHub</a><a href="https://www.npmjs.com/package/pocket-terminal">npm</a><a href="https://github.com/utsavdoye/pocket-terminal/releases">Changelog</a><a href="app/">Open the app</a></nav>
+    <p>MIT licensed · Built by <a href="https://utsavdoye.com">Utsav Doye</a></p>
+  </div>
+</footer>
+<script src="site.js"></script>
+</body>
+</html>
