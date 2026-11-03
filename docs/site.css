@@ -93,8 +93,10 @@ h1 .accent { background: linear-gradient(90deg, #FFD27A, var(--amber) 45%, var(-
 .stage { position: relative; margin: 72px auto 0; width: min(1100px, 100% - 40px); }
 .stage::before { content: ''; position: absolute; left: 6%; right: 6%; top: -60px; height: 460px; z-index: -1; pointer-events: none;
   background: radial-gradient(50% 55% at 50% 65%, rgba(255, 138, 61, .32), rgba(245, 184, 67, .1) 50%, transparent 75%); filter: blur(12px); }
-.stage::after { content: ''; position: absolute; left: 15%; right: 15%; top: -1px; height: 1px; background: linear-gradient(90deg, transparent, rgba(255, 205, 120, .9), transparent); }
-.stage-grid { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 28px; align-items: center; }
+.stage::after { content: ''; position: absolute; left: 15%; right: 15%; top: -36px; height: 1px; background: linear-gradient(90deg, transparent, rgba(255, 205, 120, .9), transparent); }
+.stage-grid { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 28px; align-items: stretch; }
+.stage-grid > .win { display: flex; flex-direction: column; border-radius: 22px; }
+.stage-grid > .win .term { flex: 1; height: auto; min-height: 400px; font-size: 14px; padding: 22px 24px; }
 
 .win { background: rgba(13, 13, 16, .94); border-radius: 14px; box-shadow: 0 0 0 1px var(--line-2) inset, 0 40px 80px rgba(0,0,0,.6); overflow: hidden; text-align: left; }
 .win-bar { display: flex; align-items: center; gap: 12px; height: 40px; padding: 0 14px; background: linear-gradient(rgba(255,255,255,.05), rgba(255,255,255,.02)); border-bottom: 1px solid var(--line); }
@@ -313,6 +315,7 @@ details p { margin: 0 0 22px; color: var(--muted); max-width: 46em; }
 @media (max-width: 1000px) {
   .links { display: none; }
   .stage-grid { grid-template-columns: 1fr; }
+  .stage-grid > .win .term { min-height: 0; height: 360px; flex: none; }
   .phone { margin: 0 auto; }
   .bento { grid-template-columns: repeat(2, 1fr); }
   .card, .card.wide { grid-column: span 1; }
@@ -330,7 +333,7 @@ details p { margin: 0 0 22px; color: var(--muted); max-width: 46em; }
   .lede { font-size: 17px; }
   .stage { margin-top: 48px; width: calc(100% - 24px); }
   .win-status { display: none; }
-  .term { height: 340px; font-size: 11.5px; padding: 14px; }
+  .term, .stage-grid > .win .term { height: 340px; font-size: 11.5px; padding: 14px; }
   .phone { width: 280px; border-radius: 46px; padding: 9px; } .phone .screen { border-radius: 37px; } .notif { left: 15px; right: 15px; top: 15px; padding: 9px 11px; gap: 9px; border-radius: 15px; } .notif img { width: 28px; height: 28px; border-radius: 7px; } .notif b { font-size: 12px; } .notif span { font-size: 11.5px; }
   .stats b { font-size: 22px; } .stats div { padding: 20px 16px; }
   .bento, .shots, .steps, .grid2, .grid3 { grid-template-columns: 1fr; }
