@@ -76,7 +76,7 @@ try:
     ph.nav(pg, 'ask'); pg.fill('#askIn','my react app says port 3000 is already in use'); pg.click('#askGo')
     check(17, 'plain-English AI answer', wait(lambda: pg.input_value('#askAi .sug .cmdedit')=='lsof -ti :3000 | xargs kill', 10))
     pg.evaluate("document.activeElement.blur(); document.getElementById('status').textContent='Awake · direct, encrypted'; document.getElementById('askHint').textContent='Commands for macOS. Nothing runs until you tap Run.'"); time.sleep(.4)
-    pg.screenshot(path=S+'/ask.png'); __import__('shutil').copy(S+'/ask.png', R+'/docs/screenshots/ask.png')
+    pg.screenshot(path=S+'/ask.png')
     b.close()
 finally:
   agent.terminate(); svc.terminate()

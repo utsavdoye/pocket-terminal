@@ -77,7 +77,7 @@ phone at your own copy.
 
 ## Not covered
 
-- **Someone using your unlocked phone.** Lock it (☰ → Settings → Lock now) or remove it from the computer.
+- **Someone using your unlocked phone.** Lock it (⋯ → Settings → Lock now) or remove it from the computer.
 - **Typing `y` without comparing the code.** The 6-digit check only helps if you look.
 - **Short PINs against someone who copies your phone's storage.** 6 digits can be guessed offline
   with enough computing power. Use 8 or more if that matters to you.

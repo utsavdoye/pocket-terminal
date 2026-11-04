@@ -39,7 +39,7 @@
   <p class="lede">The common problems and their fixes. Still stuck? Ask in <a href="https://github.com/utsavdoye/pocket-terminal/discussions">Discussions</a> or <a href="https://github.com/utsavdoye/pocket-terminal/issues/new/choose">open an issue</a>.</p>
   <ul class="toc">
     <li><a href="#install">Installing</a></li><li><a href="#pair">Pairing</a></li><li><a href="#connect">Can't connect</a></li><li><a href="#sleep">Lid closed &amp; battery</a></li>
-    <li><a href="#notify">Notifications</a></li><li><a href="#web">Local websites</a></li><li><a href="#files">Files</a></li><li><a href="#phones">Phones &amp; sharing</a></li><li><a href="#update">Update &amp; uninstall</a></li><li><a href="#logs">Logs</a></li>
+    <li><a href="#agents">AI agents</a></li><li><a href="#notify">Notifications</a></li><li><a href="#web">Local websites</a></li><li><a href="#files">Files</a></li><li><a href="#phones">Phones &amp; sharing</a></li><li><a href="#update">Update &amp; uninstall</a></li><li><a href="#logs">Logs</a></li>
   </ul>
 
   <h2 id="install">Installing</h2>
@@ -82,6 +82,15 @@ sudo pacman -S --needed base-devel python         # Arch</code></pre>
     <li>Windows can't tell when the lid is closed, so it sleeps after 10 minutes without keyboard or mouse use. Some "Modern Standby" laptops ignore wake-up alarms on battery: keep them plugged in, or use Instant mode.</li>
   </ul>
 
+  <h2 id="agents">AI agents</h2>
+  <ul>
+    <li><b>See them all:</b> ⋯ → Agents &amp; terminals shows every terminal, which one needs you, what's working and what finished. Answer a waiting one right there.</li>
+    <li><b>Answer from the notification:</b> on Android, questions show Yes / No buttons. On iPhone, tap the notification and answer in the app.</li>
+    <li><b>Answer in your own words:</b> tap 🎤 Say on a question and type or speak. On an agent's menu it picks "No, tell it what to do instead" and sends your words.</li>
+    <li><b>Auto-approve safe steps:</b> ⋯ → Settings, off by default. Says Yes only when the question has one of your safe words and none of the risky ones (delete, push, deploy, sudo…).</li>
+    <li><b>See what changed:</b> in a git folder, a finished agent shows files changed. Tap <b>See changes</b> for the diff.</li>
+  </ul>
+
   <h2 id="notify">Notifications</h2>
   <h3>iPhone: "Turn on" does nothing, or nothing arrives</h3>
   <ul>
@@ -106,7 +115,7 @@ sudo pacman -S --needed base-devel python         # Arch</code></pre>
   <pre><code>npx pocket-terminal list          # phones that can connect
 npx pocket-terminal remove 2      # lock phone number 2 out (or a name, or "all")
 npx pocket-terminal pair          # pair another phone</code></pre>
-  <p>Share a live view: ⋯ → Terminals → <b>Share live view</b>, pick how long (30 min to 1 day), send the link. They can watch, not type. <b>Stop sharing</b> ends it at once.</p>
+  <p>Share a live view: ⋯ → Agents &amp; terminals → <b>Share live view</b>, pick how long (30 min to 1 day), send the link. They can watch, not type. Tick <b>Let them answer</b> to also let them press Yes / No on its questions, nothing else. <b>Stop sharing</b> ends it at once.</p>
 
   <h2 id="update">Update &amp; uninstall</h2>
   <pre><code>npx pocket-terminal@latest        # update (or run your install line again)
@@ -122,7 +131,7 @@ npx pocket-terminal uninstall     # remove it; add --purge to delete the pairing
     <div class="footgrid">
       <div class="about">
         <a class="brand" href="./"><img src="favicon.svg" alt="" width="24" height="24"><span>Pocket Terminal</span></a>
-        <p>Your computer's terminal on your phone, from anywhere, even with the lid closed. Built by <a href="https://utsavdoye.com">Utsav Doye</a>.</p>
+        <p>Your computer's terminal on your phone, from anywhere, even with the lid closed. Built by <a href="https://github.com/utsavdoye">Utsav Doye</a>.</p>
       </div>
       <div><h4>Product</h4><ul><li><a href="app/">Open the app</a></li><li><a href="app/#demo">Live demo</a></li><li><a href="./#install">Install</a></li><li><a href="https://github.com/utsavdoye/pocket-terminal/releases">Changelog</a></li></ul></div>
       <div><h4>Help</h4><ul><li><a href="help.html">Help &amp; setup</a></li><li><a href="https://github.com/utsavdoye/pocket-terminal/discussions">Feedback</a></li><li><a href="https://github.com/utsavdoye/pocket-terminal/issues">Report a bug</a></li><li><a href="privacy.html">Privacy</a></li></ul></div>
