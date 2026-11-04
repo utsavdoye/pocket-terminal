@@ -502,7 +502,7 @@ const TERM_THEMES = {
     brightBlack: '#5D6283', brightRed: '#FF9C9C', brightGreen: '#7BE3BD', brightYellow: '#FFD07A', brightBlue: '#9DBBFF', brightMagenta: '#DAB8FF', brightCyan: '#9BE6F2', brightWhite: '#FFFFFF' },
 };
 const termTheme = () => TERM_THEMES[document.documentElement.dataset.theme === 'dark' ? 'dark' : 'light'];
-const KEYS = { cx: '\x18', co: '\x0f', esc: '\x1b', tab: '\t', up: '\x1b[A', down: '\x1b[B', right: '\x1b[C', left: '\x1b[D', home: '\x1b[H', end: '\x1b[F', pgup: '\x1b[5~', pgdn: '\x1b[6~', cc: '\x03', cd: '\x04', cz: '\x1a', cl: '\x0c', cr: '\x12' };
+const KEYS = { cx: '\x18', co: '\x0f', esc: '\x1b', tab: '\t', up: '\x1b[A', down: '\x1b[B', right: '\x1b[C', left: '\x1b[D', home: '\x1b[H', end: '\x1b[F', pgup: '\x1b[5~', pgdn: '\x1b[6~', cc: '\x03', cd: '\x04', cz: '\x1a', cl: '\x0c', cr: '\x12', stab: '\x1b[Z', ca: '\x01', ce: '\x05', cw: '\x17', cu: '\x15', del: '\x1b[3~' };
 const mods = { ctrl: false, alt: false }, modBtn = {};
 function applyMods(d) {
   if (!mods.ctrl && !mods.alt) return d;
@@ -812,6 +812,9 @@ function setupUi() {
       term.focus();
     });
   });
+  // The key row scrolls sideways: fade the edge that has more keys behind it.
+  const kr = $('keys'), kfade = () => { kr.classList.toggle('more-l', kr.scrollLeft > 4); kr.classList.toggle('more-r', kr.scrollLeft + kr.clientWidth < kr.scrollWidth - 4); };
+  kr.addEventListener('scroll', kfade, { passive: true }); addEventListener('resize', kfade); kfade();
   $('pasteSend').onclick = () => { const t = $('pasteText').value; closePaste(); if (t) { term.paste(t); toast('Pasted'); } };
   $('pasteCancel').onclick = closePaste;
   document.querySelectorAll('#tabs [data-tab]').forEach((b) => (b.onclick = () => openSheet(b.dataset.tab)));
