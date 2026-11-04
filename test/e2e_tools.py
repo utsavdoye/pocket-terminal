@@ -8,6 +8,9 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__))); import pairing_h
 from playwright.sync_api import sync_playwright
 S=__import__('tempfile').mkdtemp(); os.makedirs(S+'/home'); os.makedirs(S+'/u'); R=os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 open(S+'/u/hello.txt','w').write('hello from the computer\n')
+# a git project for the "what changed" summary
+os.makedirs(S+'/u/repo'); open(S+'/u/repo/tracked.txt','w').write('one\n')
+for c in (['init','-q'],['add','.'],['-c','user.email=t@t','-c','user.name=t','commit','-qm','first']): subprocess.run(['git','-C',S+'/u/repo']+c,check=True)
 # a local website with a root-absolute script and link
 os.makedirs(S+'/site'); open(S+'/site/index.html','w').write('<!doctype html><html><head><script src="/app.js"></script></head><body><h1 id=h>Home</h1><a id=go href="/page2.html">next</a></body></html>')
 open(S+'/site/app.js','w').write('document.title="site-js-ran";'); open(S+'/site/page2.html','w').write('<html><head><title>page-two</title></head><body>Second page</body></html>')
@@ -51,12 +54,12 @@ try:
 
     # 2. Terminals: start a long program, open a second terminal, switch back.
     typ(pg, 'sleep 600\n'); time.sleep(2.5)
-    t=sessions(pg); check(3, 'Terminals lists this one with sleep running', 'sleep' in t and 'this one' in t)
+    t=sessions(pg); check(3, 'Agents lists this one with sleep running', 'sleep' in t and 'on screen' in t)
     pg.click('#sessNew'); time.sleep(1.5); typ(pg, 'echo in-second-terminal\n')
     check(4, 'new terminal works', wait(lambda: 'in-second-terminal' in pg.evaluate(ROWS), 5))
     t=sessions(pg); check(5, 'both terminals listed', t.count('Shell') + t.count('sleep') >= 2)
     first_sid=pg.evaluate("[...document.querySelectorAll('#sessList [data-sw]')].map(b=>b.dataset.sw)")
-    pg.click('#sessList .sess >> text=sleep'); time.sleep(1.2)
+    pg.click('#sessList .agent:has-text("sleep") [data-sw]'); time.sleep(1.2)
     check(6, 'switching back shows the first terminal', wait(lambda: 'answered-y' in pg.evaluate(ROWS), 5))
     pg.keyboard.press('Control+C'); time.sleep(0.3)
 
@@ -81,6 +84,78 @@ try:
     check(11, 'tapping it opens that terminal', wait(lambda: 'Deploy now' in pg3.evaluate(ROWS), 40))
     pg3.click('#term'); pg3.keyboard.type('y\n'); check(12, 'and you can answer there', wait(lambda: 'deploy-y' in pg3.evaluate(ROWS), 5))
     pg3.close()
+
+    # 4b. Agents dashboard: a terminal in the background asks; answer it from the dashboard, no switching.
+    def ask_in_background(cmd):
+        q=ctx.new_page(); q.goto(APP); wait(lambda: awake(q), 40); ph.nav(q,'sessions'); time.sleep(1); q.click('#sessNew'); time.sleep(1.5)
+        typ(q, cmd); time.sleep(0.5); sid=q.evaluate("sessionStorage.getItem('pt_sid')"); q.close(); return sid
+    ship_sid=ask_in_background('read -p "Ship it? (y/n) " a; echo shipped-$a\n')
+    pg.bring_to_front(); wait(lambda: awake(pg), 20); ph.nav(pg,'sessions')
+    card='#sessList .agent.s-wait:has-text("Ship it")'
+    check('12b', 'dashboard shows the waiting terminal with its question', wait(lambda: pg.is_visible(card), 15))
+    check('12c', 'summary counts who needs you', wait(lambda: 'needs you' in pg.inner_text('#agSum') and pg.inner_text('#agSum').strip().startswith('1'), 5))
+    check('12d', 'it shows the folder', '~' in pg.inner_text(card))
+    pg.click(card+' button.yes')
+    check('12e', 'answering from the dashboard: the card stops waiting', wait(lambda: not pg.is_visible(card), 10))
+    pg.click(f'#sessList [data-sw="{ship_sid}"]'); time.sleep(1.2)
+    check('12f', 'and the answer reached that terminal', wait(lambda: 'shipped-y' in pg.evaluate(ROWS), 8))
+
+    # 4c. Answer buttons on the notification (what the service worker does when you tap "Yes" on a watch).
+    rel_sid=ask_in_background('sleep 16; read -p "Release now? (y/n) " a; echo released-$a\n')
+    got=wait(lambda: [x for x in pushed if x.get('ok') and 'Release now' in json.dumps(x)], 30)
+    ans=got and got[-1]['msg'].get('ans')
+    check('12g', 'the notification carries Yes/No buttons and a one-time answer key', bool(ans) and [a['action'] for a in ans['acts']]==['yes','no'] and len(ans['k'])>=40)
+    SEND="""async ([ans, choice, keyOverride]) => {
+      const fromB64u=(s)=>Uint8Array.from(atob(s.replace(/-/g,'+').replace(/_/g,'/')+'==='.slice((s.length+3)%4)),c=>c.charCodeAt(0));
+      const b64u=(u8)=>btoa(String.fromCharCode(...u8)).replace(/\\+/g,'-').replace(/\\//g,'_').replace(/=+$/,'');
+      const key=await crypto.subtle.importKey('raw', keyOverride?crypto.getRandomValues(new Uint8Array(32)):fromB64u(ans.k),'AES-GCM',false,['encrypt']);
+      const iv=crypto.getRandomValues(new Uint8Array(12));
+      const ct=new Uint8Array(await crypto.subtle.encrypt({name:'AES-GCM',iv},key,new TextEncoder().encode(JSON.stringify({a:choice,ts:Date.now()}))));
+      const blob=new Uint8Array(12+ct.length); blob.set(iv); blob.set(ct,12);
+      const r=await fetch(ans.b.replace(/\\/+$/,'')+'/'+encodeURIComponent(ans.tp),{method:'POST',body:'pta1.'+ans.id+'.'+b64u(blob)}); return r.status; }"""
+    if ans:
+        pg.evaluate(SEND, [ans, 'yes', True]); time.sleep(2)   # a forged answer (wrong key) is ignored
+        pg.evaluate(SEND, [ans, 'yes', False]); time.sleep(2)  # the real one
+        pg.evaluate(SEND, [ans, 'no', False]); time.sleep(1.5) # a replay: works only once
+    log=open(S+'/agent.log').read()
+    check('12h', 'tapping Yes on the notification answers the terminal', 'answered "yes" from a notification' in log)
+    check('12i', 'a forged or replayed answer does nothing', log.count('from a notification')==1)
+    pg.click('#term'); ph.nav(pg,'sessions'); time.sleep(1); pg.click(f'#sessList [data-sw="{rel_sid}"]'); time.sleep(1.2)
+    check('12j', 'the terminal got exactly one "y"', wait(lambda: 'released-y' in pg.evaluate(ROWS), 8) and 'released-n' not in pg.evaluate(ROWS))
+    pw_sid=ask_in_background('sleep 16; read -s -p "Password: " pw; echo\n')
+    gotpw=wait(lambda: [x for x in pushed if x.get('ok') and 'Password' in json.dumps(x)], 30)
+    check('12k', 'password questions never get answer buttons', gotpw and 'ans' not in gotpw[-1]['msg'])
+
+    # 4d. Auto-approve: turn it on with a safe word; a safe question is answered by itself, a risky one still asks.
+    pg.click('#term'); pg.keyboard.press('Control+C'); time.sleep(0.3)
+    ph.nav(pg,'settings'); pg.click('#autoSetup'); wait(lambda: pg.input_value('#autoAllow') != '', 8)
+    pg.fill('#autoAllow', 'npm test'); pg.check('#autoOn'); pg.click('#autoForm button.btn:not(.ghost)')
+    check('12l', 'auto-approve is saved on the computer', wait(lambda: json.load(open(S+'/home/auto.json'))['enabled'], 5))
+    ph.close_menu(pg)
+    typ(pg, 'clear; printf "\\n%.0s" {1..12}\n'); time.sleep(0.5)
+    typ(pg, 'echo "Bash(npm test)"; read -p "Proceed? (y/n) " a; echo auto-$a\n')
+    check('12m', 'a safe step is answered by itself', wait(lambda: 'auto-y' in pg.evaluate(ROWS), 10))
+    typ(pg, 'echo "Bash(npm test && git push)"; read -p "Proceed? (y/n) " a; echo risky-$a\n')
+    check('12n', 'a risky step still asks you', wait(lambda: pg.is_visible('#needs'), 8) and 'risky-y' not in pg.evaluate(ROWS))
+    pg.click('#needsBtns >> text=No'); wait(lambda: 'risky-n' in pg.evaluate(ROWS), 5)
+
+    # 4e. Answer in your own words.
+    typ(pg, 'read -p "Anything to change? (y/n) " a; echo said-$a\n')
+    wait(lambda: pg.is_visible('#needs'), 8); pg.click('#needsBtns >> text=Say')
+    check('12o', 'Say opens the answer box', wait(lambda: pg.is_visible('#sayBox'), 5))
+    pg.fill('#sayIn', 'use the blue button'); pg.click('#saySend')
+    check('12p', 'your words reach the terminal', wait(lambda: 'said-use the blue button' in pg.evaluate(ROWS).replace('\u00a0',' '), 8))
+
+    # 4f. When a program finishes: what changed, and the full change list.
+    chg_sid=ask_in_background('cd ~/repo && python3 -c "import time;time.sleep(22);open(\'tracked.txt\',\'a\').write(\'two\\n\')"\n')
+    gotd=wait(lambda: [x for x in pushed if x.get('ok') and 'finished' in x['msg'].get('title','') and x['msg'].get('sid')==chg_sid], 45)
+    check('12q', 'the "finished" notification says what changed', gotd and '1 file changed (+1 −0)' in gotd[-1]['msg']['body'])
+    ph.nav(pg,'sessions'); time.sleep(1.2)
+    check('12r', 'the dashboard shows it finished with its changes', wait(lambda: '1 file changed' in pg.inner_text('#sessList'), 8))
+    pg.click(f'[data-diff="{chg_sid}"]')
+    check('12s', 'See changes shows the real diff', wait(lambda: '+two' in pg.inner_text('#diffOut') and 'tracked.txt' in pg.inner_text('#diffOut'), 10))
+    ph.close_menu(pg)
+    time.sleep(0.6)
 
     # 5. Files: download and upload.
     pg.bring_to_front(); wait(lambda: awake(pg), 20)
@@ -125,10 +200,21 @@ try:
     check(26, 'Stop sharing ends it for the viewer', wait(lambda: 'live view ended' in vw.evaluate(ROWS).lower(), 10))
     vw2=vctx.new_page(); vw2.goto(link); time.sleep(8)
     check(27, 'the old link no longer connects', 'echo' not in vw2.evaluate(ROWS) and not awake(vw2))
+    # 8. A teammate's link that may answer Yes/No (and nothing else).
+    ph.nav(pg,'sessions'); time.sleep(0.5); pg.check('#shareAnswer'); pg.click('#shareBtn')
+    link2=wait(lambda: pg.input_value('#shareLink') if '#watch=' in pg.input_value('#shareLink') and pg.input_value('#shareLink')!=link else None, 8)
+    ph.close_menu(pg)
+    tw=vctx.new_page(); tw.goto(link2); wait(lambda: 'Live' in tw.inner_text('#status'), 40)
+    typ(pg, 'read -p "Merge it? (y/n) " a; echo team-$a\n')
+    check(30, "the teammate sees the question with Yes / No", wait(lambda: tw.is_visible('#needs') and 'Merge it' in tw.inner_text('#needsLine'), 15))
+    check(31, 'and only Yes / No (no Say, no keys)', tw.inner_text('#needsBtns').split()==['Yes','No'] and tw.is_hidden('#keys'))
+    tw.click('#needsBtns >> text=Yes')
+    check(32, "the teammate's Yes answers it", wait(lambda: 'team-y' in pg.evaluate(ROWS), 8))
+    ph.nav(pg,'sessions'); time.sleep(0.5); pg.click('#shareStop'); ph.close_menu(pg)
     check(28, 'no page errors', not errs); errs and print(errs)
     b.close()
 finally:
     agent.terminate(); svc.terminate(); push.terminate(); site.shutdown()
     log=open(S+'/agent.log').read()
-    check(29, 'agent never logged command text or file names', 'Deploy now' not in log and 'hello.txt' not in log and 'shared-screen' not in log)
+    check(29, 'agent never logged command text or file names', 'Deploy now' not in log and 'hello.txt' not in log and 'shared-screen' not in log and 'Release now' not in log)
 print('ALL OK' if ok else 'FAILED'); sys.exit(0 if ok else 1)

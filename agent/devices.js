@@ -54,7 +54,7 @@ function startDevices({ core, power, log, dir }) {
   const sharesAll = () => readJson(SHARES, []).filter((s) => s.expires > Date.now());
   function startWatch(sh) {
     if (watching.has(sh.id)) return;
-    const t = startDirect({ cfg: { ...cfg, secret: sh.secret, deviceId: sh.deviceId, role: 'viewer', watchKey: sh.key, stateFile: `state-share-${sh.id}.json`, notify: false },
+    const t = startDirect({ cfg: { ...cfg, secret: sh.secret, deviceId: sh.deviceId, role: 'viewer', watchKey: sh.key, canAnswer: !!sh.canAnswer, stateFile: `state-share-${sh.id}.json`, notify: false },
       core, power: null, log: (...a) => log(`[share ${sh.id.slice(0, 4)}]`, ...a), dir });
     const timer = setTimeout(() => stopWatch(sh.id), Math.min(sh.expires - Date.now(), 2 ** 31 - 1));
     watching.set(sh.id, { t, timer });
@@ -68,17 +68,17 @@ function startDevices({ core, power, log, dir }) {
     log(`live view link ${id.slice(0, 4)} ended`);
   }
   const shareX = (deviceId) => ({
-    share: (key, minutes) => {
+    share: (key, minutes, canAnswer = false) => {
       minutes = Math.min(24 * 60, Math.max(5, minutes));
-      const sh = { id: crypto.randomBytes(6).toString('hex'), secret: newSecret(), deviceId, key, expires: Date.now() + minutes * 60e3 };
+      const sh = { id: crypto.randomBytes(6).toString('hex'), secret: newSecret(), deviceId, key, canAnswer: !!canAnswer, expires: Date.now() + minutes * 60e3 };
       writeJson(SHARES, [...sharesAll(), sh]); startWatch(sh);
       const params = new URLSearchParams({ watch: sh.secret, name: cfg.name || os.hostname() });
       if ((cfg.boards || []).join(',') !== 'https://ntfy.sh') params.set('boards', (cfg.boards || []).join(','));
-      log(`live view link made (${minutes} min)`);
+      log(`live view link made (${minutes} min${canAnswer ? ', can answer' : ''})`);
       const app = !cfg.appUrl || /^https:\/\/(utsavdoye(20122005)?\.github\.io\/pocket-terminal|terminal\.utsavdoye\.com\/app)\/?$/i.test(cfg.appUrl) ? DEFAULT_APP : cfg.appUrl; // the official app moved
       return { id: sh.id, link: app.replace(/#.*$/, '') + '#' + params, expires: sh.expires };
     },
-    shares: () => sharesAll().filter((s) => s.deviceId === deviceId).map((s) => ({ id: s.id, expires: s.expires, sid: s.key.split(':').slice(1).join(':') })),
+    shares: () => sharesAll().filter((s) => s.deviceId === deviceId).map((s) => ({ id: s.id, expires: s.expires, canAnswer: !!s.canAnswer, sid: s.key.split(':').slice(1).join(':') })),
     unshare: (id) => { if (sharesAll().some((s) => s.id === id && s.deviceId === deviceId)) stopWatch(id); },
   });
 

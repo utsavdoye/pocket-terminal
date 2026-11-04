@@ -40,7 +40,7 @@ function main() {
     }, sim || {});
   }
 
-  const core = createCore({ log, power });
+  const core = createCore({ log, power, dir: DIR });
   if (mode === 'direct') {
     transport = require('./devices').startDevices({ core, power, log, dir: DIR });
   } else {

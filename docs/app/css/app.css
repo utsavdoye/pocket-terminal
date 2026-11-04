@@ -326,6 +326,35 @@ select.field-in { appearance: none; -webkit-appearance: none; }
 .sess .body small { display: block; color: var(--muted); font-size: 13px; }
 .sess .body code { display: block; color: var(--faint); font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 2px; }
 .sess .x { flex: none; padding: 8px; }
+/* ---------- agents dashboard ---------- */
+.ag-sum { display: flex; gap: 8px; margin: 0 0 12px; }
+.ag-sum:empty { display: none; }
+.ag-sum span { flex: 1; padding: 10px 12px; border-radius: 12px; background: var(--raised); box-shadow: inset 0 0 0 1px var(--line); font-size: 13px; color: var(--muted); }
+.ag-sum span b { display: block; font: 600 22px var(--sans); color: var(--ink, inherit); }
+.ag-sum span.hot { box-shadow: inset 0 0 0 1.5px var(--lamp), 0 0 0 3px var(--lamp-glow); }
+.ag-sum span.hot b { color: var(--accent); }
+.agent { display: flex; flex-direction: column; gap: 8px; }
+.agent.cur { box-shadow: inset 0 0 0 1.5px var(--line-2, var(--line)), var(--shadow-1); }
+.agent.s-wait { box-shadow: inset 0 0 0 1.5px var(--lamp), 0 0 0 4px var(--lamp-glow), var(--shadow-1); }
+.ag-top { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.ag-top .st { width: 10px; height: 10px; border-radius: 50%; background: var(--faint); flex: none; }
+.ag-top .st.s-work, .ag-top .st.s-run { background: var(--mint); box-shadow: 0 0 0 3px color-mix(in srgb, var(--mint) 18%, transparent); }
+.ag-top .st.s-work { animation: pulse 1.6s ease-in-out infinite; }
+.ag-top .st.s-wait { background: var(--lamp); box-shadow: 0 0 0 3px var(--lamp-glow); animation: pulse 1.1s ease-in-out infinite; }
+.ag-top .st.s-done { background: var(--mint); }
+.ag-name { flex: 1; min-width: 0; }
+.ag-name b { display: block; font-size: 15px; font-weight: 600; }
+.ag-name small { display: block; font: 12px var(--mono); color: var(--faint); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ag-tag { flex: none; font-size: 12px; font-weight: 600; padding: 3px 8px; border-radius: 999px; background: var(--raised-2); color: var(--muted); }
+.agent.s-wait .ag-tag { background: var(--lamp); color: var(--lamp-ink); }
+.agent.s-work .ag-tag { color: var(--mint); }
+.ag-q { margin: 0; font: 13px/1.45 var(--mono); color: var(--ink, inherit); overflow-wrap: anywhere; }
+.ag-note { margin: 0; font-size: 13px; color: var(--muted); }
+.agent code { display: block; color: var(--faint); font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ag-btns { margin-top: 0; }
+.ag-acts { display: flex; align-items: center; gap: 8px; }
+.ag-acts .x { margin-left: auto; padding: 6px 8px; }
+.ag-eye { font-size: 12px; color: var(--muted); }
 .sharebox { margin-top: 12px; }
 .sharebox .ex { margin: 4px 0 0; color: var(--muted); font-size: 14px; }
 .sharebox .cmdedit { width: 100%; margin-top: 10px; font-size: 13px; color: var(--accent); background: var(--bg); }
@@ -403,3 +432,16 @@ body.viewer #term { margin-bottom: calc(8px + var(--safe-b)); }
 @keyframes ignite { from { transform: scaleX(0); } to { transform: scaleX(1); } }
 @keyframes bloom { 0% { opacity: 0; } 35% { opacity: 1; height: 60px; } 100% { opacity: 1; height: 36px; } }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } }
+
+/* ---------- answer in your words ---------- */
+.saybox { position: fixed; inset: auto 0 0 0; z-index: 60; padding: 12px 12px calc(12px + env(safe-area-inset-bottom)); background: color-mix(in srgb, var(--bg) 70%, transparent); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); animation: rise-sm .22s var(--spring) both; }
+.saybox form { display: flex; flex-direction: column; gap: 8px; padding: 14px; border-radius: 18px; background: var(--raised); box-shadow: inset 0 0 0 1.5px var(--lamp), 0 10px 40px rgba(0,0,0,.25); }
+.saybox b { font-size: 15px; }
+.saybox small { font: 12px var(--mono); color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.saybox textarea { width: 100%; font: 15px var(--sans); padding: 10px; border-radius: 12px; resize: none; }
+#sayMic.on { background: var(--lamp); color: var(--lamp-ink); }
+/* ---------- changes (git diff) ---------- */
+pre.diff { margin: 0; padding: 12px; border-radius: 12px; background: var(--raised); box-shadow: inset 0 0 0 1px var(--line); font: 12px/1.5 var(--mono); white-space: pre-wrap; overflow-wrap: anywhere; max-height: 70vh; overflow: auto; }
+pre.diff .a { color: var(--mint); } pre.diff .d { color: #E5484D; } pre.diff .h { color: var(--accent); font-weight: 600; } pre.diff .f { color: var(--muted); font-weight: 600; }
+body.viewer.cananswer #needs { display: block !important; }
+.ag-note .plus { color: var(--mint); font-family: var(--mono); } .ag-note .minus { color: #E5484D; font-family: var(--mono); }

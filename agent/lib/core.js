@@ -5,6 +5,7 @@
 //     (an AI coding agent waiting for "yes", a [y/N] prompt, "Press Enter…")
 // Transports (direct P2P, or the optional relay) plug in as "clients" of a terminal session.
 
+const fs = require('fs');
 const os = require('os');
 const path = require('path');
 const { EventEmitter } = require('events');
@@ -44,8 +45,33 @@ const lastLine = (tail) => tail.split('\n').map((l) => l.trim()).filter(Boolean)
 const question = (tail) => { const ls = tail.split('\n').map((l) => l.trim()).filter(Boolean); return [...ls].reverse().find((l) => /\?|\[y\/n\]|\(y\/n\)|password|passphrase|press (enter|return|any key)/i.test(l)) || ls.slice(-1)[0] || ''; };
 const isMenu = (tail) => /(?:^|\n)\s*(?:❯|›|>)?\s*1\.\s+\S[\s\S]*\n\s*2\.\s+\S/.test(tail);
 
-function createCore({ log, power }) {
+// ---------- smart auto-approve ----------
+// Off by default. When on, a question is answered "yes" by itself only if the screen shows one of
+// your allowed words AND none of the risky ones. Anything else still asks you.
+const RISKY = /\b(rm|rmdir|del|delete|remove|drop|truncate|force|--force|-f\b|push|deploy|publish|release|sudo|chmod|chown|kill|reset|revert|overwrite|format|mkfs|dd|curl|wget|install|uninstall|payment|secret|token|password|passphrase|prod|production|migrat)/i;
+const DEFAULT_AUTO = { enabled: false, allow: ['npm test', 'npm run test', 'pytest', 'go test', 'cargo test', 'git status', 'git diff', 'ls', 'cat ', 'Read(', 'Read file', 'Search(', 'Grep'] };
+function autoDecision(cfg, tail, text, menu) {
+  if (!cfg || !cfg.enabled || !Array.isArray(cfg.allow) || !cfg.allow.length) return null;
+  if (/password|passphrase/i.test(text)) return null;
+  const screen = tail.toLowerCase();
+  if (RISKY.test(tail)) return null;
+  const hit = cfg.allow.map((a) => String(a).trim()).filter(Boolean).find((a) => screen.includes(a.toLowerCase()));
+  if (!hit) return null;
+  const c = choicesFor(text, menu).find((x) => x.a === 'yes');
+  return c ? { d: c.d, rule: hit } : null;
+}
+
+function createCore({ log, power, dir }) {
   const events = new EventEmitter();
+  const AUTO = dir ? path.join(dir, 'auto.json') : null;
+  let auto = { ...DEFAULT_AUTO }; try { auto = { ...DEFAULT_AUTO, ...JSON.parse(fs.readFileSync(AUTO, 'utf8')) }; } catch {}
+  const setAuto = (c) => {
+    const allow = Array.isArray(c.allow) ? c.allow.map((x) => String(x).slice(0, 60)).filter((x) => x.trim()).slice(0, 40) : auto.allow;
+    auto = { enabled: !!c.enabled, allow };
+    if (AUTO) try { fs.writeFileSync(AUTO, JSON.stringify(auto, null, 2), { mode: 0o600 }); } catch {}
+    log(`auto-approve ${auto.enabled ? 'on' : 'off'} (${auto.allow.length} rules)`);
+    return auto;
+  };
   const ran = new Set();
   let running = 0;
 
@@ -59,7 +85,8 @@ function createCore({ log, power }) {
     let s = sessions.get(key);
     if (!s) {
       s = { key, term: null, buffer: '', tail: '', clients: new Set(), last: Date.now(), created: Date.now(),
-        lastOut: 0, program: null, progSince: 0, asked: false, quietT: null, burst: 0 };
+        lastOut: 0, program: null, progSince: 0, asked: false, quietT: null, burst: 0,
+        askText: '', askMenu: false, askedAt: 0, done: null, cwd: null, cwdAt: 0, outN: 0, mark: 0 };
       sessions.set(key, s); trim();
     }
     s.last = Date.now();
@@ -109,9 +136,16 @@ function createCore({ log, power }) {
       const p = foreground(s);
       if (p === s.raw) continue;
       const was = s.program, since = s.progSince;
-      s.raw = p; s.program = p; s.progSince = Date.now(); s.asked = false;
-      if (p) refine(s, p);
-      if (was && !p && Date.now() - since > 20e3) emit(s, 'done', { program: was, seconds: Math.round((Date.now() - since) / 1000) });
+      // A new program means any old question is gone. A program that just ended may have been
+      // followed straight away by a question from the shell (seen < 3 s ago): keep that one.
+      if (p || !(s.asked && Date.now() - s.askedAt < 3000)) s.asked = false;
+      s.raw = p; s.program = p; s.progSince = Date.now();
+      if (p) { refine(s, p); s.done = null; }
+      if (was && !p && Date.now() - since > 20e3) {
+        s.done = { program: was, at: Date.now(), seconds: Math.round((Date.now() - since) / 1000), changes: null };
+        const d = s.done;
+        changesIn(s, (ch) => { d.changes = ch; emit(s, 'done', { program: was, seconds: d.seconds, changes: ch }); });
+      }
     }
     busyChanged();
   }
@@ -124,12 +158,20 @@ function createCore({ log, power }) {
   }
   const watch = setInterval(checkPrograms, 2000); watch.unref && watch.unref();
 
+  // Only what appeared after your last keystroke counts: an answered question stays in the
+  // scrollback, and must not look like it's being asked again.
+  const fresh = (s) => { const n = s.outN - s.mark; return n <= 0 ? '' : n >= s.tail.length ? s.tail : s.tail.slice(-n); };
   function onQuiet(s) {
     if (!s.term) return;
-    const tail = s.tail.split('\n').slice(-12).join('\n');
+    const tail = fresh(s).split('\n').slice(-12).join('\n');
     if (!s.asked && asksForInput(tail)) {
-      s.asked = true; busyChanged();
-      emit(s, 'input', { text: question(tail).slice(0, 120), menu: isMenu(tail) });
+      s.asked = true; s.askText = question(tail).slice(0, 120); s.askMenu = isMenu(tail); s.askedAt = Date.now(); busyChanged();
+      const ok = autoDecision(auto, tail.split('\n').slice(-10).join('\n'), s.askText, s.askMenu); // just the agent's question box
+      if (ok) { // answered by your own rule: tell the phone quietly, don't ask
+        log(`auto-approved a question (rule: ${ok.rule.slice(0, 20)})`);
+        setTimeout(() => { if (s.asked && s.term) session(s.key).input(ok.d); }, 800);
+        emit(s, 'auto', { text: s.askText, rule: ok.rule });
+      } else emit(s, 'input', { text: s.askText, menu: s.askMenu });
     } else if (WIN && s.burst && Date.now() - s.burst > 30e3 && !s.asked) {
       // Windows: no foreground-program info, so "busy for 30 s, then quiet for 15 s" means done.
       emit(s, 'quiet', { text: lastLine(tail).slice(0, 120) });
@@ -147,7 +189,7 @@ function createCore({ log, power }) {
     const send = (msg) => { for (const c of s.clients) { try { c(msg); } catch {} } };
     t.onData((d) => {
       s.buffer += d; if (s.buffer.length > BUFFER_LIMIT) s.buffer = s.buffer.slice(-BUFFER_LIMIT);
-      s.tail = (s.tail + plain(d)).slice(-2000);
+      const pd = plain(d); s.tail = (s.tail + pd).slice(-2000); s.outN += pd.length;
       const now = Date.now();
       if (!s.burst) s.burst = now;
       s.lastOut = now;
@@ -161,7 +203,7 @@ function createCore({ log, power }) {
     return {
       key, clients: s.clients,
       input: (d) => {
-        power && power.activity(); s.last = Date.now();
+        power && power.activity(); s.last = Date.now(); s.mark = s.outN;
         if (s.asked) { s.asked = false; busyChanged(); }
         if (WIN) s.burst = 0;
         if (!s.term) startShell(s); else s.term.write(d);
@@ -187,7 +229,79 @@ function createCore({ log, power }) {
     return [...sessions.values()].filter((s) => s.key.startsWith(prefix)).sort((a, b) => a.created - b.created).map((s) => ({
       sid: s.key.slice(prefix.length), program: s.program, busy: busy(s), running: !!s.term, waiting: s.asked,
       lastOut: s.lastOut || null, created: s.created, viewers: s.clients.size, line: lastLine(s.tail.split('\n').slice(-6).join('\n')).slice(0, 80),
+      // for the agents dashboard: what it asks, since when it runs, what just finished, where it runs
+      question: s.asked ? s.askText : null, menu: s.asked ? s.askMenu : false, askedAt: s.asked ? s.askedAt : null,
+      since: s.program ? s.progSince : null, done: s.done, cwd: cwdOf(s),
     }));
+  }
+  // The folder a terminal is in (its shell's working folder). Cached; refreshed in the background.
+  const home = os.homedir();
+  const tidy = (d) => (d && d.startsWith(home) ? '~' + d.slice(home.length) : d) || null;
+  function cwdOf(s) {
+    const pid = s.term && s.term.pid;
+    if (pid && Date.now() - s.cwdAt > 5000) {
+      s.cwdAt = Date.now();
+      if (process.platform === 'linux') { try { s.cwd = tidy(fs.readlinkSync(`/proc/${pid}/cwd`)); } catch {} }
+      else if (process.platform === 'darwin') {
+        execFile('lsof', ['-a', '-p', String(pid), '-d', 'cwd', '-Fn'], { timeout: 3000 }, (e, out) => {
+          const l = !e && String(out).split('\n').find((x) => x.startsWith('n')); if (l) s.cwd = tidy(l.slice(1));
+        });
+      }
+    }
+    return s.cwd;
+  }
+  // What changed in the terminal's folder (git): files, lines added/removed. null if it isn't a git folder.
+  function folderOf(s, cb) {
+    const pid = s.term && s.term.pid; if (!pid) return cb(null);
+    if (process.platform === 'linux') { try { return cb(fs.readlinkSync(`/proc/${pid}/cwd`)); } catch { return cb(null); } }
+    if (process.platform === 'darwin') return execFile('lsof', ['-a', '-p', String(pid), '-d', 'cwd', '-Fn'], { timeout: 3000 }, (e, out) => { const l = !e && String(out).split('\n').find((x) => x.startsWith('n')); cb(l ? l.slice(1) : null); });
+    cb(null);
+  }
+  function changesIn(s, cb) {
+    folderOf(s, (dirp) => {
+      if (!dirp) return cb(null);
+      execFile('git', ['-C', dirp, 'diff', '--numstat', 'HEAD'], { timeout: 5000, maxBuffer: 1 << 20 }, (e, out) => {
+        if (e) return cb(null);
+        let files = 0, add = 0, del = 0;
+        for (const l of String(out).split('\n')) { const m = l.match(/^(\d+|-)\t(\d+|-)\t/); if (m) { files++; add += +m[1] || 0; del += +m[2] || 0; } }
+        execFile('git', ['-C', dirp, 'ls-files', '--others', '--exclude-standard'], { timeout: 5000, maxBuffer: 1 << 20 }, (e2, o2) => {
+          const fresh = e2 ? 0 : String(o2).split('\n').filter(Boolean).length;
+          cb({ files: files + fresh, add, del, fresh });
+        });
+      });
+    });
+  }
+  // The full change list (git diff) of a terminal's folder, for "See changes" on the phone.
+  function diff(key, cb) {
+    const s = sessions.get(key); if (!s) return cb({ error: 'That terminal is gone.' });
+    folderOf(s, (dirp) => {
+      if (!dirp) return cb({ error: 'Could not find its folder.' });
+      execFile('git', ['-C', dirp, 'diff', '--no-color', '--stat', '-p', 'HEAD'], { timeout: 8000, maxBuffer: 4 << 20 }, (e, out) => {
+        if (e) return cb({ error: /not a git repository/i.test(String(e.message)) ? 'This folder is not a git project, so there is no change list.' : 'git could not show the changes.' });
+        execFile('git', ['-C', dirp, 'ls-files', '--others', '--exclude-standard'], { timeout: 5000 }, (e2, o2) => {
+          const fresh = e2 ? [] : String(o2).split('\n').filter(Boolean);
+          let text = String(out); const cut = text.length > 200e3; if (cut) text = text.slice(0, 200e3);
+          cb({ folder: tidy(dirp), diff: text, cut, fresh: fresh.slice(0, 100) });
+        });
+      });
+    });
+  }
+  // Answer a terminal that is waiting for you, without switching to it. Does nothing if it isn't waiting.
+  function answer(key, d) {
+    const s = sessions.get(key);
+    if (!s || !s.term || !s.asked || typeof d !== 'string' || !d || d.length > 16) return false;
+    session(key).input(d); return true;
+  }
+  // Answer in your own words (voice or typed). On an AI agent's choice menu, Esc first: that's
+  // "No, tell it what to do instead", then your words go in as the instruction.
+  function reply(key, text) {
+    const s = sessions.get(key);
+    if (!s || !s.term || !s.asked || typeof text !== 'string') return false;
+    text = text.replace(/[\x00-\x08\x0b-\x1f\x7f]/g, ' ').trim().slice(0, 500); if (!text) return false;
+    const io = session(key);
+    if (s.askMenu || /do you want/i.test(s.askText)) { io.input('\x1b'); setTimeout(() => s.term && s.term.write(text + '\r'), 600); }
+    else io.input(text + '\r');
+    return true;
   }
   function close(key) { const s = sessions.get(key); if (s) kill(s); }
 
@@ -218,10 +332,22 @@ function createCore({ log, power }) {
   }
 
   return {
-    events, session, dropOthers, list, close, runJob,
+    events, session, dropOthers, list, close, runJob, answer, reply, diff, getAuto: () => auto, setAuto,
+    question: (key) => { const s = sessions.get(key); return s && s.asked ? { text: s.askText, menu: s.askMenu } : null; },
     clients: legacy.clients, input: legacy.input, resize: legacy.resize, screen: legacy.screen, hasShell: legacy.hasShell,
     stop: () => { clearInterval(watch); for (const s of [...sessions.values()]) kill(s); },
   };
 }
 
-module.exports = { createCore, asksForInput, plain, SHELL };
+// The one-tap answers that fit a question. The phone only ever sends the choice's name;
+// what gets typed is decided here, on the computer.
+function choicesFor(text, menu) {
+  const t = String(text || '');
+  if (menu || /(?:❯|›)\s*1\./.test(t) || /do you want/i.test(t)) return [{ a: 'yes', title: '1 · Yes', d: '1' }, { a: 'no', title: 'No (Esc)', d: '\x1b' }];
+  if (/y\/n|yes\/no/i.test(t)) return [{ a: 'yes', title: 'Yes', d: 'y\r' }, { a: 'no', title: 'No', d: 'n\r' }];
+  if (/password|passphrase/i.test(t)) return []; // never from a notification
+  if (/press (?:enter|return|any key)/i.test(t)) return [{ a: 'yes', title: 'Enter', d: '\r' }];
+  return [];
+}
+
+module.exports = { createCore, asksForInput, plain, SHELL, choicesFor, autoDecision };

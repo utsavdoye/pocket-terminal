@@ -40,8 +40,12 @@ npx pocket-terminal
 ## Features
 
 **For AI agents**
-- Phone notification when an AI agent (Claude Code, Codex, Gemini CLI, Aider…) or any program asks a question, with one-tap answers.
-- "It's done" alerts when a build, download or training run finishes or goes quiet.
+- **Agents dashboard:** every agent and terminal on one screen: who needs you (with the question), what's working and for how long, what just finished. Answer a waiting one right there.
+- **Answer from the notification:** Yes / No buttons right on the notification, with the app closed and the phone locked. On Android they show on Wear OS watches too.
+- **Answer in your own words:** type or say "No, keep the old tests" and it goes to the agent as its next instruction.
+- **Auto-approve safe steps (opt-in):** steps that match your safe words (like `npm test`) are answered by themselves; anything risky (delete, push, deploy, install, sudo…) still asks you.
+- **What changed:** when an agent finishes you get "4 files changed (+120 −8)", and *See changes* shows the full diff on your phone.
+- **Team links:** share a live view that can also press Yes / No on questions, and nothing else.
 - The computer stays awake while a program is working, even on battery with the lid closed.
 
 **A real terminal**
@@ -57,7 +61,7 @@ npx pocket-terminal
 
 <p align="center">
   <img src="docs/screenshots/agent.png" alt="An AI coding agent asks for permission and the phone shows one-tap answers" width="23%">
-  <img src="docs/screenshots/terminals.png" alt="Running terminals and a view-only share link" width="23%">
+  <img src="docs/screenshots/agents.png" alt="Agents dashboard: one agent needs you, one is working, one finished with its changes" width="23%">
   <img src="docs/screenshots/localhost.png" alt="The computer's localhost:3000 open on the phone" width="23%">
   <img src="docs/screenshots/files.png" alt="Files: download from the computer, upload from the phone" width="23%">
 </p>

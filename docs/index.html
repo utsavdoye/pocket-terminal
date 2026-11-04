@@ -33,7 +33,7 @@
 <link rel="stylesheet" href="site.css">
 <script data-goatcounter="https://utsavdoye.goatcounter.com/count" async src="https://gc.zgo.at/count.js"></script>
 <script type="application/ld+json">{"@context":"https://schema.org","@graph":[
-{"@type":"SoftwareApplication","name":"Pocket Terminal","description":"Use your computer's terminal from your phone, from any network, even with the laptop lid closed. Answer AI coding agents, open localhost, move files. End-to-end encrypted.","applicationCategory":"DeveloperApplication","operatingSystem":"macOS, Windows, Linux, iOS, Android","softwareVersion":"7.0.2","offers":{"@type":"Offer","price":"0","priceCurrency":"USD"},"url":"https://pocket-terminal.utsavdoye.com/","downloadUrl":"https://www.npmjs.com/package/pocket-terminal","installUrl":"https://pocket-terminal.utsavdoye.com/#install","screenshot":"https://pocket-terminal.utsavdoye.com/screenshots/agent.png","image":"https://pocket-terminal.utsavdoye.com/og.png","codeRepository":"https://github.com/utsavdoye/pocket-terminal","license":"https://opensource.org/licenses/MIT","author":{"@type":"Person","name":"Utsav Doye","url":"https://utsavdoye.com"}},
+{"@type":"SoftwareApplication","name":"Pocket Terminal","description":"Use your computer's terminal from your phone, from any network, even with the laptop lid closed. Answer AI coding agents, open localhost, move files. End-to-end encrypted.","applicationCategory":"DeveloperApplication","operatingSystem":"macOS, Windows, Linux, iOS, Android","softwareVersion":"7.1.0","offers":{"@type":"Offer","price":"0","priceCurrency":"USD"},"url":"https://pocket-terminal.utsavdoye.com/","downloadUrl":"https://www.npmjs.com/package/pocket-terminal","installUrl":"https://pocket-terminal.utsavdoye.com/#install","screenshot":"https://pocket-terminal.utsavdoye.com/screenshots/agent.png","image":"https://pocket-terminal.utsavdoye.com/og.png","codeRepository":"https://github.com/utsavdoye/pocket-terminal","license":"https://opensource.org/licenses/MIT","author":{"@type":"Person","name":"Utsav Doye","url":"https://utsavdoye.com"}},
 {"@type":"WebSite","name":"Pocket Terminal","url":"https://pocket-terminal.utsavdoye.com/"},
 {"@type":"FAQPage","mainEntity":[
 {"@type":"Question","name":"Is Pocket Terminal free? Is there a server?","acceptedAnswer":{"@type":"Answer","text":"Free and open source (MIT). There is no server you run or pay for, and none that can read your data. A free public message board passes a few encrypted hello notes so the two devices can find each other; your live terminal goes directly between them."}},
@@ -41,6 +41,7 @@
 {"@type":"Question","name":"Can AI coding agents keep running with my laptop closed?","acceptedAnswer":{"@type":"Answer","text":"Yes. While a program is still working, the computer stays awake (on battery too, above 20%, for up to 2 hours after you last used it). When an agent like Claude Code, Codex or Gemini CLI stops to ask, your phone buzzes with the question. Tap it and answer."}},
 {"@type":"Question","name":"What does it cost in battery?","acceptedAnswer":{"@type":"Answer","text":"Each check-in is a few seconds awake. Overnight that is typically a few percent. It never stays awake below 20% and stops waking below 10%."}},
 {"@type":"Question","name":"I lost my phone. What now?","acceptedAnswer":{"@type":"Answer","text":"On your computer run npx pocket-terminal list, then npx pocket-terminal remove followed by the number. That phone is locked out within seconds, and its PIN-locked key is useless."}},
+{"@type":"Question","name":"Can I answer from my watch?","acceptedAnswer":{"@type":"Answer","text":"On Android, yes: the notification has Yes / No buttons that work with the app closed and the phone locked, and Wear OS watches show them too. On iPhone, web apps can't put buttons on notifications yet, so an Apple Watch shows the question and you answer by tapping it on your phone."}},
 {"@type":"Question","name":"Which systems does it work on?","acceptedAnswer":{"@type":"Answer","text":"Computer: macOS, Windows 10 and 11, and Linux. Phone: iPhone and Android, as an app you add to your home screen."}}
 ]}]}</script>
 </head>
@@ -64,7 +65,7 @@
   <section class="hero" id="top">
     <div class="bg-grid"></div>
     <div class="wrap">
-      <a class="pill" href="https://github.com/utsavdoye/pocket-terminal/releases"><span class="tag">NEW</span>v7: localhost on your phone <span class="arr">→</span></a>
+      <a class="pill" href="https://github.com/utsavdoye/pocket-terminal/releases"><span class="tag">NEW</span>v7.1: agents dashboard + answer from your watch <span class="arr">→</span></a>
       <h1>Your terminal,<br><span class="accent">in your pocket.</span></h1>
       <p class="lede">Answer your <strong>AI coding agents</strong>, run commands and open <strong>localhost</strong> on your laptop from your phone. From any network, <strong>even with the lid closed</strong>. Free, open source, end-to-end encrypted.</p>
       <div class="cta">
@@ -117,48 +118,63 @@
         <article class="card wide" data-path="~/features/ai-agents"><span class="num">01 / AI AGENTS</span>
           <div class="ico"><svg viewBox="0 0 24 24"><path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z"/></svg></div>
           <h3>Answer AI agents with one tap</h3>
-          <p>Claude Code, Codex, Gemini CLI, Aider or any other agent keeps working while you're out. When one asks <em>"Do you want to proceed?"</em> your phone buzzes with the question.</p>
-          <div class="snippet"><span class="a">●</span> codex needs you · app
+          <p>Claude Code, Codex, Gemini CLI or Aider keep working while you're out. When one asks <em>"Do you want to proceed?"</em> your phone buzzes with the question.</p>
+          <div class="snippet"><span class="a">●</span> Claude needs you · app
   Do you want to make this edit to auth.ts?
   <span class="g">❯ 1. Yes</span>   2. No</div>
         </article>
-        <article class="card wide" data-path="~/features/localhost"><span class="num">02 / LOCALHOST</span>
-          <div class="ico"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="14" rx="2"/><path d="M3 8h18M8 21h8"/></svg></div>
-          <h3>Your localhost, anywhere</h3>
-          <p>Run <code>npm run dev</code> on the laptop and open it on your phone from any network. No tunnels, no deploys, no public URL.</p>
-          <div class="snippet"><span class="a">$</span> npm run dev
-  <span class="g">➜</span>  Local:  <span class="c">http://localhost:3000</span>
-  <span class="g">✓</span> open on phone · 3000</div>
+        <article class="card wide" data-path="~/features/dashboard"><span class="num">02 / DASHBOARD</span>
+          <div class="ico"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg></div>
+          <h3>All your agents on one screen</h3>
+          <p>Who needs you, what's working and for how long, what just finished. Answer a waiting agent right from the list.</p>
+          <div class="snippet"><span class="a">●</span> Claude Code  ~/shop-app   <span class="a">needs you · 3 min</span>
+<span class="g">●</span> Codex        ~/api        <span class="g">working · 22 min</span>
+<span class="g">✓</span> npm build    ~/web        <span class="c">4 files changed</span></div>
         </article>
-        <article class="card" data-path="~/features/lid-closed"><span class="num">03 / POWER</span>
+        <article class="card" data-path="~/features/watch"><span class="num">03 / WATCH</span>
+          <div class="ico"><svg viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" rx="3"/><path d="M9 6l1-3h4l1 3M9 18l1 3h4l1-3"/><path d="M10 12l1.5 1.5L14.5 10"/></svg></div>
+          <h3>Answer from your watch</h3>
+          <p>Yes / No right on the notification, with the app closed and the phone locked. Shows on Wear OS watches.</p>
+        </article>
+        <article class="card" data-path="~/features/lid-closed"><span class="num">04 / POWER</span>
           <div class="ico"><svg viewBox="0 0 24 24"><path d="M20 14.5A8 8 0 0 1 9.5 4 8 8 0 1 0 20 14.5z"/></svg></div>
           <h3>Lid closed? Still works</h3>
           <p>On charger it answers instantly. On battery it wakes every minute or two to check for you, then sleeps again.</p>
         </article>
-        <article class="card" data-path="~/features/notify"><span class="num">04 / NOTIFY</span>
-          <div class="ico"><svg viewBox="0 0 24 24"><path d="M6 8a6 6 0 1 1 12 0c0 7 3 9 3 9H3s3-2 3-9M10 21h4"/></svg></div>
-          <h3>"It's done" alerts</h3>
-          <p>Long build, big download, model training: get told when it finishes or goes quiet. Encrypted for your phone only.</p>
+        <article class="card" data-path="~/features/auto-approve"><span class="num">05 / AUTO</span>
+          <div class="ico"><svg viewBox="0 0 24 24"><path d="M12 3l7 3v6c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V6z"/><path d="M9 12l2 2 4-4"/></svg></div>
+          <h3>Auto-approve safe steps</h3>
+          <p>Opt-in. Steps like <code>npm test</code> are answered for you; anything risky (delete, push, deploy, sudo) still asks.</p>
         </article>
-        <article class="card" data-path="~/features/files"><span class="num">05 / FILES</span>
+        <article class="card" data-path="~/features/changes"><span class="num">06 / CHANGES</span>
+          <div class="ico"><svg viewBox="0 0 24 24"><path d="M6 3v12M18 9v12"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="6" r="3"/><path d="M6 15a9 9 0 0 0 9-9"/></svg></div>
+          <h3>See what it changed</h3>
+          <p>"Finished · 4 files changed (+120 −8)". Tap <em>See changes</em> to read the diff on your phone.</p>
+        </article>
+        <article class="card" data-path="~/features/voice"><span class="num">07 / VOICE</span>
+          <div class="ico"><svg viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg></div>
+          <h3>Answer in your own words</h3>
+          <p>Say "No, keep the old tests" and it goes to the agent as its next instruction.</p>
+        </article>
+        <article class="card" data-path="~/features/localhost"><span class="num">08 / LOCALHOST</span>
+          <div class="ico"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="14" rx="2"/><path d="M3 8h18M8 21h8"/></svg></div>
+          <h3>Your localhost, anywhere</h3>
+          <p>Run <code>npm run dev</code> on the laptop and open it on your phone from any network. No tunnels, no deploys.</p>
+        </article>
+        <article class="card" data-path="~/features/team"><span class="num">09 / TEAM</span>
+          <div class="ico"><svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3"/><circle cx="17" cy="9" r="2.5"/><path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6M15 14.5c3 0 6 2 6 5.5"/></svg></div>
+          <h3>Share a live view</h3>
+          <p>A view-only link for a teammate. Optionally let them press Yes / No on questions, nothing else. It expires.</p>
+        </article>
+        <article class="card" data-path="~/features/files"><span class="num">10 / FILES</span>
           <div class="ico"><svg viewBox="0 0 24 24"><path d="M7 4v16M7 4l-3 3M7 4l3 3M17 20V4M17 20l-3-3M17 20l3-3"/></svg></div>
           <h3>Files both ways</h3>
           <p>Grab a file or a database backup from the computer. Upload a photo straight into a project folder.</p>
         </article>
-        <article class="card" data-path="~/features/share"><span class="num">06 / SHARE</span>
-          <div class="ico"><svg viewBox="0 0 24 24"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg></div>
-          <h3>Share a live view</h3>
-          <p>Send a view-only link. A teammate watches your terminal live and can't type a thing. It expires.</p>
-        </article>
-        <article class="card" data-path="~/features/ask"><span class="num">07 / ASK</span>
+        <article class="card" data-path="~/features/ask"><span class="num">11 / ASK</span>
           <div class="ico"><svg viewBox="0 0 24 24"><path d="M4 17l6-5-6-5M12 19h8"/></svg></div>
           <h3>Ask in plain English</h3>
           <p>"Free up port 3000" becomes the right command for your system, explained before it runs.</p>
-        </article>
-        <article class="card" data-path="~/features/network"><span class="num">08 / NETWORK</span>
-          <div class="ico"><svg viewBox="0 0 24 24"><path d="M5 12.5a10 10 0 0 1 14 0M8.5 16a5 5 0 0 1 7 0M2 9a15 15 0 0 1 20 0"/><circle cx="12" cy="19.5" r=".8"/></svg></div>
-          <h3>Any network, no setup</h3>
-          <p>Phone on mobile data, laptop on college Wi-Fi. No port forwarding, no account to sign up for.</p>
         </article>
       </div>
     </div>
@@ -171,7 +187,7 @@
         <h2>A real terminal, made for a thumb.</h2>
       </div>
       <div class="shots">
-        <figure><div class="shot"><picture><source srcset="screenshots/terminals.webp" type="image/webp"><img src="screenshots/terminals.png" alt="Terminals screen: what's running on the computer and a view-only share link" loading="lazy" width="390" height="844"></picture></div><figcaption>see what's running</figcaption></figure>
+        <figure><div class="shot"><picture><source srcset="screenshots/agents.webp" type="image/webp"><img src="screenshots/agents.png" alt="Agents dashboard: one agent needs you, one is working, one finished with its changes" loading="lazy" width="390" height="844"></picture></div><figcaption>all your agents</figcaption></figure>
         <figure><div class="shot"><picture><source srcset="screenshots/localhost.webp" type="image/webp"><img src="screenshots/localhost.png" alt="The computer's localhost:3000 open on the phone" loading="lazy" width="390" height="844"></picture></div><figcaption>open your dev server</figcaption></figure>
         <figure><div class="shot"><picture><source srcset="screenshots/files.webp" type="image/webp"><img src="screenshots/files.png" alt="Files screen: download from the computer, upload from the phone" loading="lazy" width="390" height="844"></picture></div><figcaption>move files either way</figcaption></figure>
       </div>
@@ -324,6 +340,7 @@
       <details><summary>What does it cost in battery?</summary><p>Each check-in is a few seconds awake. Overnight that's typically a few percent. It never stays awake below 20% and stops waking below 10%.</p></details>
       <details><summary>I lost my phone. What now?</summary><p>On your computer run <code>npx pocket-terminal list</code>, then <code>npx pocket-terminal remove &lt;number&gt;</code>. That phone is locked out within seconds, and its PIN-locked key is useless.</p></details>
       <details><summary>Which systems does it work on?</summary><p>Computer: macOS, Windows 10/11, and Linux (laptops get the lid-closed features; servers simply stay awake). Phone: iPhone and Android, as an app you add to your home screen.</p></details>
+      <details><summary>Can I answer from my watch?</summary><p>On Android, yes: the notification has Yes / No buttons that work with the app closed and the phone locked, and Wear OS watches show them too. On iPhone, web apps can't put buttons on notifications yet, so an Apple Watch shows the question and you answer by tapping it on your phone.</p></details>
       <details><summary>Something isn't working</summary><p>The <a href="help.html">help page</a> covers installing, pairing, connecting, notifications and uninstalling. Still stuck? Ask in <a href="https://github.com/utsavdoye/pocket-terminal/discussions">Discussions</a>.</p></details>
     </div>
   </section>
@@ -350,7 +367,7 @@
       <div><h4>Help</h4><ul><li><a href="help.html">Help &amp; setup</a></li><li><a href="https://github.com/utsavdoye/pocket-terminal/discussions">Feedback</a></li><li><a href="https://github.com/utsavdoye/pocket-terminal/issues">Report a bug</a></li><li><a href="privacy.html">Privacy</a></li></ul></div>
       <div><h4>Source</h4><ul><li><a href="https://github.com/utsavdoye/pocket-terminal">GitHub</a></li><li><a href="https://www.npmjs.com/package/pocket-terminal">npm</a></li><li><a href="https://github.com/utsavdoye/pocket-terminal/blob/main/SECURITY.md">Security</a></li><li><a href="https://github.com/utsavdoye/pocket-terminal/blob/main/LICENSE">MIT license</a></li><li><a href="https://buymeacoffee.com/utsavdoye">Buy me a coffee</a></li></ul></div>
     </div>
-    <div class="legal"><span>© 2026 Utsav Doye · MIT</span><span class="status">v7.0.2 · open source</span></div>
+    <div class="legal"><span>© 2026 Utsav Doye · MIT</span><span class="status">v7.1.0 · open source</span></div>
   </div>
 </footer>
 <script src="site.js"></script>

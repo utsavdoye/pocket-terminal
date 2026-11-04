@@ -1,11 +1,12 @@
 // Pocket Terminal service worker.
 //   1. Offline cache for the app's own files, so it opens instantly from the home screen.
 //   2. Phone notifications: shows what your computer sends (end-to-end encrypted Web Push),
-//      and a tap opens the terminal it's about.
+//      and a tap opens the terminal it's about. Questions get Yes/No buttons that answer
+//      without opening the app (Android, Wear OS watches; iPhone shows the note without buttons).
 //   3. Local websites: pages under preview/<port>/ come from your computer's localhost,
 //      through the app's encrypted link (the app window does the talking).
 // Bump VERSION on every release so phones pick up the new code.
-const VERSION = 'pt-v7.0.3';
+const VERSION = 'pt-v7.1.0';
 const FILES = ['./', 'index.html', 'js/app.js', 'js/tools.js', 'js/theme.js', 'js/crypto.js', 'js/board.js', 'js/helper.js', 'vendor/xterm.js', 'vendor/xterm.css', 'vendor/addon-fit.js', 'vendor/jsQR.js', 'manifest.json', 'icon.svg', 'icon.png', 'icon-192.png', 'icon-maskable.png', 'apple-touch-icon.png', 'css/app.css', 'fonts/ibm-plex-sans-latin-400-normal.woff2', 'fonts/ibm-plex-sans-latin-500-normal.woff2', 'fonts/ibm-plex-sans-latin-600-normal.woff2', 'fonts/jetbrains-mono-latin-400-normal.woff2', 'fonts/jetbrains-mono-latin-700-normal.woff2'];
 self.addEventListener('install', (e) => e.waitUntil(caches.open(VERSION).then((c) => c.addAll(FILES)).then(() => self.skipWaiting())));
 self.addEventListener('activate', (e) => e.waitUntil(caches.keys().then((ks) => Promise.all(ks.filter((k) => k !== VERSION).map((k) => caches.delete(k)))).then(() => self.clients.claim())));
@@ -100,14 +101,36 @@ addEventListener('submit',function(e){if(e.defaultPrevented)return;var f=e.targe
 // ---------- phone notifications ----------
 self.addEventListener('push', (e) => {
   let d = {}; try { d = e.data ? e.data.json() : {}; } catch { d = { title: 'Pocket Terminal', body: e.data && e.data.text() }; }
+  const max = (self.Notification && Notification.maxActions) || 0;
+  const acts = d.ans && Array.isArray(d.ans.acts) && max ? d.ans.acts.slice(0, max).map((a) => ({ action: String(a.action), title: String(a.title) })) : [];
   e.waitUntil(self.registration.showNotification(d.title || 'Pocket Terminal', {
     body: d.body || '', tag: d.tag || 'pt', renotify: true, icon: 'icon.png', badge: 'icon.png',
-    data: { sid: d.sid || null }, requireInteraction: d.kind === 'input',
+    data: { sid: d.sid || null, ans: acts.length ? d.ans : null, title: d.title || '' }, requireInteraction: d.kind === 'input', actions: acts,
   }));
 });
+// A Yes/No button was pressed: answer straight from here, the app doesn't need to open.
+// The note is encrypted with the key that came inside the (end-to-end encrypted) notification
+// and only works once; the board just sees an id and random bytes.
+const b64u = (u8) => btoa(String.fromCharCode(...u8)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+const fromB64u = (s) => Uint8Array.from(atob(s.replace(/-/g, '+').replace(/_/g, '/') + '==='.slice((s.length + 3) % 4)), (c) => c.charCodeAt(0));
+async function sendAnswer(ans, choice) {
+  const key = await crypto.subtle.importKey('raw', fromB64u(ans.k), 'AES-GCM', false, ['encrypt']);
+  const iv = crypto.getRandomValues(new Uint8Array(12));
+  const ct = new Uint8Array(await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, key, new TextEncoder().encode(JSON.stringify({ a: choice, ts: Date.now() }))));
+  const blob = new Uint8Array(iv.length + ct.length); blob.set(iv); blob.set(ct, iv.length);
+  const r = await fetch(`${String(ans.b).replace(/\/+$/, '')}/${encodeURIComponent(ans.tp)}`, { method: 'POST', body: `pta1.${ans.id}.${b64u(blob)}` });
+  if (!r.ok) throw new Error('board ' + r.status);
+}
 self.addEventListener('notificationclick', (e) => {
   e.notification.close();
-  const sid = e.notification.data && e.notification.data.sid;
+  const data = e.notification.data || {};
+  if (e.action && data.ans) {
+    const label = ((data.ans.acts || []).find((a) => a.action === e.action) || {}).title || e.action;
+    return e.waitUntil(sendAnswer(data.ans, e.action)
+      .then(() => self.registration.showNotification(`Sent “${label}” ✓`, { body: data.title ? `Answered: ${data.title}` : 'Your computer gets it in a moment.', tag: 'pt-sent', silent: true, icon: 'icon.png', badge: 'icon.png' }))
+      .catch(() => self.registration.showNotification('Could not send the answer', { body: 'Open the app and answer there.', tag: 'pt-sent', icon: 'icon.png', data: { sid: data.sid } })));
+  }
+  const sid = data.sid;
   e.waitUntil((async () => {
     const all = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
     const app = all.find((c) => !previewPort(c.url));

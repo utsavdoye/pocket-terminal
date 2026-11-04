@@ -15,12 +15,14 @@
 const fs = require('fs');
 const path = require('path');
 const os = require('os');
+const crypto = require('crypto');
 const ndc = require('node-datachannel');
 const { derive, seal, open, msgId } = require('./lib/crypto');
 const { Board, MAX_NOTE } = require('./lib/board');
 const files = require('./lib/files');
 const preview = require('./lib/preview');
 const webpush = require('./lib/webpush');
+const { choicesFor } = require('./lib/core');
 
 const DEFAULT_ICE = ['stun:stun.l.google.com:19302', 'stun:stun.cloudflare.com:3478'];
 const FRESH = { hello: 3 * 60e3, offer: 90e3, settings: 24 * 3600e3 };
@@ -115,7 +117,7 @@ function startDirect({ cfg, core, power, log, dir, x = {} }) {
     const bind = (sid, { fresh = true } = {}) => {
       if (sess) return sess;
       clearTimeout(attachTimer);
-      if (viewer) { show(core.session(cfg.watchKey)); send({ t: 'hi', os: process.platform, viewer: true, name: cfg.name || os.hostname() }); return sess; }
+      if (viewer) { show(core.session(cfg.watchKey)); send({ t: 'hi', os: process.platform, viewer: true, canAnswer: !!cfg.canAnswer, name: cfg.name || os.hostname() }); const q = core.question(cfg.watchKey); if (q) send({ t: 'alert', kind: 'input', ...q }); return sess; }
       const key = keyFor(sid);
       if (fresh) core.dropOthers(deviceKey + ':', key); // this phone started fresh: close its old terminals that sit idle
       const s = core.session(key);
@@ -139,7 +141,14 @@ function startDirect({ cfg, core, power, log, dir, x = {} }) {
       let m; try { m = JSON.parse(String(raw)); } catch { return; }
       info.seen = Date.now();
       if (m.t === 'ping') return send({ t: 'pong' });
-      if (viewer) { if (m.t === 'attach') bind(null); return; } // watching only: nothing else is allowed
+      if (viewer) { // watching only. A link made with "can answer" may also press Yes/No on a question, nothing else.
+        if (m.t === 'attach') bind(null);
+        else if (m.t === 'answer' && cfg.canAnswer) {
+          const q = core.question(cfg.watchKey), c = q && choicesFor(q.text, q.menu).find((x) => x.a === m.a);
+          const ok = !!c && core.answer(cfg.watchKey, c.d); send({ t: 'answered', ok }); if (ok) log(`a teammate answered "${c.a}"`);
+        }
+        return;
+      }
       switch (m.t) {
         case 'attach': { bind(m.sid, { fresh: m.fresh !== false }); const c = m.cols || size.cols, r = m.rows || size.rows; if (c) sess.resize(c | 0, r | 0); break; }
         case 'i': if (typeof m.d === 'string') bind(null).input(m.d); break;
@@ -153,6 +162,11 @@ function startDirect({ cfg, core, power, log, dir, x = {} }) {
           if (m.cols) s.resize(m.cols | 0, m.rows | 0);
           send({ t: 'switched', sid: s.key.slice(deviceKey.length + 1) }); break;
         }
+        case 'reply': { const ok = core.reply(keyFor(m.sid), m.text); send({ t: 'answered', sid: m.sid, ok }); if (ok) log('answered a waiting terminal in words'); break; }
+        case 'diff': core.diff(keyFor(m.sid), (r) => send({ t: 'diff', id: m.id, ...r })); break;
+        case 'auto-get': send({ t: 'auto', ...core.getAuto() }); break;
+        case 'auto-set': if (m.cfg && typeof m.cfg === 'object') send({ t: 'auto', ...core.setAuto(m.cfg) }); break;
+        case 'answer': { const ok = core.answer(keyFor(m.sid), m.d); send({ t: 'answered', sid: m.sid, ok }); if (ok) log('answered a waiting terminal from the dashboard'); break; }
         case 'close-session': if (keyFor(m.sid) !== (sess && sess.key)) core.close(keyFor(m.sid)); send({ t: 'sessions', list: core.list(deviceKey + ':'), current: sess ? sess.key.slice(deviceKey.length + 1) : null }); break;
         // --- notifications ---
         case 'push-sub': if (x.saveSub && m.sub && webpush.allowedEndpoint(m.sub.endpoint) && m.sub.keys) { x.saveSub(m.sub); send({ t: 'push-ok', quiet: !!m.quiet }); } else fail('push-ok', null, 'That notification address is not allowed'); break;
@@ -170,7 +184,7 @@ function startDirect({ cfg, core, power, log, dir, x = {} }) {
         case 'put-end': { const r = puts.get(m.id); if (!r) break; puts.delete(m.id); r.end().then((p) => { log('file received'); send({ t: 'put-done', id: m.id, path: p }); }).catch((e) => fail('put-done', m.id, e)); break; }
         case 'put-cancel': { const r = puts.get(m.id); if (r) { r.abort(); puts.delete(m.id); } break; }
         // --- share a live view of one session ---
-        case 'share': if (x.share && sess) { const r = x.share(sess.key, Number(m.minutes) || 60); send({ t: 'share', ...r }); } break;
+        case 'share': if (x.share && sess) { const r = x.share(sess.key, Number(m.minutes) || 60, !!m.canAnswer); send({ t: 'share', ...r }); } break;
         case 'shares': send({ t: 'shares', list: x.shares ? x.shares() : [] }); break;
         case 'unshare': x.unshare && x.unshare(String(m.id)); send({ t: 'shares', list: x.shares ? x.shares() : [] }); break;
       }
@@ -188,8 +202,34 @@ function startDirect({ cfg, core, power, log, dir, x = {} }) {
 
   // --- "your terminal needs you": a phone notification, unless you're looking at that session ---
   const lastAlert = new Map();
+  // Answer buttons on a notification. Each question gets a one-time id and its own key, sent inside
+  // the encrypted notification. The phone's service worker answers by posting an encrypted note to
+  // the mailbox, so it works with the app closed and the phone locked (Android, Wear OS watches).
+  const asks = new Map(); // id -> { key, k, choices, exp }
+  const ASK_TTL = 30 * 60e3;
+  function answerButtons(ev) {
+    const choices = choicesFor(ev.text, ev.menu);
+    if (!choices.length || !ev.key) return null;
+    for (const [id, a] of asks) if (a.exp < Date.now() || a.key === ev.key) asks.delete(id); // one live question per terminal
+    const id = crypto.randomBytes(9).toString('base64url'), k = crypto.randomBytes(32);
+    asks.set(id, { key: ev.key, k, choices, exp: Date.now() + ASK_TTL });
+    return { id, k: k.toString('base64url'), b: (cfg.boards || ['https://ntfy.sh'])[0], tp: keys.topic, acts: choices.map((c) => ({ action: c.a, title: c.title })) };
+  }
+  function onAnswer(text) {
+    const [, id, blob] = text.split('.');
+    const a = id && asks.get(id); if (!a || !blob) return;
+    let msg; try {
+      const raw = Buffer.from(blob, 'base64url'), iv = raw.subarray(0, 12), ct = raw.subarray(12, -16), tag = raw.subarray(-16);
+      const d = crypto.createDecipheriv('aes-256-gcm', a.k, iv); d.setAuthTag(tag);
+      msg = JSON.parse(Buffer.concat([d.update(ct), d.final()]).toString());
+    } catch { return; } // not ours, or tampered with
+    asks.delete(id); // works once
+    if (a.exp < Date.now() || !(Math.abs(Date.now() - Number(msg.ts)) < ASK_TTL)) return log('ignored an expired answer from a notification');
+    const c = a.choices.find((x) => x.a === msg.a); if (!c) return;
+    log(core.answer(a.key, c.d) ? `answered "${c.a}" from a notification` : 'answer from a notification came after the question was gone: ignored');
+  }
   async function notify(ev, force = false) {
-    if (viewer) return 'none';
+    if (viewer || ev.kind === 'auto') return 'none'; // auto-approved: shown in the app, no buzz
     // Watching = showing that terminal AND heard from in the last 12 s (a closed app's link can linger ~30 s).
     const watching = [...peers.values()].some((p) => p.key === ev.key && Date.now() - p.seen < 12e3);
     if (watching && !force) return 'none';
@@ -198,13 +238,14 @@ function startDirect({ cfg, core, power, log, dir, x = {} }) {
     const prog = ev.program ? ev.program[0].toUpperCase() + ev.program.slice(1) : 'Your terminal';
     const sid = ev.key ? ev.key.split(':').slice(1).join(':') : '';
     const msg = ev.kind === 'input' ? { title: `${prog} needs you`, body: ev.text || 'It is waiting for your answer.' }
-      : ev.kind === 'done' ? { title: `${prog} finished`, body: `after ${ev.seconds >= 120 ? Math.round(ev.seconds / 60) + ' min' : ev.seconds + ' s'}. Tap to see the result.` }
+      : ev.kind === 'done' ? { title: `${prog} finished`, body: `after ${ev.seconds >= 120 ? Math.round(ev.seconds / 60) + ' min' : ev.seconds + ' s'}${ev.changes && ev.changes.files ? ` · ${ev.changes.files} file${ev.changes.files === 1 ? '' : 's'} changed (+${ev.changes.add} −${ev.changes.del})` : ''}. Tap to see the result.` }
       : ev.kind === 'quiet' ? { title: 'Your terminal went quiet', body: ev.text || 'It may be done, or waiting for you.' }
       : { title: 'Notifications work ✅', body: `${cfg.name || os.hostname()} can reach this phone.` };
     const subs = x.subs ? x.subs() : [];
+    const ans = ev.kind === 'input' && subs.length ? answerButtons(ev) : null;
     let how = 'none';
     for (const sub of subs) {
-      const r = await webpush.send(x.pushKeys, sub, { ...msg, sid, kind: ev.kind, tag: `pt-${sid}` }, { topic: `pt${sid}` });
+      const r = await webpush.send(x.pushKeys, sub, { ...msg, sid, kind: ev.kind, tag: `pt-${sid}`, ...(ans ? { ans } : {}) }, { topic: `pt${sid}` });
       if (r === 'gone') x.removeSub(sub.endpoint); if (r === 'ok') how = 'push';
     }
     if (how === 'none' && cfg.notify !== false) { // no phone notifications set up: the ntfy app, without any details
@@ -243,6 +284,7 @@ function startDirect({ cfg, core, power, log, dir, x = {} }) {
 
   // --- reading the mailbox ---
   function onNote(text) {
+    if (typeof text === 'string' && text.startsWith('pta1.')) { if (!viewer) onAnswer(text); return; }
     const m = open(keys, text);
     if (!m || m.from !== 'phone' || typeof m.id !== 'string' || seen.has(m.id)) return;
     seen.add(m.id); saveState();

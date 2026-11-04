@@ -10,7 +10,7 @@ import { search, riskOf, needsFill, askAi, PROVIDERS } from './helper.js';
 import { setupTools } from './tools.js';
 
 const $ = (id) => document.getElementById(id);
-const APP_VERSION = '7.0.1';
+const APP_VERSION = '7.1.0';
 // Demo mode (#demo): the whole app with sample data and a pretend shell. Connects to nothing,
 // and never touches this phone's real pairing, history or keys.
 const DEMO = location.hash === '#demo';
@@ -773,7 +773,7 @@ function setupAsk() {
 }
 
 // ---------- UI wiring ----------
-const PAGE_TITLES = { home: 'Menu', queue: 'Send a command', snippets: 'Saved commands', ask: 'Ask AI', power: 'Power and battery', settings: 'Settings', sessions: 'Terminals', files: 'Files', web: 'Local websites' };
+const PAGE_TITLES = { home: 'Menu', queue: 'Send a command', snippets: 'Saved commands', ask: 'Ask AI', power: 'Power and battery', settings: 'Settings', sessions: 'Agents & terminals', diff: 'Changes', files: 'Files', web: 'Local websites' };
 const pageHooks = {};
 let sheetTab = null;
 function openSheet(tab) {
@@ -897,7 +897,7 @@ function setupUi() {
     input, focus: () => term.focus(), relayout: () => requestAnimationFrame(() => fit.fit()),
     openSheet, closeSheet, pageOpen: (t) => $('sheet').classList.contains('show') && sheetTab === t,
     onPage: (t, fn) => { pageHooks[t] = fn; }, onInput: (fn) => inputHooks.push(fn),
-    pushKey: () => pushKey, drain, ask: () => doAsk(), demo: DEMO,
+    pushKey: () => pushKey, drain, ask: () => doAsk(), demo: DEMO, viewer: !!S.viewer,
     onSwitchRequest: (fn) => { switchReq = fn; },
     openSession: (sid) => { if (dc && dc.readyState === 'open' && switchReq) switchReq(sid); else { setSid(sid); attachFresh = false; } },
   });
@@ -961,6 +961,18 @@ function demoShell(m) {
     return reply({ t: 'sessions', current: SID, list: demoSess.map((x) => ({ ...x, sid: x.sid === 'main' ? SID : x.sid })) });
   }
   if (m.t === 'switch') { term.reset(); term.write(PROMPT); return reply({ t: 'switched', sid: m.sid }); }
+  if (m.t === 'reply') {
+    const x = demoSess.find((y) => y.sid === m.sid);
+    if (x && x.waiting) { x.waiting = false; x.question = null; x.lastOut = Date.now(); x.line = `✻ ${m.text.slice(0, 60)}`; }
+    return reply({ t: 'answered', sid: m.sid, ok: !!x });
+  }
+  if (m.t === 'auto-get' || m.t === 'auto-set') { if (m.cfg) demoAuto = { enabled: !!m.cfg.enabled, allow: m.cfg.allow }; return reply({ t: 'auto', ...demoAuto }); }
+  if (m.t === 'diff') return reply({ t: 'diff', id: m.id, folder: '~/Projects/web', cut: false, fresh: ['src/Cart.test.tsx'], diff: DEMO_DIFF });
+  if (m.t === 'answer') {
+    const x = demoSess.find((y) => y.sid === m.sid);
+    if (x && x.waiting) { x.waiting = false; x.question = null; x.lastOut = Date.now(); x.line = '✓ Edited src/auth.ts · running tests…'; }
+    return reply({ t: 'answered', sid: m.sid, ok: !!x });
+  }
   if (m.t === 'shares') return reply({ t: 'shares', list: [] });
   if (m.t === 'share') return reply({ t: 'share', id: 'demo', link: 'https://pocket-terminal.utsavdoye.com/app/#watch=only-a-demo', expires: now + m.minutes * 60e3 });
   if (m.t === 'push-test' || m.t === 'push-sub') return reply({ t: 'push-tested', how: 'none' });
@@ -1020,9 +1032,23 @@ function demoShell(m) {
     } else if (ch >= ' ') { demoLine += ch; out(ch); }
   }
 }
+const T0 = Date.now();
+let demoAuto = { enabled: false, allow: ['npm test', 'pytest', 'git status', 'Read('] };
+const DEMO_DIFF = `diff --git a/src/Cart.tsx b/src/Cart.tsx
+@@ -12,7 +12,9 @@ export function Cart({ items }) {
+-  const total = items.reduce((a, i) => a - i.price, 0);
++  const total = items.reduce((a, i) => a + i.price * i.qty, 0);
++  if (!items.length) return <Empty />;
+   return <Summary total={total} />;
+diff --git a/src/api.ts b/src/api.ts
+@@ -3,4 +3,4 @@
+-const BASE = 'http://localhost:3000';
++const BASE = import.meta.env.VITE_API ?? 'http://localhost:3000';`;
 let demoSess = [
-  { sid: 'main', program: null, busy: false, running: true, waiting: false, lastOut: Date.now(), viewers: 1, line: 'utsav@MacBook-Pro ~ %' },
-  { sid: 'build1', program: 'npm', busy: true, running: true, waiting: false, lastOut: Date.now() - 20e3, viewers: 0, line: 'webpack compiled successfully in 812 ms' },
+  { sid: 'agent1', program: 'claude', busy: true, running: true, waiting: true, menu: true, question: 'Do you want to make this edit to auth.ts?', askedAt: T0 - 3 * 60e3, since: T0 - 14 * 60e3, lastOut: T0 - 3 * 60e3, created: T0 - 15 * 60e3, viewers: 0, cwd: '~/Projects/shop-app', line: '❯ 1. Yes' },
+  { sid: 'agent2', program: 'codex', busy: true, running: true, waiting: false, since: T0 - 22 * 60e3, lastOut: T0 - 4e3, created: T0 - 23 * 60e3, viewers: 0, cwd: '~/Projects/api', line: '● Running tests (38/60)…' },
+  { sid: 'build1', program: null, busy: false, running: true, waiting: false, done: { program: 'npm', at: T0 - 4 * 60e3, seconds: 312, changes: { files: 4, add: 120, del: 8 } }, lastOut: T0 - 4 * 60e3, created: T0 - 10 * 60e3, viewers: 0, cwd: '~/Projects/web', line: 'webpack compiled successfully in 812 ms' },
+  { sid: 'main', program: null, busy: false, running: true, waiting: false, lastOut: T0, created: T0 - 30 * 60e3, viewers: 1, cwd: '~', line: 'utsav@MacBook-Pro ~ %' },
 ];
 function demoAgent() {
   const lines = [`${C.c}✻${C.x} Reading app.js…`, `${C.c}✻${C.x} Planning the change…`, '',

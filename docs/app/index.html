@@ -147,7 +147,7 @@
         <button data-tab="ask"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.8 4.7L18.5 9.5l-4.7 1.8L12 16l-1.8-4.7L5.5 9.5l4.7-1.8z"/></svg><span><b>Ask AI</b><small>Find a command, or describe it in plain English</small></span></button>
       </div>
       <div class="group">
-        <button data-tab="sessions"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="14" rx="2"/><path d="M7 9l3 2.5L7 14"/><path d="M13 14h4"/><path d="M8 21h8"/></svg><span><b>Terminals</b><small>What's running, switch, share a live view</small></span><em class="count" id="sessCount"></em></button>
+        <button data-tab="sessions"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="14" rx="2"/><path d="M7 9l3 2.5L7 14"/><path d="M13 14h4"/><path d="M8 21h8"/></svg><span><b>Agents &amp; terminals</b><small>Who needs you, what's working, share a live view</small></span><em class="count" id="sessCount"></em></button>
         <button data-tab="files"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg><span><b>Files</b><small>Download to this phone, upload from it</small></span></button>
         <button data-tab="web"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M3 12h18"/><path d="M12 3a14 14 0 0 1 0 18a14 14 0 0 1 0-18z"/></svg><span><b>Local websites</b><small>Open localhost:3000 on this phone</small></span></button>
       </div>
@@ -187,10 +187,12 @@
       </form>
     </div>
     <div class="pane" id="pane-sessions">
-      <p class="hint">Terminals on your computer. Programs keep running when you close the app, and it tells you when one finishes or needs an answer.</p>
+      <div class="ag-sum" id="agSum"></div>
       <div class="list" id="sessList"></div>
+      <p class="hint" style="margin-top:12px">Every terminal on your computer: AI agents, builds, servers. They keep running when you close the app. Answer a waiting one right here, or from the notification.</p>
       <div class="field" style="margin-top:12px"><div>Share for<small>The link stops working after this</small></div>
         <div class="seg" id="shareMins"><button data-v="30">30m</button><button data-v="60" class="on">1h</button><button data-v="240">4h</button><button data-v="1440">1d</button></div></div>
+      <label class="toggle small" style="margin-top:10px"><input type="checkbox" id="shareAnswer"> Let them answer its questions (Yes / No only)</label>
       <div class="row2" style="margin-top:12px"><button class="btn ghost" id="sessNew" type="button">+ New terminal</button><button class="btn ghost" id="shareBtn" type="button">Share live view</button></div>
       <div class="item sharebox" id="shareBox" hidden>
         <div class="top"><b>View-only link to this terminal</b><span class="tag warn" id="shareLeft"></span></div>
@@ -232,11 +234,23 @@
         <div class="seg" data-set="awakeOnCharger"><button data-v="true">On</button><button data-v="false">Off</button></div></div>
       <div class="note" id="pNote"></div>
     </div>
+    <div class="pane" id="pane-diff">
+      <p class="hint" id="diffInfo">Loading the changes…</p>
+      <pre class="diff" id="diffOut"></pre>
+    </div>
     <div class="pane" id="pane-settings">
       <div class="field"><div>Connection<small id="connInfo">–</small></div><button class="btn small ghost" id="retryDirect">Reconnect</button></div>
       <div class="field"><div>Phone notifications<small id="pushInfo">When a program finishes or needs your answer.</small></div><button class="btn small ghost" id="pushBtn">Turn on</button></div>
       <div class="field"><div>Backup: ntfy app<small>Install the free <b>ntfy</b> app and subscribe to <code id="notifyTopic"></code></small></div>
         <button class="btn small ghost" id="copyTopic">Copy</button></div>
+      <div class="field"><div>Auto-approve safe steps<small id="autoInfo">Off. Every question asks you.</small></div><button class="btn small ghost" id="autoSetup">Set up</button></div>
+      <form class="aiform" id="autoForm" hidden>
+        <p class="hint">When an AI agent asks, it gets <b>"Yes" by itself</b> only if its screen shows one of your words below <b>and none of the risky ones</b> (delete, rm, push, deploy, install, sudo, curl, password, production…). Everything else still asks you. One per line.</p>
+        <textarea class="field-in" id="autoAllow" rows="6" autocapitalize="off" autocorrect="off" spellcheck="false"></textarea>
+        <label class="toggle small"><input type="checkbox" id="autoOn"> Turn on auto-approve</label>
+        <div class="row2"><button class="btn">Save</button><button type="button" class="btn ghost" id="autoReset">Use the safe defaults</button></div>
+        <p class="note" id="autoNote"></p>
+      </form>
       <div class="field"><div>AI helper<small id="aiInfo">Off</small></div><button class="btn small ghost" id="aiSetup">Set up</button></div>
       <form class="aiform" id="aiForm" hidden>
         <p class="hint">Turns plain English into commands. Uses <b>your own key</b>, kept encrypted on this phone. Only what you type in <b>Ask</b> goes to the AI, straight from this phone. Your computer, its files and command output are never sent.</p>
@@ -255,6 +269,14 @@
       <div class="field"><div>Unpair this phone<small>Removes the key from this phone. To lock it out from the computer instead, run <code>node pair.js --remove</code>.</small></div><button class="btn small danger" id="unpair">Unpair</button></div>
     </div>
   </div>
+</div>
+<div class="saybox" id="sayBox" hidden role="dialog" aria-label="Answer in your words">
+  <form id="sayForm">
+    <b id="sayTitle">Answer in your words</b>
+    <small id="sayQ"></small>
+    <textarea class="field-in" id="sayIn" rows="3" placeholder="No, keep the old tests and only fix the login bug" autocapitalize="sentences" enterkeyhint="send"></textarea>
+    <div class="row2"><button type="button" class="btn ghost" id="sayMic">🎤 Speak</button><button type="button" class="btn ghost" id="sayCancel">Cancel</button><button class="btn" id="saySend">Send</button></div>
+  </form>
 </div>
 <div class="preview" id="preview" hidden>
   <header class="pvbar">

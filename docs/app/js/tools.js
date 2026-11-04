@@ -1,5 +1,6 @@
 // Pocket Terminal phone app: the tools around the terminal.
-//   Terminals   what's running on the computer; switch, close, share a view-only link
+//   Agents      a dashboard of every terminal: who needs you (answer right there), what's working, what finished;
+//               switch, close, share a view-only link
 //   Needs you   a program asks something (an AI agent's "Do you want to proceed?", [y/N]): answer in one tap
 //   Notify      phone notifications straight from the computer (Web Push), tap to jump to that terminal
 //   Files       browse, download to this phone, upload from it
@@ -21,44 +22,110 @@ export function setupTools(ctx) {
 
   // ================= Needs you: one-tap answers =================
   let needsFor = null;
+  // Buttons that fit a question: [label, what to type, class]
+  const SAY = ['🎤 Say', 'SAY'];
+  function answerBtns(text, menu) {
+    text = String(text || '');
+    if (ctx.viewer) return [['Yes', { a: 'yes' }, 'yes'], ['No', { a: 'no' }]]; // a teammate's link: Yes / No only, checked on the computer
+    if (/password|passphrase/i.test(text)) return [['Type it', null, 'yes'], ['^C', '\x03']];
+    return [...baseBtns(text, menu), SAY];
+  }
+  function baseBtns(text, menu) {
+    if (menu || /(?:❯|›)\s*1\./.test(text) || /do you want/i.test(text)) return [['1 · Yes', '1', 'yes'], ['2', '2'], ['3 · No', '3'], ['Enter', '\r'], ['Esc', '\x1b']];
+    if (/y\/n|yes\/no/i.test(text)) return [['Yes', 'y\r', 'yes'], ['No', 'n\r'], ['Enter', '\r'], ['^C', '\x03']];
+    return [['Enter', '\r', 'yes'], ['y', 'y\r'], ['n', 'n\r'], ['Esc', '\x1b'], ['^C', '\x03']];
+  }
+  // ---- answer in your own words (typed or spoken): "No, do it this way instead" ----
+  let sayFor = null, sayRec = null;
+  const SRx = window.SpeechRecognition || window.webkitSpeechRecognition;
+  function openSay(sid, q) {
+    sayFor = sid; $('sayQ').textContent = q || ''; $('sayIn').value = ''; $('sayBox').hidden = false;
+    $('sayMic').hidden = !SRx; setTimeout(() => $('sayIn').focus(), 50);
+  }
+  function closeSay() { if (sayRec) try { sayRec.stop(); } catch {} $('sayBox').hidden = true; sayFor = null; }
+  $('sayCancel').onclick = closeSay;
+  $('sayForm').onsubmit = (e) => {
+    e.preventDefault(); const text = $('sayIn').value.trim(); if (!text || !sayFor) return;
+    if (!ctx.live()) return toast('Connect first');
+    ctx.send({ t: 'reply', sid: sayFor, text }); closeSay();
+  };
+  $('sayIn').onkeydown = (e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); $('sayForm').requestSubmit(); } };
+  $('sayMic').onclick = () => {
+    if (sayRec) { sayRec.stop(); return; }
+    try {
+      sayRec = new SRx(); sayRec.lang = navigator.language || 'en-US'; sayRec.interimResults = true;
+      $('sayMic').classList.add('on');
+      sayRec.onresult = (ev) => { $('sayIn').value = [...ev.results].map((r) => r[0].transcript).join(' '); };
+      sayRec.onerror = () => toast('Voice is blocked here. Tap the 🎤 on your keyboard instead.');
+      sayRec.onend = () => { $('sayMic').classList.remove('on'); sayRec = null; };
+      sayRec.start();
+    } catch { sayRec = null; $('sayMic').classList.remove('on'); toast('Tap the 🎤 on your keyboard and say it.'); }
+  };
   function showNeeds(m) {
-    if (m.kind !== 'input' || (m.sid && m.sid !== ctx.sid())) return;
+    if (m.kind !== 'input' || (!ctx.viewer && m.sid && m.sid !== ctx.sid())) return;
     const text = String(m.text || '');
     $('needsTitle').textContent = `${m.program ? m.program[0].toUpperCase() + m.program.slice(1) : 'Your terminal'} needs you`;
     $('needsLine').textContent = text;
-    // Pick buttons that fit the question.
-    let btns;
-    if (m.menu || /(?:❯|›)\s*1\./.test(text) || /do you want/i.test(text)) btns = [['1 · Yes', '1', 'yes'], ['2', '2'], ['3 · No', '3'], ['Enter', '\r'], ['Esc', '\x1b']];
-    else if (/y\/n|yes\/no/i.test(text)) btns = [['Yes', 'y\r', 'yes'], ['No', 'n\r'], ['Enter', '\r'], ['^C', '\x03']];
-    else if (/password|passphrase/i.test(text)) btns = [['Type it', null, 'yes'], ['^C', '\x03']];
-    else btns = [['Enter', '\r', 'yes'], ['y', 'y\r'], ['n', 'n\r'], ['Esc', '\x1b'], ['^C', '\x03']];
+    const btns = answerBtns(text, m.menu);
     $('needsBtns').innerHTML = btns.map(([l, d, c], i) => `<button type="button" data-i="${i}"${c ? ` class="${c}"` : ''}>${esc(l)}</button>`).join('');
     $('needsBtns').onclick = (e) => {
       const b = e.target.closest('[data-i]'); if (!b) return;
-      const d = btns[+b.dataset.i][1]; hideNeeds();
+      const d = btns[+b.dataset.i][1];
+      if (d === 'SAY') return openSay(ctx.sid(), text);
+      hideNeeds();
+      if (d && typeof d === 'object') return ctx.send({ t: 'answer', ...d }); // teammate link
       if (d) ctx.input(d); ctx.focus();
     };
     needsFor = m.sid || ctx.sid(); $('needs').hidden = false; ctx.relayout();
     navigator.vibrate && navigator.vibrate([30, 60, 30]);
   }
   function hideNeeds() { if (!$('needs').hidden) { $('needs').hidden = true; needsFor = null; ctx.relayout(); } }
-  ctx.on('alert', (m) => { if (m.kind === 'input') showNeeds(m); refreshSessionsSoon(); });
+  ctx.on('alert', (m) => {
+    if (m.kind === 'input') showNeeds(m);
+    if (m.kind === 'auto') toast(`Auto-approved (${m.rule || 'your rule'}): ${String(m.text || '').slice(0, 60)}`);
+    refreshSessionsSoon();
+  });
+  ctx.on('hi', (m) => { if (m.viewer && m.canAnswer) document.body.classList.add('cananswer'); });
   ctx.onInput(hideNeeds);
 
   // ================= Terminals =================
-  let sessions = [], current = null, shareId = null;
-  const label = (s) => s.program ? s.program : s.running ? 'Shell' : 'Not started';
+  let sessions = [], current = null, shareId = null, sessBtns = {};
+  const NAMES = { claude: 'Claude Code', codex: 'Codex', gemini: 'Gemini CLI', aider: 'Aider', opencode: 'OpenCode', 'cursor-agent': 'Cursor', amp: 'Amp', goose: 'Goose', qwen: 'Qwen Code', npm: 'npm', pnpm: 'pnpm', yarn: 'yarn' };
+  const nice = (p) => NAMES[p] || (p ? p[0].toUpperCase() + p.slice(1) : '');
+  const label = (s) => s.program ? nice(s.program) : s.running ? 'Shell' : 'Not started';
+  const dur = (ms) => { const sec = Math.max(1, Math.round(ms / 1000)); return sec < 60 ? `${sec} s` : sec < 3600 ? `${Math.round(sec / 60)} min` : `${(sec / 3600).toFixed(sec < 36000 ? 1 : 0)} h`; };
+  const stateOf = (s) => s.waiting ? 'wait' : s.busy && s.lastOut && Date.now() - s.lastOut < 60e3 ? 'work' : s.program ? 'run' : s.done ? 'done' : 'idle';
+  const ORDER = { wait: 0, work: 1, run: 2, done: 3, idle: 4 };
   function paintSessions() {
     const waiting = sessions.filter((s) => s.waiting && s.sid !== current).length;
     $('sessCount').textContent = waiting || '';
-    $('sessList').innerHTML = sessions.length ? sessions.map((s) => {
-      const st = s.waiting ? 'wait' : s.busy && s.lastOut && Date.now() - s.lastOut < 60e3 ? 'work' : '';
-      const what = s.waiting ? 'Waiting for your answer' : st === 'work' ? 'Working…' : s.program ? 'Running' : 'At the prompt';
-      return `<div class="item sess${s.sid === current ? ' cur' : ''}"><button class="sess" data-sw="${esc(s.sid)}" type="button">
-        <i class="st ${st}"></i><span class="body"><b>${esc(label(s))}${s.sid === current ? ' · this one' : ''}</b><small>${what}${s.lastOut ? ' · ' + ago(s.lastOut) : ''}${s.viewers > (s.sid === current ? 1 : 0) ? ' · 👁 ' + (s.viewers - (s.sid === current ? 1 : 0)) : ''}</small>${s.line ? `<code>${esc(s.line)}</code>` : ''}</span></button>
-        ${s.sid !== current ? `<button class="x" data-close="${esc(s.sid)}" type="button" aria-label="Close terminal">✕</button>` : ''}</div>`;
-    }).join('') : '<div class="empty">Connect to see your terminals.</div>';
+    const n = { wait: 0, work: 0, done: 0 }; for (const s of sessions) { const k = stateOf(s); if (k in n) n[k]++; else if (k === 'run') n.work++; }
+    $('agSum').innerHTML = sessions.length ? `<span class="${n.wait ? 'hot' : ''}"><b>${n.wait}</b> need${n.wait === 1 ? 's' : ''} you</span><span><b>${n.work}</b> working</span><span><b>${n.done}</b> finished</span>` : '';
+    sessBtns = {};
+    const list = [...sessions].sort((a, b) => ORDER[stateOf(a)] - ORDER[stateOf(b)] || a.created - b.created);
+    $('sessList').innerHTML = list.length ? list.map((s) => {
+      const st = stateOf(s), cur = s.sid === current, others = s.viewers - (cur ? 1 : 0);
+      const tag = st === 'wait' ? `Needs you${s.askedAt ? ' · ' + dur(Date.now() - s.askedAt) : ''}`
+        : st === 'work' ? `Working${s.since ? ' · ' + dur(Date.now() - s.since) : ''}`
+          : st === 'run' ? `Running · quiet ${s.lastOut ? dur(Date.now() - s.lastOut) : ''}`
+            : st === 'done' ? `Finished ${ago(s.done.at)}` : 'At the prompt';
+      const title = st === 'done' && !s.program ? nice(s.done.program) : label(s);
+      let body = '';
+      if (st === 'wait') {
+        const btns = (sessBtns[s.sid] = answerBtns(s.question, s.menu).filter(([l]) => !['Enter', 'Esc', '^C'].includes(l))); // the dashboard keeps it short
+        body = `<p class="ag-q">${esc(s.question || 'It is waiting for your answer.')}</p><div class="needs-btns ag-btns">${btns.map(([l, d, c], i) => d ? `<button type="button" data-ans="${esc(s.sid)}" data-i="${i}"${c ? ` class="${c}"` : ''}>${esc(l)}</button>` : '').join('')}</div>`;
+      } else if (st === 'done') {
+        const ch = s.done.changes;
+        body = `<p class="ag-note">Ran for ${dur(s.done.seconds * 1000)}${ch && ch.files ? ` · <b>${ch.files} file${ch.files === 1 ? '' : 's'} changed</b> <span class="plus">+${ch.add}</span> <span class="minus">−${ch.del}</span>` : ''}.</p>${ch && ch.files ? `<div class="needs-btns ag-btns"><button type="button" class="yes" data-diff="${esc(s.sid)}">See changes</button></div>` : ''}`;
+      }
+      else if (s.line) body = `<code>${esc(s.line)}</code>`;
+      return `<div class="item agent s-${st}${cur ? ' cur' : ''}">
+        <div class="ag-top"><i class="st s-${st}"></i><span class="ag-name"><b>${esc(title)}</b>${s.cwd ? `<small>${esc(s.cwd)}</small>` : ''}</span><span class="ag-tag">${esc(tag)}</span></div>
+        ${body}
+        <div class="ag-acts"><button class="btn small ghost" data-sw="${esc(s.sid)}" type="button">${cur ? 'Open · on screen' : 'Open'}</button>${others > 0 ? `<span class="ag-eye">👁 ${others}</span>` : ''}${!cur ? `<button class="x" data-close="${esc(s.sid)}" type="button" aria-label="Close terminal">✕</button>` : ''}</div></div>`;
+    }).join('') : '<div class="empty">Connect to see your agents and terminals.</div>';
   }
+  ctx.on('answered', (m) => { toast(m.ok ? 'Sent ✓' : 'It isn’t waiting anymore'); if (m.sid === current) hideNeeds(); refreshSessionsSoon(); });
   function refreshSessions() { if (ctx.live()) ctx.send({ t: 'sessions' }); }
   let rsT; function refreshSessionsSoon() { clearTimeout(rsT); rsT = setTimeout(refreshSessions, 400); }
   ctx.on('sessions', (m) => { sessions = m.list || []; current = m.current; paintSessions(); });
@@ -66,12 +133,37 @@ export function setupTools(ctx) {
   ctx.on('switched', (m) => { current = m.sid; ctx.setSid(m.sid); hideNeeds(); refreshSessions(); });
   setInterval(() => { if (ctx.pageOpen('sessions')) refreshSessions(); }, 4000);
   $('sessList').onclick = (e) => {
+    const a = e.target.closest('[data-ans]');
+    if (a) {
+      const b = (sessBtns[a.dataset.ans] || [])[+a.dataset.i]; if (!b || !b[1]) return;
+      if (b[1] === 'SAY') { const s = sessions.find((x) => x.sid === a.dataset.ans); return openSay(a.dataset.ans, s && s.question); }
+      a.disabled = true; ctx.send({ t: 'answer', sid: a.dataset.ans, d: b[1] }); return;
+    }
+    const df = e.target.closest('[data-diff]'); if (df) return openDiff(df.dataset.diff);
     const c = e.target.closest('[data-close]');
     if (c) { const s = sessions.find((x) => x.sid === c.dataset.close); if (s && s.program && !confirm(`Close this terminal? ${s.program} is still running in it.`)) return; ctx.send({ t: 'close-session', sid: c.dataset.close }); return; }
     const b = e.target.closest('[data-sw]'); if (!b) return;
     if (b.dataset.sw !== current) switchTo(b.dataset.sw);
     ctx.closeSheet();
   };
+  function openDiff(sid) {
+    if (!ctx.live()) return toast('Connect first');
+    $('diffInfo').textContent = 'Loading the changes…'; $('diffOut').innerHTML = ''; ctx.openSheet('diff');
+    const id = ctx.newId();
+    ctx.listen(id, (m) => {
+      ctx.unlisten(id);
+      if (m.error) { $('diffInfo').textContent = m.error; return; }
+      const files = (m.diff.match(/^diff --git /gm) || []).length + (m.fresh || []).length;
+      $('diffInfo').textContent = `${m.folder} · ${files} file${files === 1 ? '' : 's'} changed${m.cut ? ' (long: showing the start)' : ''}. Compared with your last commit.`;
+      const lines = m.diff.split('\n').map((l) => {
+        const c = /^diff --git /.test(l) ? 'f' : /^@@/.test(l) ? 'h' : /^\+(?!\+\+)/.test(l) ? 'a' : /^-(?!--)/.test(l) ? 'd' : '';
+        return c ? `<span class="${c}">${esc(l)}</span>` : esc(l);
+      });
+      if (m.fresh && m.fresh.length) lines.push('', '<span class="f">New files (not in git yet):</span>', ...m.fresh.map((f) => `<span class="a">+ ${esc(f)}</span>`));
+      $('diffOut').innerHTML = lines.join('\n') || 'No changes.';
+    });
+    ctx.send({ t: 'diff', id, sid });
+  }
   function switchTo(sid) { const sz = ctx.size(); ctx.send({ t: 'switch', sid, cols: sz.cols, rows: sz.rows }); }
   $('sessNew').onclick = () => { if (!ctx.live()) return toast('Connect first'); switchTo(ctx.newId()); ctx.closeSheet(); toast('New terminal'); };
   ctx.onPage('sessions', () => { refreshSessions(); ctx.send({ t: 'shares' }); });
@@ -82,11 +174,12 @@ export function setupTools(ctx) {
   $('shareMins').onclick = (e) => { const b = e.target.closest('[data-v]'); if (!b) return; shareMins = +b.dataset.v; $('shareMins').querySelectorAll('button').forEach((x) => x.classList.toggle('on', x === b)); };
   $('shareBtn').onclick = () => {
     if (!ctx.live()) return toast('Connect first');
-    ctx.send({ t: 'share', minutes: shareMins });
+    ctx.send({ t: 'share', minutes: shareMins, canAnswer: $('shareAnswer').checked });
   };
   ctx.on('share', (m) => {
     if (!m.link) return;
     shareId = m.id; shareExp = m.expires; $('shareLink').value = m.link; $('shareBox').hidden = false; paintShareLeft();
+    $('shareBox').querySelector('.ex').textContent = $('shareAnswer').checked ? 'Anyone with the link can watch this terminal live and answer its questions with Yes or No, until it expires. They can\'t type or run anything else.' : 'Anyone with the link can watch this terminal live until it expires. They can\'t type or run anything.';
     $('shareSend').hidden = !navigator.share;
   });
   ctx.on('shares', (m) => {
@@ -138,6 +231,25 @@ export function setupTools(ctx) {
   });
   $('pushBtn').onclick = () => (ctx.store.get('push') && pushOk() && Notification.permission === 'granted' ? (ctx.live() ? ctx.send({ t: 'push-test' }) : toast('Connect first')) : turnOnPush());
   paintPush();
+
+  // ================= Auto-approve =================
+  let autoCfg = null;
+  const DEFAULT_ALLOW = ['npm test', 'npm run test', 'pytest', 'go test', 'cargo test', 'git status', 'git diff', 'ls', 'cat ', 'Read(', 'Read file', 'Search(', 'Grep'];
+  function paintAuto() {
+    if (!autoCfg) { $('autoInfo').textContent = 'Connect to see it.'; return; }
+    $('autoInfo').textContent = autoCfg.enabled ? `On · ${autoCfg.allow.length} safe words. Risky steps still ask you.` : 'Off. Every question asks you.';
+    $('autoOn').checked = autoCfg.enabled; $('autoAllow').value = (autoCfg.allow || []).join('\n');
+  }
+  ctx.on('auto', (m) => { autoCfg = { enabled: !!m.enabled, allow: m.allow || [] }; paintAuto(); });
+  ctx.onPage('settings', () => { if (ctx.live() && !ctx.viewer) ctx.send({ t: 'auto-get' }); paintAuto(); });
+  $('autoSetup').onclick = () => { $('autoForm').hidden = !$('autoForm').hidden; if (ctx.live()) ctx.send({ t: 'auto-get' }); };
+  $('autoReset').onclick = () => { $('autoAllow').value = DEFAULT_ALLOW.join('\n'); };
+  $('autoForm').onsubmit = (e) => {
+    e.preventDefault(); if (!ctx.live()) return toast('Connect first');
+    const allow = $('autoAllow').value.split('\n').map((x) => x.trim()).filter(Boolean);
+    ctx.send({ t: 'auto-set', cfg: { enabled: $('autoOn').checked, allow } });
+    $('autoNote').textContent = 'Saved on your computer.'; toast($('autoOn').checked ? 'Auto-approve is on for safe steps' : 'Auto-approve is off');
+  };
 
   // ================= Files =================
   let cwd = ctx.store.get('cwd', '~'), listing = null, xfer = null, lastFile = null;
