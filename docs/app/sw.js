@@ -5,7 +5,7 @@
 //   3. Local websites: pages under preview/<port>/ come from your computer's localhost,
 //      through the app's encrypted link (the app window does the talking).
 // Bump VERSION on every release so phones pick up the new code.
-const VERSION = 'pt-v7.0.2';
+const VERSION = 'pt-v7.0.3';
 const FILES = ['./', 'index.html', 'js/app.js', 'js/tools.js', 'js/theme.js', 'js/crypto.js', 'js/board.js', 'js/helper.js', 'vendor/xterm.js', 'vendor/xterm.css', 'vendor/addon-fit.js', 'vendor/jsQR.js', 'manifest.json', 'icon.svg', 'icon.png', 'icon-192.png', 'icon-maskable.png', 'apple-touch-icon.png', 'css/app.css', 'fonts/ibm-plex-sans-latin-400-normal.woff2', 'fonts/ibm-plex-sans-latin-500-normal.woff2', 'fonts/ibm-plex-sans-latin-600-normal.woff2', 'fonts/jetbrains-mono-latin-400-normal.woff2', 'fonts/jetbrains-mono-latin-700-normal.woff2'];
 self.addEventListener('install', (e) => e.waitUntil(caches.open(VERSION).then((c) => c.addAll(FILES)).then(() => self.skipWaiting())));
 self.addEventListener('activate', (e) => e.waitUntil(caches.keys().then((ks) => Promise.all(ks.filter((k) => k !== VERSION).map((k) => caches.delete(k)))).then(() => self.clients.claim())));
@@ -90,8 +90,10 @@ const concat = (parts) => { const n = parts.reduce((a, p) => a + p.byteLength, 0
 // Runs inside the preview page. Full-page links and forms to "/somewhere" would leave the preview,
 // so send them to /…/preview/<port>/somewhere instead. Single-page apps (which handle links
 // themselves) are left alone.
-const SHIM = `(function(){var s=document.currentScript,p=s&&s.dataset.port,pre=${JSON.stringify(PRE)}+p;
-function fix(u){try{var x=new URL(u,location.href);if(x.origin===location.origin&&x.pathname.indexOf(${JSON.stringify(PRE)})!==0)return pre+x.pathname+x.search+x.hash;}catch(e){}return null}
+// jsStr: a JS string literal that is also safe inside an HTML <script> (no '<', '>', '/' or line breaks).
+const jsStr = (v) => JSON.stringify(String(v)).replace(/[<>\/\u2028\u2029]/g, (c) => '\\u' + c.charCodeAt(0).toString(16).padStart(4, '0'));
+const SHIM = `(function(){var s=document.currentScript,p=s&&s.dataset.port,pre=${jsStr(PRE)}+p;
+function fix(u){try{var x=new URL(u,location.href);if(x.origin===location.origin&&x.pathname.indexOf(${jsStr(PRE)})!==0)return pre+x.pathname+x.search+x.hash;}catch(e){}return null}
 addEventListener('click',function(e){if(e.defaultPrevented||e.button||e.metaKey||e.ctrlKey)return;var a=e.target.closest&&e.target.closest('a[href]');if(!a||a.target==='_blank'||a.hasAttribute('download'))return;var f=fix(a.getAttribute('href'));if(f){e.preventDefault();location.href=f}});
 addEventListener('submit',function(e){if(e.defaultPrevented)return;var f=e.target,u=fix(f.getAttribute('action')||location.href);if(u&&f.getAttribute('action'))f.setAttribute('action',u)},true);})();`;
 

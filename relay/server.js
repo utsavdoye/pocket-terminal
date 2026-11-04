@@ -36,18 +36,24 @@ const BUFFER_LIMIT = 256 * 1024;
 const MAX_JOBS = 50;
 const MAX_SNIPPETS = 60;
 // Changing the password or token signs out every phone.
-const SECRET = crypto.createHash('sha256').update(`session|${APP_PASSWORD || APP_PASSWORD_HASH}|${AGENT_TOKEN}`).digest();
+// scrypt (slow on purpose), so nothing derived from the password can be brute-forced quickly.
+const SECRET = crypto.scryptSync(`session|${APP_PASSWORD || APP_PASSWORD_HASH}|${AGENT_TOKEN}`, 'pocket-terminal-session', 32, { N: 16384, r: 8, p: 1 });
+// A plain APP_PASSWORD is turned into a scrypt hash once at start-up and compared like the stored one.
+const PLAIN_SALT = crypto.randomBytes(16).toString('hex');
+const PLAIN_HASH = APP_PASSWORD_HASH ? null : crypto.scryptSync(APP_PASSWORD, PLAIN_SALT, 64, { N: 16384, r: 8, p: 1 });
 
 // ---------- helpers ----------
 
-const sha = (s) => crypto.createHash('sha256').update(String(s)).digest();
-const safeEqual = (a, b) => crypto.timingSafeEqual(sha(a), sha(b));
+// For comparing tokens (not passwords) in constant time: HMAC both with a random per-run key.
+const CMP_KEY = crypto.randomBytes(32);
+const cmpHash = (s) => crypto.createHmac('sha256', CMP_KEY).update(String(s)).digest();
+const safeEqual = (a, b) => crypto.timingSafeEqual(cmpHash(a), cmpHash(b));
 const sign = (v) => crypto.createHmac('sha256', SECRET).update(v).digest('base64url');
 const now = () => Date.now();
 const log = (...a) => console.log(new Date().toISOString(), ...a);
 
 function passwordOk(pw) {
-  if (!APP_PASSWORD_HASH) return safeEqual(pw, APP_PASSWORD);
+  if (!APP_PASSWORD_HASH) { const got = crypto.scryptSync(String(pw), PLAIN_SALT, 64, { N: 16384, r: 8, p: 1 }); return crypto.timingSafeEqual(got, PLAIN_HASH); }
   const [, salt, hash] = APP_PASSWORD_HASH.split(':');
   const got = crypto.scryptSync(pw, salt, 64, { N: 16384, r: 8, p: 1 });
   const want = Buffer.from(hash, 'hex');

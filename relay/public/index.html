@@ -188,7 +188,7 @@
   const KEYS = { esc:'\x1b', tab:'\t', up:'\x1b[A', down:'\x1b[B', right:'\x1b[C', left:'\x1b[D', home:'\x1b[H', end:'\x1b[F',
     pgup:'\x1b[5~', pgdn:'\x1b[6~', cc:'\x03', cd:'\x04', cz:'\x1a', cl:'\x0c', cr:'\x12' };
   const store = { get(k, d) { try { return localStorage.getItem(k) ?? d; } catch { return d; } }, set(k, v) { try { localStorage.setItem(k, v); } catch {} } };
-  const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;' })[c]);
+  const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' })[c]);
   const ago = (t) => { if (!t) return 'never'; const s = Math.round((Date.now() - t) / 1000);
     return s < 60 ? 'just now' : s < 3600 ? `${Math.round(s / 60)} min ago` : s < 86400 ? `${Math.round(s / 3600)} h ago` : `${Math.round(s / 86400)} d ago`; };
   const until = (t) => { const s = Math.round((t - Date.now()) / 1000); if (s <= 0) return 'any moment';
@@ -305,8 +305,8 @@
   let snippets = [];
   function renderSnips(list) {
     snippets = list;
-    $('snips').innerHTML = list.length ? list.map((s) => `<div class="card snip"><button class="run" data-run="${s.id}"><b>${esc(s.name)}</b><code>${esc(s.cmd)}</code></button>
-      <button class="x" data-sdel="${s.id}">✕</button></div>`).join('') : '<div class="empty">No snippets yet. Add your common commands below.</div>';
+    $('snips').innerHTML = list.length ? list.map((s) => `<div class="card snip"><button class="run" data-run="${esc(s.id)}"><b>${esc(s.name)}</b><code>${esc(s.cmd)}</code></button>
+      <button class="x" data-sdel="${esc(s.id)}">✕</button></div>`).join('') : '<div class="empty">No snippets yet. Add your common commands below.</div>';
   }
   $('snips').onclick = async (e) => {
     const run = e.target.closest('[data-run]'); const del = e.target.closest('[data-sdel]');
@@ -329,9 +329,9 @@
       const tag = j.status === 'done' ? (j.code === 0 ? '<span class="tag done">done</span>' : `<span class="tag fail">exit ${esc(j.code)}</span>`)
         : j.status === 'running' ? '<span class="tag running">running</span>' : '<span class="tag">waiting for Mac</span>';
       const out = j.status === 'done' ? `<pre>${esc(j.out) || '(no output)'}</pre>` : '';
-      const del = j.status !== 'running' ? `<button class="x" data-del="${j.id}">remove</button>` : '<span></span>';
+      const del = j.status !== 'running' ? `<button class="x" data-del="${esc(j.id)}">remove</button>` : '<span></span>';
       return `<div class="card"><div class="top"><code>${esc(j.cmd)}</code>${tag}</div>${out}
-        <div class="meta"><span>added ${ago(j.created)}${j.finished ? ' · finished ' + ago(j.finished) : ''}</span>${del}</div></div>`;
+        <div class="meta"><span>added ${esc(ago(j.created))}${j.finished ? ' · finished ' + esc(ago(j.finished)) : ''}</span>${del}</div></div>`;
     }).join('') : '<div class="empty">Nothing queued.</div>';
   }
   $('jobs').onclick = (e) => { const id = e.target.dataset.del; if (id) api('/api/jobs/' + id, null, 'DELETE'); };
