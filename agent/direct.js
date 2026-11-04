@@ -204,7 +204,7 @@ function startDirect({ cfg, core, power, log, dir, x = {} }) {
   const lastAlert = new Map();
   // Answer buttons on a notification. Each question gets a one-time id and its own key, sent inside
   // the encrypted notification. The phone's service worker answers by posting an encrypted note to
-  // the mailbox, so it works with the app closed and the phone locked (Android, Wear OS watches).
+  // the mailbox, so it works with the app closed and the phone locked (Android).
   const asks = new Map(); // id -> { key, k, choices, exp }
   const ASK_TTL = 30 * 60e3;
   function answerButtons(ev) {

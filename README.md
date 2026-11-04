@@ -41,7 +41,7 @@ npx pocket-terminal
 
 **For AI agents**
 - **Agents dashboard:** every agent and terminal on one screen: who needs you (with the question), what's working and for how long, what just finished. Answer a waiting one right there.
-- **Answer from the notification:** Yes / No buttons right on the notification, with the app closed and the phone locked. On Android they show on Wear OS watches too.
+- **Answer from the notification:** Yes / No buttons right on the notification, with the app closed and the phone locked. (Android; on iPhone, tap the notification to answer in the app.)
 - **Answer in your own words:** type or say "No, keep the old tests" and it goes to the agent as its next instruction.
 - **Auto-approve safe steps (opt-in):** steps that match your safe words (like `npm test`) are answered by themselves; anything risky (delete, push, deploy, install, sudo…) still asks you.
 - **What changed:** when an agent finishes you get "4 files changed (+120 −8)", and *See changes* shows the full diff on your phone.

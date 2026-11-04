@@ -2,7 +2,7 @@
 //   1. Offline cache for the app's own files, so it opens instantly from the home screen.
 //   2. Phone notifications: shows what your computer sends (end-to-end encrypted Web Push),
 //      and a tap opens the terminal it's about. Questions get Yes/No buttons that answer
-//      without opening the app (Android, Wear OS watches; iPhone shows the note without buttons).
+//      without opening the app (Android; iPhone shows the note without buttons).
 //   3. Local websites: pages under preview/<port>/ come from your computer's localhost,
 //      through the app's encrypted link (the app window does the talking).
 // Bump VERSION on every release so phones pick up the new code.

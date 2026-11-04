@@ -2,7 +2,7 @@
 
 ## 7.1.0 (2026-11-04)
 - **Agents dashboard** (⋯ → Agents & terminals): every terminal with its program, folder and state. Who needs you (and the question), what's working and for how long, what finished. Answer a waiting one without switching to it.
-- **Answer buttons on notifications:** Yes / No right on the notification, even with the app closed and the phone locked; shows on Wear OS watches. Each question gets a one-time key inside the encrypted notification; answers are encrypted, work once and expire after 30 minutes. (iPhone web apps can't show notification buttons yet: tap the notification instead.)
+- **Answer buttons on notifications:** Yes / No right on the notification, even with the app closed and the phone locked (Android). Each question gets a one-time key inside the encrypted notification; answers are encrypted, work once and expire after 30 minutes. (iPhone web apps can't show notification buttons yet: tap the notification instead.)
 - **Answer in your own words:** 🎤 Say on any question. On an AI agent's menu it chooses "No, tell it what to do instead" and sends your words.
 - **Auto-approve safe steps** (Settings, off by default): answered "Yes" only when the agent's question box shows one of your safe words and none of the risky ones.
 - **What changed:** "finished" notifications and the dashboard show files changed (+added −removed) for git folders; See changes shows the diff.

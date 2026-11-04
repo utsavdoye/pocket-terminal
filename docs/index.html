@@ -41,7 +41,7 @@
 {"@type":"Question","name":"Can AI coding agents keep running with my laptop closed?","acceptedAnswer":{"@type":"Answer","text":"Yes. While a program is still working, the computer stays awake (on battery too, above 20%, for up to 2 hours after you last used it). When an agent like Claude Code, Codex or Gemini CLI stops to ask, your phone buzzes with the question. Tap it and answer."}},
 {"@type":"Question","name":"What does it cost in battery?","acceptedAnswer":{"@type":"Answer","text":"Each check-in is a few seconds awake. Overnight that is typically a few percent. It never stays awake below 20% and stops waking below 10%."}},
 {"@type":"Question","name":"I lost my phone. What now?","acceptedAnswer":{"@type":"Answer","text":"On your computer run npx pocket-terminal list, then npx pocket-terminal remove followed by the number. That phone is locked out within seconds, and its PIN-locked key is useless."}},
-{"@type":"Question","name":"Can I answer from my watch?","acceptedAnswer":{"@type":"Answer","text":"On Android, yes: the notification has Yes / No buttons that work with the app closed and the phone locked, and Wear OS watches show them too. On iPhone, web apps can't put buttons on notifications yet, so an Apple Watch shows the question and you answer by tapping it on your phone."}},
+{"@type":"Question","name":"Can I answer without opening the app?","acceptedAnswer":{"@type":"Answer","text":"On Android, yes: questions show Yes / No buttons right on the notification, even with the app closed and the phone locked. On iPhone, web apps can't put buttons on notifications yet, so tap the notification and answer in the app."}},
 {"@type":"Question","name":"Which systems does it work on?","acceptedAnswer":{"@type":"Answer","text":"Computer: macOS, Windows 10 and 11, and Linux. Phone: iPhone and Android, as an app you add to your home screen."}}
 ]}]}</script>
 </head>
@@ -65,7 +65,7 @@
   <section class="hero" id="top">
     <div class="bg-grid"></div>
     <div class="wrap">
-      <a class="pill" href="https://github.com/utsavdoye/pocket-terminal/releases"><span class="tag">NEW</span>v7.1: agents dashboard + answer from your watch <span class="arr">→</span></a>
+      <a class="pill" href="https://github.com/utsavdoye/pocket-terminal/releases"><span class="tag">NEW</span>v7.1: agents dashboard + answer from the notification <span class="arr">→</span></a>
       <h1>Your terminal,<br><span class="accent">in your pocket.</span></h1>
       <p class="lede">Answer your <strong>AI coding agents</strong>, run commands and open <strong>localhost</strong> on your laptop from your phone. From any network, <strong>even with the lid closed</strong>. Free, open source, end-to-end encrypted.</p>
       <div class="cta">
@@ -131,10 +131,10 @@
 <span class="g">●</span> Codex        ~/api        <span class="g">working · 22 min</span>
 <span class="g">✓</span> npm build    ~/web        <span class="c">4 files changed</span></div>
         </article>
-        <article class="card" data-path="~/features/watch"><span class="num">03 / WATCH</span>
-          <div class="ico"><svg viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" rx="3"/><path d="M9 6l1-3h4l1 3M9 18l1 3h4l1-3"/><path d="M10 12l1.5 1.5L14.5 10"/></svg></div>
-          <h3>Answer from your watch</h3>
-          <p>Yes / No right on the notification, with the app closed and the phone locked. Shows on Wear OS watches.</p>
+        <article class="card" data-path="~/features/notify"><span class="num">03 / NOTIFY</span>
+          <div class="ico"><svg viewBox="0 0 24 24"><path d="M6 16V11a6 6 0 0 1 12 0v5l1.5 2h-15z"/><path d="M10 20.5a2 2 0 0 0 4 0"/><path d="M9.5 11.5l1.8 1.8 3.2-3.3"/></svg></div>
+          <h3>Answer from the notification</h3>
+          <p>Yes / No right on the notification on Android, with the app closed and the phone locked.</p>
         </article>
         <article class="card" data-path="~/features/lid-closed"><span class="num">04 / POWER</span>
           <div class="ico"><svg viewBox="0 0 24 24"><path d="M20 14.5A8 8 0 0 1 9.5 4 8 8 0 1 0 20 14.5z"/></svg></div>
@@ -340,7 +340,7 @@
       <details><summary>What does it cost in battery?</summary><p>Each check-in is a few seconds awake. Overnight that's typically a few percent. It never stays awake below 20% and stops waking below 10%.</p></details>
       <details><summary>I lost my phone. What now?</summary><p>On your computer run <code>npx pocket-terminal list</code>, then <code>npx pocket-terminal remove &lt;number&gt;</code>. That phone is locked out within seconds, and its PIN-locked key is useless.</p></details>
       <details><summary>Which systems does it work on?</summary><p>Computer: macOS, Windows 10/11, and Linux (laptops get the lid-closed features; servers simply stay awake). Phone: iPhone and Android, as an app you add to your home screen.</p></details>
-      <details><summary>Can I answer from my watch?</summary><p>On Android, yes: the notification has Yes / No buttons that work with the app closed and the phone locked, and Wear OS watches show them too. On iPhone, web apps can't put buttons on notifications yet, so an Apple Watch shows the question and you answer by tapping it on your phone.</p></details>
+      <details><summary>Can I answer without opening the app?</summary><p>On Android, yes: questions show Yes / No buttons right on the notification, even with the app closed and the phone locked. On iPhone, web apps can't put buttons on notifications yet, so tap the notification and answer in the app.</p></details>
       <details><summary>Something isn't working</summary><p>The <a href="help.html">help page</a> covers installing, pairing, connecting, notifications and uninstalling. Still stuck? Ask in <a href="https://github.com/utsavdoye/pocket-terminal/discussions">Discussions</a>.</p></details>
     </div>
   </section>
