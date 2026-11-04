@@ -91,4 +91,6 @@ if grep -q "agent running" "$LOG" 2>/dev/null; then echo "Agent running ✅"; el
 
 echo
 if [ -n "${POCKET_SKIP_PAIR:-}" ]; then exit 0; fi
-"$NODE" pair.js </dev/tty
+# Pairing needs a keyboard. Without a terminal (CI, some cloud shells), say what to run instead of failing.
+if { : </dev/tty; } 2>/dev/null; then "$NODE" pair.js </dev/tty
+else echo "Installed. To pair a phone, open a terminal on this computer and run:  npx pocket-terminal pair"; fi
