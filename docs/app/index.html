@@ -68,24 +68,21 @@
 
 <!-- Not paired yet -->
 <div class="gate" id="gate-none" hidden>
-  <a class="gate-help" href="https://pocket-terminal.utsavdoye.com/#install" target="_blank" rel="noopener" aria-label="Install guide">? Install guide</a>
   <div class="gate-inner">
     <img class="mark" src="icon.svg" alt="">
     <h1>Pocket Terminal</h1>
     <p>Your computer's terminal on this phone, from anywhere. It even works with the lid closed, and everything is end-to-end encrypted.</p>
     <ol class="steps">
-      <li><b>Run this on your computer</b>Works the same on Mac, Windows and Linux. Open Terminal (PowerShell on Windows) and paste:
+      <li><b>Run this on your computer</b>Mac, Windows or Linux terminal.
         <button class="cmd" id="copyCmd" type="button"><span class="pr">$</span> npx pocket-terminal<span class="cp">copy</span></button>
-        <small>"npx not found"? Install <a href="https://nodejs.org" target="_blank" rel="noopener">Node.js</a> first, or follow the <a href="https://pocket-terminal.utsavdoye.com/#install" target="_blank" rel="noopener">install guide</a>.</small></li>
-      <li><b>Scan the QR code</b>Your computer shows a QR code. Tap <b class="in">Scan QR code</b> below and point the camera at it.</li>
-      <li><b>Approve it on the computer</b>Check the 6-digit code matches, type y, then choose a PIN.</li>
+        <small>Needs Node.js. <a href="https://pocket-terminal.utsavdoye.com/#install" target="_blank" rel="noopener">Install guide →</a></small></li>
+      <li><b>Scan its QR code</b>Point your camera at the code it shows.</li>
+      <li><b>Approve on the computer</b>Codes match? Type y, then set a PIN.</li>
     </ol>
     <div class="pairopts">
       <button class="btn" id="scanBtn" type="button">Scan QR code</button>
       <button class="btn ghost" id="pasteBtn" type="button">Paste pairing link</button>
     </div>
-    <a class="guide" href="https://pocket-terminal.utsavdoye.com/#install" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M9.5 9.3a2.6 2.6 0 0 1 5 .9c0 1.7-2.5 2.3-2.5 3.6"/><path d="M12 17h.01"/></svg><span><b>Stuck installing?</b>Open the step-by-step install guide</span><i>→</i></a>
-    <button class="linkbtn" id="demoBtn" type="button">See a demo first →</button>
     <form class="row2 pasteform" id="pasteForm" hidden>
       <input class="field-in" id="pasteIn" placeholder="https://…#join=…" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false">
       <button class="btn">Pair</button>

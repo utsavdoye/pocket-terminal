@@ -82,7 +82,6 @@ function showNone() {
   $('pasteBtn').onclick = () => { $('pasteForm').hidden = false; $('pasteIn').focus(); };
   $('pasteForm').onsubmit = (e) => { e.preventDefault(); if (!handleLink($('pasteIn').value)) $('noneErr').textContent = "That isn't a Pocket Terminal pairing link. Run  npx pocket-terminal pair  on your computer and copy the link it shows."; };
   $('scanClose').onclick = closeScanner;
-  $('demoBtn').onclick = () => { location.hash = 'demo'; location.reload(); };
   $('copyCmd').onclick = async () => { const b = $('copyCmd'); try { await navigator.clipboard.writeText('npx pocket-terminal'); } catch {} b.classList.add('ok'); b.querySelector('.cp').textContent = 'copied'; setTimeout(() => { b.classList.remove('ok'); b.querySelector('.cp').textContent = 'copy'; }, 1800); };
 }
 function handleLink(text) {
