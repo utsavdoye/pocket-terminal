@@ -49,7 +49,7 @@ async function boot() {
   }
   if (h.get('join') || h.get('pair')) {
     history.replaceState(null, '', location.pathname + location.search); // remove the code from the address bar
-    if (!h.get('join')) { showNone(); toast('That is an old pairing code. Run  node pair.js  on your computer for a new one.'); return; }
+    if (!h.get('join')) { showNone(); toast('That is an old pairing code. Run  npx pocket-terminal pair  on your computer for a new one.'); return; }
     show('gate-pair'); joinFlow(joinFrom(h)); return;
   }
   const vault = store.get('vault');
@@ -80,9 +80,10 @@ function showNone() {
   if (noneReady) return; noneReady = true;
   $('scanBtn').onclick = openScanner;
   $('pasteBtn').onclick = () => { $('pasteForm').hidden = false; $('pasteIn').focus(); };
-  $('pasteForm').onsubmit = (e) => { e.preventDefault(); if (!handleLink($('pasteIn').value)) $('noneErr').textContent = "That isn't a Pocket Terminal pairing link. Run  node pair.js  on your computer and copy the link it shows."; };
+  $('pasteForm').onsubmit = (e) => { e.preventDefault(); if (!handleLink($('pasteIn').value)) $('noneErr').textContent = "That isn't a Pocket Terminal pairing link. Run  npx pocket-terminal pair  on your computer and copy the link it shows."; };
   $('scanClose').onclick = closeScanner;
   $('demoBtn').onclick = () => { location.hash = 'demo'; location.reload(); };
+  $('copyCmd').onclick = async () => { const b = $('copyCmd'); try { await navigator.clipboard.writeText('npx pocket-terminal'); } catch {} b.classList.add('ok'); b.querySelector('.cp').textContent = 'copied'; setTimeout(() => { b.classList.remove('ok'); b.querySelector('.cp').textContent = 'copy'; }, 1800); };
 }
 function handleLink(text) {
   let u; try { u = new URL(String(text).trim()); } catch { return false; }
@@ -135,7 +136,7 @@ async function joinFlow(j, here = false) {
   if (old && !j.replaceOk) {
     $('pairTitle').textContent = `Pair with ${j.name}?`; $('pairHint').textContent = '';
     $('pairPad').hidden = $('pairDots').hidden = true; $('iosNote').hidden = true; $('replaceNote').hidden = false;
-    $('replaceText').textContent = `This phone is already paired with ${old.name}. Pairing with ${j.name} replaces it. Only continue if you just ran node pair.js on your own computer.`;
+    $('replaceText').textContent = `This phone is already paired with ${old.name}. Pairing with ${j.name} replaces it. Only continue if you just ran npx pocket-terminal pair on your own computer.`;
     $('replaceYes').onclick = () => { $('replaceNote').hidden = true; joinFlow({ ...j, replaceOk: true }, here); };
     $('replaceNo').onclick = () => location.replace(location.pathname);
     return;
@@ -174,8 +175,8 @@ async function joinFlow(j, here = false) {
   try { await b.publish(await seal(ik, { id: randomId(), ts: Date.now(), from: 'phone', type: 'join', nonce, pub, device: deviceName() })); }
   catch (e) { end(); return fail(e.message); }
   $('pairHint').textContent = 'Check that your computer shows the same code, then type y there to allow this phone.';
-  slow = setTimeout(() => { if (!done) $('pairErr').textContent = 'Still waiting. Each QR code works only once: if this one was already used or is older than 10 minutes, run  node pair.js  on your computer for a new one.'; }, 45e3);
-  timeout = setTimeout(() => { if (!done) { end(); fail('No answer from your computer. Run  node pair.js  there for a new QR code.'); } }, 10 * 60e3);
+  slow = setTimeout(() => { if (!done) $('pairErr').textContent = 'Still waiting. Each QR code works only once: if this one was already used or is older than 10 minutes, run  npx pocket-terminal pair  on your computer for a new one.'; }, 45e3);
+  timeout = setTimeout(() => { if (!done) { end(); fail('No answer from your computer. Run  npx pocket-terminal pair  there for a new QR code.'); } }, 10 * 60e3);
 }
 
 // ---------- PIN pad (phone-style; the physical keyboard works too) ----------
@@ -359,12 +360,12 @@ async function connect({ hello = true } = {}) {
   answerTimer = setTimeout(() => { if (!dc || dc.readyState !== 'open') { linkState = 'waiting'; paint(); scheduleRetry(); } }, 15e3);
 }
 
-// The computer removed this phone (node pair.js --remove). Forget the key and say so.
+// The computer removed this phone (npx pocket-terminal remove). Forget the key and say so.
 async function revoked() {
   store.del('vault'); store.del('jobs'); store.del('ai'); await idbDel('session');
   try { dc && dc.close(); pc && pc.close(); } catch {}
   board && board.stop(); location.hash = ''; showNone();
-  $('noneErr').textContent = 'This phone was removed on your computer. To use it again, run  node pair.js  there and tap Scan QR code.';
+  $('noneErr').textContent = 'This phone was removed on your computer. To use it again, run  npx pocket-terminal pair  there and tap Scan QR code.';
 }
 
 // No answer? The computer may be asleep or briefly offline. Keep knocking while the app is open,

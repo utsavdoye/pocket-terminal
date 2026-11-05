@@ -281,7 +281,38 @@ export function setupTools(ctx) {
     const b = e.target.closest('[data-i]'); if (!b || !listing) return;
     const f = listing.entries[+b.dataset.i]; const full = listing.path + (listing.path.endsWith(listing.sep) ? '' : listing.sep) + f.n;
     if (f.d) return ls(full);
+    openFileAct(f, full);
+  };
+  // Tapping a file asks what to do: type its path into the terminal (for a command or an AI agent), or download it.
+  let faFile = null;
+  // How the path is typed: ~/… when it's inside home and needs no quotes, else quoted so spaces and symbols are safe.
+  function shellPath(p) {
+    const win = listing.sep === '\\', home = listing.home;
+    if (win) return /[\s&()^%!'";,]/.test(p) ? `"${p}"` : p;
+    const safe = (x) => /^[\w@%+=:,.\/~-]+$/.test(x);
+    if (home && (p === home || p.startsWith(home + '/'))) { const rel = '~' + p.slice(home.length); if (safe(rel)) return rel; }
+    return safe(p) ? p : `'${p.replace(/'/g, `'\\''`)}'`;
+  }
+  function openFileAct(f, full) {
+    faFile = { f, full, typed: shellPath(full) };
+    $('faName').textContent = f.n; $('faPath').textContent = faFile.typed;
+    $('faGet').textContent = `Download to this phone · ${fmtSize(f.s)}`;
+    $('fileAct').hidden = false;
+  }
+  const closeFileAct = () => { $('fileAct').hidden = true; faFile = null; };
+  $('faCancel').onclick = closeFileAct;
+  $('fileAct').onclick = (e) => { if (e.target.id === 'fileAct') closeFileAct(); };
+  $('faForm').onsubmit = (e) => e.preventDefault();
+  $('faPut').onclick = () => {
+    if (!faFile) return;
+    const t = faFile.typed; closeFileAct(); ctx.closeSheet();
+    ctx.input(t + ' '); ctx.focus(); toast('Path added to the terminal');
+  };
+  $('faGet').onclick = () => {
+    if (!faFile) return;
+    const { f, full } = faFile;
     if (xfer) return toast('Wait for the current transfer');
+    closeFileAct();
     if (f.s > 50 * 1048576 && !confirm(`${f.n} is ${fmtSize(f.s)}. Download it to this phone?`)) return;
     download(full, f.s);
   };

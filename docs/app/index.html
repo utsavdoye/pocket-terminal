@@ -73,8 +73,10 @@
     <h1>Pocket Terminal</h1>
     <p>Your computer's terminal on this phone, from anywhere. It even works with the lid closed, and everything is end-to-end encrypted.</p>
     <ol class="steps">
-      <li><b>Install on your computer</b>Mac: <code>bash install.sh</code><br>Windows: <code>install.ps1</code></li>
-      <li><b>Scan the QR code</b>Tap Scan QR code below. Each code works once.</li>
+      <li><b>Run this on your computer</b>In Terminal on a Mac, PowerShell on Windows, or any Linux terminal.
+        <button class="cmd" id="copyCmd" type="button"><span class="pr">$</span> npx pocket-terminal<span class="cp">copy</span></button>
+        <small>Needs <a href="https://nodejs.org" target="_blank" rel="noopener">Node.js 18.20+</a>. Other ways: <a href="https://pocket-terminal.utsavdoye.com/#install" target="_blank" rel="noopener">install guide</a></small></li>
+      <li><b>Scan the QR code</b>Your computer shows a QR code. Tap <b class="in">Scan QR code</b> below and point the camera at it.</li>
       <li><b>Approve it on the computer</b>Check the 6-digit code matches, type y, then choose a PIN.</li>
     </ol>
     <div class="pairopts">
@@ -272,7 +274,7 @@
       <div class="field"><div>Text size</div><div class="seg"><button id="smaller" aria-label="Smaller text">A−</button><button id="bigger" aria-label="Bigger text">A+</button></div></div>
       <div class="field"><div>App version<small id="appVer">–</small></div><button class="btn small ghost" id="reloadApp">Reload app</button></div>
       <div class="field"><div>Lock now<small>Asks for your PIN next time</small></div><button class="btn small ghost" id="lockNow">Lock</button></div>
-      <div class="field"><div>Unpair this phone<small>Removes the key from this phone. To lock it out from the computer instead, run <code>node pair.js --remove</code>.</small></div><button class="btn small danger" id="unpair">Unpair</button></div>
+      <div class="field"><div>Unpair this phone<small>Removes the key from this phone. To lock it out from the computer instead, run <code>npx pocket-terminal remove</code>.</small></div><button class="btn small danger" id="unpair">Unpair</button></div>
     </div>
   </div>
 </div>
@@ -282,6 +284,17 @@
     <small id="sayQ"></small>
     <textarea class="field-in" id="sayIn" rows="3" placeholder="No, keep the old tests and only fix the login bug" autocapitalize="sentences" enterkeyhint="send"></textarea>
     <div class="row2"><button type="button" class="btn ghost" id="sayMic">🎤 Speak</button><button type="button" class="btn ghost" id="sayCancel">Cancel</button><button class="btn" id="saySend">Send</button></div>
+  </form>
+</div>
+<div class="saybox" id="fileAct" hidden role="dialog" aria-labelledby="faName">
+  <form id="faForm">
+    <b id="faName"></b>
+    <small id="faPath"></small>
+    <div class="stack">
+      <button type="button" class="btn" id="faPut">Put its path in the terminal</button>
+      <button type="button" class="btn ghost" id="faGet">Download to this phone</button>
+      <button type="button" class="btn ghost" id="faCancel">Cancel</button>
+    </div>
   </form>
 </div>
 <div class="preview" id="preview" hidden>
