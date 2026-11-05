@@ -10,7 +10,7 @@ import { search, riskOf, needsFill, askAi, PROVIDERS } from './helper.js';
 import { setupTools } from './tools.js';
 
 const $ = (id) => document.getElementById(id);
-const APP_VERSION = '7.1.0';
+const APP_VERSION = '7.2.0';
 // Demo mode (#demo): the whole app with sample data and a pretend shell. Connects to nothing,
 // and never touches this phone's real pairing, history or keys.
 const DEMO = location.hash === '#demo';
@@ -259,7 +259,11 @@ function lockFlow(vault) {
 
 // ---------- main ----------
 let S, keys, board, term, fit;
-let lastPong = 0, pingSent = 0, rtt = null;
+let lastPong = 0, pingSent = 0, rtt = null, lastRx = 0, rxZ = 0;
+Object.defineProperty(window, 'ptPacked', { get: () => rxZ }); // for tests: how many messages came packed
+// Big messages from the computer come deflated (much less data on a weak signal).
+const CAN_INFLATE = (() => { try { new DecompressionStream('deflate-raw'); return true; } catch { return false; } })();
+const inflate = (buf) => new Response(new Blob([buf]).stream().pipeThrough(new DecompressionStream('deflate-raw'))).text();
 function paintPing() {
   const el = $('ping'); const on = dc && dc.readyState === 'open' && rtt !== null;
   el.hidden = !on; if (on) { el.textContent = `${rtt} ms`; el.className = 'tick ' + (rtt < 120 ? 'good' : rtt < 400 ? 'ok' : 'slow'); }
@@ -291,12 +295,29 @@ function start(session) {
     if (document.visibilityState !== 'visible') { clearTimeout(retryTimer); return; }
     retryN = 0;
     board.restart(); // phones kill background connections
-    if (!dc || dc.readyState !== 'open') return connect();
-    const asked = Date.now(); sendTerm({ t: 'ping' });
-    setTimeout(() => { // no answer: the link died while we were away. Rebuild it.
-      if (lastPong < asked && dc) { const old = dc; dc = null; try { old.close(); pc && pc.close(); } catch {} lastAttempt = 0; connect(); }
-    }, 2500);
+    checkLink(2500);
   });
+  // Weak or changing networks: Wi-Fi to mobile data, a lift, a train. React at once instead of
+  // waiting for the old link to time out.
+  addEventListener('online', () => { retryN = 0; board.restart(); checkLink(3000); });
+  addEventListener('offline', () => paint());
+  try { navigator.connection && navigator.connection.addEventListener('change', () => checkLink(3000)); } catch {}
+  // A link can die without closing (signal gone). Heard nothing for 25 s while on screen: rebuild it.
+  setInterval(() => {
+    if (document.visibilityState === 'visible' && dc && dc.readyState === 'open' && Date.now() - lastRx > 25e3) rebuild();
+  }, 3000);
+}
+// Is the link still alive? Ask, and rebuild it if nothing comes back in time.
+function checkLink(ms) {
+  if (DEMO || ended) return;
+  if (!dc || dc.readyState !== 'open') { lastAttempt = 0; return connect(); }
+  const asked = Date.now(); sendTerm({ t: 'ping' });
+  setTimeout(() => { if (lastRx < asked && dc) rebuild(); }, ms);
+}
+function rebuild() {
+  const old = dc; dc = null; linkState = 'connecting'; paint();
+  try { old && old.close(); pc && pc.close(); } catch {}
+  attachFresh = false; lastAttempt = 0; connect();
 }
 
 async function onNoteText(text) {
@@ -346,7 +367,10 @@ async function connect({ hello = true } = {}) {
   pc.oid = randomId(); // each attempt has its own id; only its own answer is accepted
   const ch = pc.createDataChannel('pt', { ordered: true });
   wire(ch);
-  pc.onconnectionstatechange = () => { if (pc && pc.connectionState === 'failed' && (!dc || dc.readyState !== 'open')) { linkState = 'backup'; paint(); } };
+  pc.onconnectionstatechange = () => {
+    if (pc && pc.connectionState === 'failed' && (!dc || dc.readyState !== 'open')) { linkState = 'backup'; paint(); }
+    if (pc && pc.connectionState === 'disconnected' && dc && dc.readyState === 'open') checkLink(4000); // signal dropped or network changed
+  };
   await pc.setLocalDescription(await pc.createOffer());
   await gatherDone(pc, 4000);
   const mine = pc;
@@ -355,7 +379,7 @@ async function connect({ hello = true } = {}) {
     if (pc !== mine) return; // a newer attempt replaced this one
     await post('offer', { oid: mine.oid, sdp: mine.localDescription.sdp });
     offerAt = Date.now();
-  } catch (e) { linkState = 'noboard'; toast(e.message); paint(); scheduleRetry(); return; }
+  } catch (e) { linkState = 'noboard'; if (navigator.onLine !== false) toast(e.message); paint(); scheduleRetry(true); return; }
   clearTimeout(answerTimer);
   answerTimer = setTimeout(() => { if (!dc || dc.readyState !== 'open') { linkState = 'waiting'; paint(); scheduleRetry(); } }, 15e3);
 }
@@ -371,10 +395,11 @@ async function revoked() {
 // No answer? The computer may be asleep or briefly offline. Keep knocking while the app is open,
 // so it connects by itself at the computer's next check-in (each knock is 2 tiny encrypted notes).
 let retryN = 0, retryTimer = null;
-function scheduleRetry() {
+function scheduleRetry(net = false) {
   clearTimeout(retryTimer);
   if (document.visibilityState !== 'visible') return;
-  const ms = [45e3, 60e3, 90e3, 120e3][Math.min(retryN++, 3)];
+  // net: this phone's own internet failed, so try again soon. Otherwise the computer is likely asleep.
+  const ms = net ? [3e3, 6e3, 12e3, 20e3][Math.min(retryN++, 3)] : [45e3, 60e3, 90e3, 120e3][Math.min(retryN++, 3)];
   retryTimer = setTimeout(() => { if (!dc || dc.readyState !== 'open') { lastAttempt = 0; connect(); } }, ms);
 }
 
@@ -394,13 +419,22 @@ function wire(ch) {
   ch.onopen = () => {
     dc = ch; linkState = 'direct'; clearTimeout(answerTimer); clearTimeout(openTimer); clearTimeout(retryTimer); retryN = 0;
     mac.state = 'online'; mac.ts = Date.now(); lastPong = Date.now();
-    sendTerm({ t: 'attach', sid: SID, fresh: attachFresh, cols: term.cols, rows: term.rows }); // first, before any resize
+    lastRx = Date.now();
+    sendTerm({ t: 'attach', sid: SID, fresh: attachFresh, cols: term.cols, rows: term.rows, z: CAN_INFLATE ? 1 : 0 }); // first, before any resize
     attachFresh = true;
     fit.fit(); sendTerm({ t: 'r', cols: term.cols, rows: term.rows });
     flushPending();
     paint();
   };
-  ch.onmessage = (e) => { let m; try { m = JSON.parse(e.data); } catch { return; } handleMsg(m); };
+  ch.binaryType = 'arraybuffer';
+  let inq = Promise.resolve(); // messages are handled strictly in order, even while one is being unpacked
+  ch.onmessage = (e) => {
+    lastRx = Date.now();
+    const d = e.data;
+    if (typeof d === 'string') { inq = inq.then(() => { let m; try { m = JSON.parse(d); } catch { return; } handleMsg(m); }); return; }
+    rxZ++;
+    inq = inq.then(() => inflate(d)).then((t) => { let m; try { m = JSON.parse(t); } catch { return; } handleMsg(m); }).catch(() => {});
+  };
   ch.onclose = () => {
     if (dc !== ch) return;
     dc = null; linkState = 'waiting'; paint();
@@ -532,6 +566,18 @@ function setupTerminal() {
   fit = new FitAddon.FitAddon(); term.loadAddon(fit); term.open($('term')); setupTouchScroll();
   if (S.viewer) { term.options.disableStdin = true; term.options.cursorBlink = false; fit = { fit: () => viewerSize() }; }
   term.onData((d) => input(applyMods(d)));
+  // Holding delete on a phone keyboard: some keyboards send only "delete" events (no key press)
+  // and speed up to whole words after a moment. Turn those into terminal deletes, so holding it
+  // clears text the way it does in a message. A real key press is left to the terminal (no doubles).
+  let lastBs = 0;
+  term.textarea.addEventListener('keydown', (e) => { if (e.key === 'Backspace') lastBs = performance.now(); }, true);
+  term.textarea.addEventListener('beforeinput', (e) => {
+    const t = e.inputType;
+    if (S.viewer || (t !== 'deleteContentBackward' && t !== 'deleteWordBackward' && t !== 'deleteSoftLineBackward')) return;
+    e.preventDefault();
+    if (performance.now() - lastBs < 80) return;
+    input(t === 'deleteContentBackward' ? '\x7f' : t === 'deleteWordBackward' ? '\x17' : '\x15'); // ^W word, ^U line
+  }, true);
   term.onResize(() => sendTerm({ t: 'r', cols: term.cols, rows: term.rows }));
   const setFont = (n) => { size = Math.max(9, Math.min(24, n)); term.options.fontSize = size; store.set('font', size); fit.fit(); };
   $('smaller').onclick = () => setFont(size - 1); $('bigger').onclick = () => setFont(size + 1);

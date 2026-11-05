@@ -16,6 +16,7 @@ const fs = require('fs');
 const path = require('path');
 const os = require('os');
 const crypto = require('crypto');
+const zlib = require('zlib');
 const ndc = require('node-datachannel');
 const { derive, seal, open, msgId } = require('./lib/crypto');
 const { Board, MAX_NOTE } = require('./lib/board');
@@ -84,17 +85,59 @@ function startDirect({ cfg, core, power, log, dir, x = {} }) {
 
   function attach(pc, dc) {
     const max = Math.max(16e3, Math.min(dc.maxMessageSize?.() || 65536, 200e3)) - 1024;
+    // Phones that can unpack it get big messages deflated: terminal text shrinks 3-10x,
+    // which is what makes a weak signal usable.
+    let zOK = false;
+    const wire = (s) => {
+      if (zOK && s.length > 1024) {
+        const z = zlib.deflateRawSync(s);
+        if (z.length < s.length * 0.8) { dc.sendMessageBinary(z); return; }
+      }
+      dc.sendMessage(s);
+    };
     const send = (msg) => {
       if (!dc.isOpen()) return;
       let s = JSON.stringify(msg);
-      if (s.length <= max) { dc.sendMessage(s); return; }
+      if (s.length <= max) { wire(s); return; }
       // Big screen replays are split into pieces that fit.
       if (msg.t === 'reset' || msg.t === 'o') {
         const d = msg.d; const step = Math.floor(max / 2);
-        for (let i = 0; i < d.length; i += step) dc.sendMessage(JSON.stringify({ t: i === 0 && msg.t === 'reset' ? 'reset' : 'o', d: d.slice(i, i + step) }));
+        for (let i = 0; i < d.length; i += step) wire(JSON.stringify({ t: i === 0 && msg.t === 'reset' ? 'reset' : 'o', d: d.slice(i, i + step) }));
       } else if (msg.t === 'result') {
-        dc.sendMessage(JSON.stringify({ ...msg, out: msg.out.slice(-Math.floor(max / 2)) }));
+        wire(JSON.stringify({ ...msg, out: msg.out.slice(-Math.floor(max / 2)) }));
       }
+    };
+    // Terminal output is gathered for a moment and sent in one piece. If the link is slower than
+    // the output (a weak signal and a noisy build), the backlog is dropped and the phone gets the
+    // current screen once the link catches up, so what you see is never minutes behind.
+    const OUT_HIGH = 48 * 1024, OUT_LOW = 8 * 1024;
+    const queued = () => { try { return dc.bufferedAmount(); } catch { return 0; } };
+    let pend = '', flushT = null, behind = false, lastFlush = 0;
+    const flushOut = () => {
+      clearTimeout(flushT); flushT = null;
+      if (!dc.isOpen()) { pend = ''; return; }
+      if (behind) { pend = ''; return; }
+      if (queued() > OUT_HIGH) {
+        pend = ''; behind = true;
+        const wait = () => {
+          if (!dc.isOpen()) return;
+          if (queued() > OUT_LOW) return setTimeout(wait, 200);
+          behind = false; if (sess) send({ t: 'reset', d: sess.screen() });
+        };
+        setTimeout(wait, 200); return;
+      }
+      if (pend) { const d = pend; pend = ''; lastFlush = Date.now(); send({ t: 'o', d }); }
+    };
+    const client = (msg) => {
+      if (msg.t === 'o') {
+        if (behind) return;
+        pend += msg.d;
+        // A keystroke's echo goes out at once (no added delay). Only a burst of output is gathered.
+        if (pend.length > 32e3 || (!flushT && Date.now() - lastFlush > 40)) flushOut();
+        else if (!flushT) flushT = setTimeout(flushOut, 12);
+        return;
+      }
+      flushOut(); send(msg); // anything else keeps its place after the output before it
     };
     // Wait while more than 1 MB is queued on the link (big files and pages).
     const waiters = [];
@@ -109,8 +152,9 @@ function startDirect({ cfg, core, power, log, dir, x = {} }) {
     const deviceKey = cfg.deviceId || keys.topic.slice(3, 11);
     const keyFor = (sid) => `${deviceKey}:${String(sid || 'shared').replace(/[^\w-]/g, '').slice(0, 40) || 'shared'}`;
     const show = (s) => {
-      if (sess) sess.clients.delete(send);
-      sess = s; info.key = s.key; sess.clients.add(send);
+      if (sess) sess.clients.delete(client);
+      pend = ''; clearTimeout(flushT); flushT = null;
+      sess = s; info.key = s.key; sess.clients.add(client);
       send({ t: 'reset', d: sess.screen() });
       const sz = sess.size(); if (sz) send({ t: 'size', ...sz });
     };
@@ -141,6 +185,7 @@ function startDirect({ cfg, core, power, log, dir, x = {} }) {
       let m; try { m = JSON.parse(String(raw)); } catch { return; }
       info.seen = Date.now();
       if (m.t === 'ping') return send({ t: 'pong' });
+      if (m.t === 'attach' && m.z === 1) zOK = true;
       if (viewer) { // watching only. A link made with "can answer" may also press Yes/No on a question, nothing else.
         if (m.t === 'attach') bind(null);
         else if (m.t === 'answer' && cfg.canAnswer) {
@@ -193,7 +238,7 @@ function startDirect({ cfg, core, power, log, dir, x = {} }) {
       clearTimeout(attachTimer);
       for (const st of gets.values()) st.cancelled = true;
       for (const r of puts.values()) r.abort();
-      peers.delete(send); sess && sess.clients.delete(send);
+      peers.delete(send); sess && sess.clients.delete(client); clearTimeout(flushT);
       if (!viewer) power && power.setPhoneWanting(peers.size > 0);
       log(`${viewer ? 'viewer' : 'phone'} disconnected (${peers.size} open)`);
       try { pc.close(); } catch {}

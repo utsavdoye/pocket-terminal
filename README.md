@@ -52,10 +52,11 @@ npx pocket-terminal
 - zsh, bash or PowerShell with colours, tab completion, and Ctrl, Esc and arrow keys on a touch key bar.
 - Several terminals at once. Programs keep running when you close the app.
 - Send a command while the computer sleeps; it runs at the next check-in and the reply comes back to you.
+- Works on a weak signal: output is compressed, a slow link skips ahead to the current screen instead of lagging, and it reconnects by itself when you switch between Wi-Fi and mobile data.
 
 **Beyond the terminal**
 - Open the computer's `localhost` sites on your phone, privately, from any network.
-- Download files from the computer, or upload into a project folder.
+- Download files from the computer, upload into a project folder, or tap a file to put its path in the terminal.
 - Share a live, view-only link to one terminal. It expires.
 - Ask in plain English ("free up port 3000") and get the right command for your system, explained, with a safety label. Works offline for 70+ common commands; optional AI with your own key.
 

@@ -53,9 +53,13 @@ class Board {
       const r = await fetch(`${u}/${this.topic}/json?since=${encodeURIComponent(since)}`, { signal: ctl.signal });
       if (!r.ok) throw new Error(`answered ${r.status}`);
       const reader = r.body.getReader(); const dec = new TextDecoder(); let buf = '';
+      // ntfy sends a keepalive at least every ~45 s. Silence for 75 s: the connection died
+      // quietly (weak Wi-Fi). Drop it and open a new one.
+      let quiet = setTimeout(() => ctl.abort('stalled'), 75e3);
       for (;;) {
         const { value, done } = await reader.read();
-        if (done) break;
+        clearTimeout(quiet); quiet = setTimeout(() => ctl.abort('stalled'), 75e3);
+        if (done) { clearTimeout(quiet); break; }
         buf += dec.decode(value, { stream: true });
         let i; while ((i = buf.indexOf('\n')) >= 0) {
           const line = buf.slice(0, i); buf = buf.slice(i + 1);
@@ -64,8 +68,8 @@ class Board {
         }
       }
     } catch (e) {
-      if (ctl.signal.aborted) return;
-      this.log(`board stream ${u}: ${e.message}`);
+      if (ctl.signal.aborted && ctl.signal.reason !== 'stalled') return;
+      this.log(`board stream ${u}: ${ctl.signal.reason === 'stalled' ? 'went quiet, reconnecting' : e.message}`);
     }
     if (!this.stopped && this.streams.get(u) === ctl) setTimeout(() => this._streamOne(u, onNote, onOpen), 3000);
   }

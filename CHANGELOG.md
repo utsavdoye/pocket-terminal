@@ -1,5 +1,14 @@
 # Changelog
 
+## 7.2.0 (2026-11-05)
+- **Works on a weak signal:** big output is sent compressed (terminal text shrinks 3-10x). If the link is slower than the output, the phone skips ahead to the current screen instead of falling minutes behind: on a 4 KB/s link, what you type shows up right after a 300 KB flood.
+- **Reconnects by itself, faster:** switching Wi-Fi to mobile data, a dropped signal or a link that died quietly is noticed and rebuilt in seconds. If the phone's own internet fails, it retries in 3-20 s instead of waiting a minute.
+- **Typing feels instant:** a keystroke's echo is sent the moment it appears (only bursts of output are gathered).
+- **Holding delete works like in a message:** phone keyboards that send only "delete" events, and speed up to whole words, now clear text properly.
+- **Key row:** ⇧tab (switch mode in Claude Code), ^A ^E ^W ^U, del and more symbols, grouped, with a fade showing there's more to scroll.
+- **Files:** tap a file to put its path in the terminal, or download it.
+- **Welcome screen:** one command for every computer (`npx pocket-terminal`) with a copy button, and the install guide one tap away.
+
 ## 7.1.0 (2026-11-04)
 - **Agents dashboard** (⋯ → Agents & terminals): every terminal with its program, folder and state. Who needs you (and the question), what's working and for how long, what finished. Answer a waiting one without switching to it.
 - **Answer buttons on notifications:** Yes / No right on the notification, even with the app closed and the phone locked (Android). Each question gets a one-time key inside the encrypted notification; answers are encrypted, work once and expire after 30 minutes. (iPhone web apps can't show notification buttons yet: tap the notification instead.)
