@@ -79,6 +79,9 @@ function createCore({ log, power, dir }) {
   // continue where you left off; open it fresh and you get a new terminal, while anything still
   // running (an AI agent, a build) stays alive in its own session and shows in the Sessions list.
   const sessions = new Map(); // key -> session
+  const asks = new Map(); // permission questions from agents outside Pocket Terminal: key -> { key, agent, text, cwd, at, done }
+  const ext = new Map(); // agents outside Pocket Terminal, from their hooks: key -> { key, agent, cwd, since, last, busy, done }
+  const EXT_BUSY_MS = 15 * 60e3; // no word from it for 15 min: stop keeping the computer awake for it
   const MAX_SESSIONS = 8;
 
   function getSession(key) {
@@ -153,7 +156,8 @@ function createCore({ log, power, dir }) {
   function busyChanged() {
     // A program that printed something in the last 3 minutes and isn't waiting for you keeps
     // the computer awake on battery (an AI agent working with the lid closed).
-    const n = [...sessions.values()].filter((s) => busy(s) && !s.asked && Date.now() - s.lastOut < 3 * 60e3).length;
+    const n = [...sessions.values()].filter((s) => busy(s) && !s.asked && Date.now() - s.lastOut < 3 * 60e3).length
+      + [...ext.values()].filter((e) => e.busy && Date.now() - e.last < EXT_BUSY_MS).length;
     if (n !== lastBusy) { lastBusy = n; power && power.setBusy && power.setBusy(n); }
   }
   const watch = setInterval(checkPrograms, 2000); watch.unref && watch.unref();
@@ -179,11 +183,16 @@ function createCore({ log, power, dir }) {
     s.burst = 0;
   }
 
-  function startShell(s, cols = 80, rows = 24) {
+  function startShell(s, cols = 80, rows = 24, run = null) {
     s.buffer = ''; s.tail = '';
-    const t = pty.spawn(SHELL, SHELL_ARGS, {
-      name: 'xterm-256color', cols, rows, cwd: os.homedir(),
-      env: { ...process.env, TERM: 'xterm-256color', COLORTERM: 'truecolor', POCKET_TERMINAL: '1', PROMPT_EOL_MARK: '' }, // no stray '%' after a screen replay
+    // run: a command started from the computer ("npx pocket-terminal run claude"), with that
+    // terminal's own folder and environment, so it behaves exactly as if typed there.
+    const args = run ? (WIN ? ['-NoLogo', '-Command', run.cmd] : ['-c', run.cmd]) : SHELL_ARGS;
+    const env = run && run.env && typeof run.env === 'object' ? run.env : process.env;
+    let cwd = os.homedir(); if (run && run.cwd) { try { if (fs.statSync(run.cwd).isDirectory()) cwd = run.cwd; } catch {} }
+    const t = pty.spawn(SHELL, args, {
+      name: 'xterm-256color', cols, rows, cwd,
+      env: { ...env, TERM: 'xterm-256color', COLORTERM: 'truecolor', POCKET_TERMINAL: '1', PROMPT_EOL_MARK: '' }, // no stray '%' after a screen replay
     });
     s.term = t;
     const send = (msg) => { for (const c of s.clients) { try { c(msg); } catch {} } };
@@ -196,7 +205,12 @@ function createCore({ log, power, dir }) {
       clearTimeout(s.quietT); s.quietT = setTimeout(() => onQuiet(s), WIN ? 15e3 : 1200);
       send({ t: 'o', d });
     });
-    t.onExit(() => { if (s.term === t) { s.term = null; s.program = null; busyChanged(); send({ t: 'o', d: '\r\n\x1b[33m[shell exited, press Enter for a new one]\x1b[0m\r\n' }); } });
+    t.onExit(({ exitCode } = {}) => {
+      if (s.term !== t) return;
+      s.term = null; s.program = null; busyChanged();
+      send({ t: 'o', d: run ? `\r\n\x1b[33m[finished${exitCode ? `, exit code ${exitCode}` : ''}. Press Enter for a new shell]\x1b[0m\r\n` : '\r\n\x1b[33m[shell exited, press Enter for a new one]\x1b[0m\r\n' });
+      send({ t: 'exit', code: exitCode || 0 });
+    });
   }
   function session(key) {
     const s = getSession(key);
@@ -218,6 +232,46 @@ function createCore({ log, power, dir }) {
       hasShell: () => !!s.term,
     };
   }
+  // Start a command in a new session (from the computer). Returns the session.
+  function runIn(key, run, cols, rows) {
+    const s = getSession(key);
+    if (!s.term) startShell(s, cols > 0 && cols < 1000 ? cols : 80, rows > 0 && rows < 1000 ? rows : 24, run);
+    return session(key);
+  }
+
+  // ---- AI agents running outside Pocket Terminal (e.g. Claude Code in VS Code), via their hooks ----
+  // A permission question waits here until a phone answers, the computer answers it, or it's dropped.
+  function ask({ agent, text, cwd }) {
+    const key = 'local:Q-' + Math.random().toString(36).slice(2, 10);
+    let done;
+    const p = new Promise((res) => { done = res; });
+    const a = { key, agent: String(agent || 'AI agent').slice(0, 40), text: String(text || '').slice(0, 300), cwd: tidy(cwd), at: Date.now(), done };
+    asks.set(key, a);
+    log(`${a.agent} asks for permission (sent to the phone)`); // what it asks is never logged
+    events.emit('alert', { key, kind: 'input', program: a.agent, text: a.text, ask: true, cwd: a.cwd,
+      choices: [{ a: 'yes', title: 'Allow', d: 'yes' }, { a: 'no', title: 'Deny', d: 'no' }] });
+    const end = (v) => { if (!asks.has(key)) return; asks.delete(key); done(v); events.emit('alert', { key, kind: 'gone' }); };
+    return { key, decision: p, cancel: () => end(null), settle: end };
+  }
+  // Working / finished, from the agent's own hooks. Keeps the computer awake while it works.
+  function extEvent({ session, agent, cwd, kind, away = true }) {
+    const id = String(session || 'x').replace(/[^\w-]/g, '').slice(0, 12) || 'x';
+    const key = 'local:C-' + id, now = Date.now();
+    let e = ext.get(key);
+    if (!e) { e = { key, agent: String(agent || 'AI agent').slice(0, 40), cwd: null, since: now, last: now, busy: false, done: null, dir: null }; ext.set(key, e); }
+    if (cwd) { e.dir = String(cwd); e.cwd = tidy(e.dir); }
+    e.last = now;
+    if (kind === 'stop') {
+      if (e.busy) {
+        e.busy = false;
+        const seconds = Math.round((now - e.since) / 1000), d = { program: e.agent, at: now, seconds, changes: null }; e.done = d;
+        gitChanges(e.dir, (ch) => { d.changes = ch; if (seconds >= 20 && away !== false) events.emit('alert', { key, kind: 'done', program: e.agent, seconds, changes: ch }); });
+      }
+    } else if (!e.busy) { e.busy = true; e.since = now; e.done = null; }
+    for (const [k, x] of ext) if (now - x.last > 2 * 3600e3) ext.delete(k); // forget agents unheard of for 2 h
+    busyChanged();
+  }
+
   // A phone started a new session: close its older sessions that nobody is looking at and
   // that are just sitting at the prompt. Anything still running is kept.
   function dropOthers(prefix, keepKey) {
@@ -226,13 +280,19 @@ function createCore({ log, power, dir }) {
   }
   function list(prefix) {
     checkPrograms();
-    return [...sessions.values()].filter((s) => s.key.startsWith(prefix)).sort((a, b) => a.created - b.created).map((s) => ({
+    const extra = prefix !== 'local:' ? [] : [
+      ...[...asks.values()].map((a) => ({ sid: a.key.slice(6), program: a.agent, ask: true, busy: false, running: true, waiting: true, lastOut: a.at, created: a.at, viewers: 0, line: '',
+        question: a.text, menu: false, askedAt: a.at, since: null, done: null, cwd: a.cwd })),
+      ...[...ext.values()].map((e) => ({ sid: e.key.slice(6), program: e.busy ? e.agent : null, ext: true, agent: e.agent, busy: e.busy, running: true, waiting: false, lastOut: e.last, created: e.since, viewers: 0, line: '',
+        question: null, menu: false, askedAt: null, since: e.busy ? e.since : null, done: e.done, cwd: e.cwd })),
+    ];
+    return extra.concat([...sessions.values()].filter((s) => s.key.startsWith(prefix)).sort((a, b) => a.created - b.created).map((s) => ({
       sid: s.key.slice(prefix.length), program: s.program, busy: busy(s), running: !!s.term, waiting: s.asked,
       lastOut: s.lastOut || null, created: s.created, viewers: s.clients.size, line: lastLine(s.tail.split('\n').slice(-6).join('\n')).slice(0, 80),
       // for the agents dashboard: what it asks, since when it runs, what just finished, where it runs
       question: s.asked ? s.askText : null, menu: s.asked ? s.askMenu : false, askedAt: s.asked ? s.askedAt : null,
       since: s.program ? s.progSince : null, done: s.done, cwd: cwdOf(s),
-    }));
+    })));
   }
   // The folder a terminal is in (its shell's working folder). Cached; refreshed in the background.
   const home = os.homedir();
@@ -257,8 +317,9 @@ function createCore({ log, power, dir }) {
     if (process.platform === 'darwin') return execFile('lsof', ['-a', '-p', String(pid), '-d', 'cwd', '-Fn'], { timeout: 3000 }, (e, out) => { const l = !e && String(out).split('\n').find((x) => x.startsWith('n')); cb(l ? l.slice(1) : null); });
     cb(null);
   }
-  function changesIn(s, cb) {
-    folderOf(s, (dirp) => {
+  function changesIn(s, cb) { folderOf(s, (dirp) => gitChanges(dirp, cb)); }
+  function gitChanges(dirp, cb) {
+    {
       if (!dirp) return cb(null);
       execFile('git', ['-C', dirp, 'diff', '--numstat', 'HEAD'], { timeout: 5000, maxBuffer: 1 << 20 }, (e, out) => {
         if (e) return cb(null);
@@ -269,12 +330,12 @@ function createCore({ log, power, dir }) {
           cb({ files: files + fresh, add, del, fresh });
         });
       });
-    });
+    }
   }
   // The full change list (git diff) of a terminal's folder, for "See changes" on the phone.
   function diff(key, cb) {
-    const s = sessions.get(key); if (!s) return cb({ error: 'That terminal is gone.' });
-    folderOf(s, (dirp) => {
+    const e = ext.get(key), s = sessions.get(key); if (!s && !e) return cb({ error: 'That terminal is gone.' });
+    (e ? (f) => f(e.dir) : (f) => folderOf(s, f))((dirp) => {
       if (!dirp) return cb({ error: 'Could not find its folder.' });
       execFile('git', ['-C', dirp, 'diff', '--no-color', '--stat', '-p', 'HEAD'], { timeout: 8000, maxBuffer: 4 << 20 }, (e, out) => {
         if (e) return cb({ error: /not a git repository/i.test(String(e.message)) ? 'This folder is not a git project, so there is no change list.' : 'git could not show the changes.' });
@@ -288,6 +349,8 @@ function createCore({ log, power, dir }) {
   }
   // Answer a terminal that is waiting for you, without switching to it. Does nothing if it isn't waiting.
   function answer(key, d) {
+    const a = asks.get(key);
+    if (a) { if (d !== 'yes' && d !== 'no') return false; log(`${a.agent}: ${d === 'yes' ? 'allowed' : 'denied'} from the phone`); a.done(d); asks.delete(key); events.emit('alert', { key, kind: 'gone' }); return true; }
     const s = sessions.get(key);
     if (!s || !s.term || !s.asked || typeof d !== 'string' || !d || d.length > 16) return false;
     session(key).input(d); return true;
@@ -303,7 +366,7 @@ function createCore({ log, power, dir }) {
     else io.input(text + '\r');
     return true;
   }
-  function close(key) { const s = sessions.get(key); if (s) kill(s); }
+  function close(key) { const s = sessions.get(key); if (s) kill(s); if (ext.delete(key)) busyChanged(); }
 
   // The relay transport and older phones use one shared session.
   const legacy = session('shared');
@@ -332,7 +395,8 @@ function createCore({ log, power, dir }) {
   }
 
   return {
-    events, session, dropOthers, list, close, runJob, answer, reply, diff, getAuto: () => auto, setAuto,
+    events, session, dropOthers, list, close, runJob, answer, reply, diff, getAuto: () => auto, setAuto, runIn, ask, extEvent,
+    isSession: (key) => sessions.has(key),
     question: (key) => { const s = sessions.get(key); return s && s.asked ? { text: s.askText, menu: s.askMenu } : null; },
     clients: legacy.clients, input: legacy.input, resize: legacy.resize, screen: legacy.screen, hasShell: legacy.hasShell,
     stop: () => { clearInterval(watch); for (const s of [...sessions.values()]) kill(s); },

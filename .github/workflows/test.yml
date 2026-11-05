@@ -70,5 +70,7 @@ jobs:
         run: python test/e2e_demo.py | tee out.txt && grep -q "ALL OK" out.txt
       - name: Tools (Needs you, terminals, notifications, files, local websites, sharing)
         run: python test/e2e_tools.py | tee out.txt && grep -q "ALL OK" out.txt
+      - name: Agents started on the computer and Claude Code's hook
+        run: python test/e2e_hooks.py | tee out.txt && grep -q "ALL OK" out.txt
       - name: Installer scripts parse
         run: bash -n agent/install.sh && bash -n agent/install-linux.sh && bash -n agent/uninstall.sh && bash -n docs/install.sh

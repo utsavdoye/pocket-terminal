@@ -40,6 +40,8 @@ npx pocket-terminal
 ## Features
 
 **For AI agents**
+- **Start on the computer, carry on from the phone:** `npx pocket-terminal run claude` (or `codex`, `gemini`, any command) runs in your window as usual and live on your phone. Walk away and keep going there.
+- **Claude Code anywhere, even in VS Code:** `npx pocket-terminal claude on` connects its official hooks. When you're away, its permission questions come to your phone with Allow / Deny; at the computer they stay on screen. It keeps the computer awake while Claude works and tells you when it's done.
 - **Agents dashboard:** every agent and terminal on one screen: who needs you (with the question), what's working and for how long, what just finished. Answer a waiting one right there.
 - **Answer from the notification:** Yes / No buttons right on the notification, with the app closed and the phone locked. (Android; on iPhone, tap the notification to answer in the app.)
 - **Answer in your own words:** type or say "No, keep the old tests" and it goes to the agent as its next instruction.

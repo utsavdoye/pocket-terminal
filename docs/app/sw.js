@@ -6,7 +6,7 @@
 //   3. Local websites: pages under preview/<port>/ come from your computer's localhost,
 //      through the app's encrypted link (the app window does the talking).
 // Bump VERSION on every release so phones pick up the new code.
-const VERSION = 'pt-v7.2.0';
+const VERSION = 'pt-v7.3.0';
 const FILES = ['./', 'index.html', 'js/app.js', 'js/tools.js', 'js/theme.js', 'js/crypto.js', 'js/board.js', 'js/helper.js', 'vendor/xterm.js', 'vendor/xterm.css', 'vendor/addon-fit.js', 'vendor/jsQR.js', 'manifest.json', 'icon.svg', 'icon.png', 'icon-192.png', 'icon-maskable.png', 'apple-touch-icon.png', 'css/app.css', 'fonts/ibm-plex-sans-latin-400-normal.woff2', 'fonts/ibm-plex-sans-latin-500-normal.woff2', 'fonts/ibm-plex-sans-latin-600-normal.woff2', 'fonts/jetbrains-mono-latin-400-normal.woff2', 'fonts/jetbrains-mono-latin-700-normal.woff2'];
 self.addEventListener('install', (e) => e.waitUntil(caches.open(VERSION).then((c) => c.addAll(FILES)).then(() => self.skipWaiting())));
 self.addEventListener('activate', (e) => e.waitUntil(caches.keys().then((ks) => Promise.all(ks.filter((k) => k !== VERSION).map((k) => caches.delete(k)))).then(() => self.clients.claim())));

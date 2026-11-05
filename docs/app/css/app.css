@@ -227,10 +227,11 @@ select.field-in { appearance: none; -webkit-appearance: none; }
 .menu.back-in, .pane.back-in { animation: page-back .28s var(--ease) both; }
 .group { background: var(--raised); border-radius: 16px; overflow: hidden; margin-bottom: 16px; box-shadow: inset 0 0 0 1px var(--line), var(--shadow-1); }
 .group button { width: 100%; display: flex; align-items: center; gap: 14px; padding: 14px 16px; text-align: left; position: relative; transition: background .12s; }
-.group button + button::before { content: ''; position: absolute; top: 0; left: 52px; right: 0; height: 1px; background: var(--line); }
+.group button + button::before { content: ''; position: absolute; top: 0; left: 64px; right: 0; height: 1px; background: var(--line); }
 .group button::after { content: ''; width: 8px; height: 8px; border-right: 1.8px solid var(--faint); border-top: 1.8px solid var(--faint); transform: rotate(45deg); flex: none; margin-right: 4px; }
 .group button:active { background: var(--raised-2); }
-.group svg { width: 22px; height: 22px; stroke: var(--accent); flex: none; }
+.group svg { width: 34px; height: 34px; padding: 7px; border-radius: 10px; stroke: var(--accent); flex: none; background: color-mix(in srgb, var(--accent) 11%, transparent); transition: transform .2s var(--spring); }
+.group button:active svg { transform: scale(.9) rotate(-4deg); }
 .group span { flex: 1; min-width: 0; display: flex; flex-direction: column; }
 .group b { font-weight: 500; font-size: 16px; }
 .group small { color: var(--muted); font-size: 13px; }
@@ -457,3 +458,30 @@ pre.diff { margin: 0; padding: 12px; border-radius: 12px; background: var(--rais
 pre.diff .a { color: var(--mint); } pre.diff .d { color: #E5484D; } pre.diff .h { color: var(--accent); font-weight: 600; } pre.diff .f { color: var(--muted); font-weight: 600; }
 body.viewer.cananswer #needs { display: block !important; }
 .ag-note .plus { color: var(--mint); font-family: var(--mono); } .ag-note .minus { color: #E5484D; font-family: var(--mono); }
+
+/* ---------- live feel ---------- */
+/* A live strip over the terminal: which agents need you or are working, one tap to the dashboard. */
+.agstrip { flex: none; align-self: center; margin: 8px 8px 0; display: flex; align-items: center; gap: 8px; max-width: calc(100% - 16px);
+  padding: 7px 10px 7px 11px; border-radius: 999px; font: 600 12.5px var(--sans); color: var(--text);
+  background: color-mix(in srgb, var(--raised) 88%, transparent); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+  box-shadow: inset 0 0 0 1px var(--line-strong), var(--shadow-2); animation: drop .4s var(--spring) both; transition: transform .15s var(--ease); }
+.agstrip:active { transform: scale(.96); }
+.agstrip span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.agstrip em { font-style: normal; color: var(--faint); font-size: 15px; line-height: 1; }
+.agstrip .st { width: 8px; height: 8px; border-radius: 50%; flex: none; background: var(--mint); box-shadow: 0 0 0 3px color-mix(in srgb, var(--mint) 20%, transparent); animation: pulse 1.6s ease-in-out infinite; }
+.agstrip.hot { box-shadow: inset 0 0 0 1.5px var(--lamp), 0 0 0 4px var(--lamp-glow), var(--shadow-2); }
+.agstrip.hot .st { background: var(--lamp); box-shadow: 0 0 0 3px var(--lamp-glow); animation-duration: 1s; }
+/* Cards come in one after another, and answer to a touch. */
+.list > *:nth-child(2) { animation-delay: .04s; } .list > *:nth-child(3) { animation-delay: .08s; } .list > *:nth-child(4) { animation-delay: .12s; } .list > *:nth-child(n+5) { animation-delay: .16s; }
+.agent { transition: transform .15s var(--ease), box-shadow .25s var(--ease); position: relative; overflow: hidden; }
+.agent:active { transform: scale(.99); }
+/* A working agent shows a moving line along its bottom edge. */
+.agent.s-work::after { content: ''; position: absolute; left: 0; bottom: 0; height: 2px; width: 40%; border-radius: 2px;
+  background: linear-gradient(90deg, transparent, var(--mint), transparent); animation: sweep 1.8s ease-in-out infinite; }
+@keyframes sweep { from { transform: translateX(-100%); } to { transform: translateX(260%); } }
+.ag-sum span { transition: transform .2s var(--spring), box-shadow .25s; }
+.ag-sum span b { font-variant-numeric: tabular-nums; }
+.ag-sum span.hot b { animation: pop .35s var(--spring); }
+.needs-btns button { transition: transform .12s var(--ease), filter .15s; }
+.needs { animation: drop .35s var(--spring) both; }
+@media (prefers-reduced-motion: reduce) { .agent.s-work::after, .agstrip .st { animation: none; } }

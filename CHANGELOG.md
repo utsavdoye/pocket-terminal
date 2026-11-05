@@ -1,5 +1,12 @@
 # Changelog
 
+## 7.3.0 (2026-11-05)
+- **Start on the computer, carry on from the phone:** `npx pocket-terminal run claude` (or any command) runs in your own terminal window as usual, and live on your phone. Close the window or walk away: it keeps running, its questions reach your phone, and you continue there. Whoever types sets the screen size.
+- **Claude Code anywhere, even in VS Code:** `npx pocket-terminal claude on` adds Pocket Terminal to Claude Code's official hooks (your other settings are kept, with a backup). When you're away from the computer (no keyboard or mouse for a minute), its permission questions come to your phone (app and notification) with Allow / Deny, and the answer goes straight back to Claude. At the computer, or back at it, they show on screen as usual. While Claude works the computer stays awake (lid closed too), and your phone hears when it finishes. `npx pocket-terminal claude off` removes it.
+- **A local door for the agent:** a socket in your private folder, usable only with a token only you can read.
+- **Live strip:** over the key row, "Claude Code needs you" or "2 agents working", one tap to the dashboard.
+- **Look and feel:** icon tiles in the menu, cards that animate in and respond to touch, a moving line on working agents.
+
 ## 7.2.0 (2026-11-05)
 - **Works on a weak signal:** big output is sent compressed (terminal text shrinks 3-10x). If the link is slower than the output, the phone skips ahead to the current screen instead of falling minutes behind: on a 4 KB/s link, what you type shows up right after a 300 KB flood.
 - **Reconnects by itself, faster:** switching Wi-Fi to mobile data, a dropped signal or a link that died quietly is noticed and rebuilt in seconds. If the phone's own internet fails, it retries in 3-20 s instead of waiting a minute.

@@ -5,6 +5,8 @@
 //   npx pocket-terminal pair       pair another phone
 //   npx pocket-terminal list       phones that can connect
 //   npx pocket-terminal remove N   lock a phone out (number or name, or "all")
+//   npx pocket-terminal run CMD    run a command here AND on your phone (e.g. run claude)
+//   npx pocket-terminal claude on  Claude Code's permission questions reach your phone when you're away
 //   npx pocket-terminal logs       what the agent is doing
 //   npx pocket-terminal uninstall  remove it (add --purge to delete the pairing key too)
 //
@@ -54,7 +56,55 @@ function install() {
   const code = WIN
     ? run('powershell.exe', ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', path.join(AGENT, 'install.ps1')], { cwd: AGENT })
     : run('bash', [path.join(AGENT, 'install.sh')], { cwd: AGENT });
+  if (!code) {
+    console.log('\nTip: start an agent here and keep it on your phone too:  npx pocket-terminal run claude');
+    if (fs.existsSync(path.join(os.homedir(), '.claude'))) console.log('Claude Code (also in VS Code): let its questions reach your phone:  npx pocket-terminal claude on');
+  }
   process.exit(code);
+}
+
+// ---- Claude Code: add (or remove) our hook in ~/.claude/settings.json, keeping everything else ----
+const CLAUDE = path.join(os.homedir(), '.claude', 'settings.json');
+const HOOK = path.join(AGENT, 'hook.js');
+const ours = (h) => h && typeof h.command === 'string' && h.command.includes('hook.js') && h.command.includes('.pocket-terminal');
+function claudeHooks(on) {
+  let cfg = {};
+  if (fs.existsSync(CLAUDE)) {
+    try { cfg = JSON.parse(fs.readFileSync(CLAUDE, 'utf8')); } catch { console.error(`Could not read ${CLAUDE} (is it valid JSON?). Nothing changed.`); process.exit(1); }
+    const bak = CLAUDE + '.before-pocket-terminal';
+    if (!fs.existsSync(bak)) fs.copyFileSync(CLAUDE, bak);
+  }
+  const hooks = cfg.hooks && typeof cfg.hooks === 'object' ? cfg.hooks : {};
+  for (const ev of Object.keys(hooks)) { // drop our old entries, keep yours
+    if (!Array.isArray(hooks[ev])) continue;
+    hooks[ev] = hooks[ev].map((g) => ({ ...g, hooks: (g.hooks || []).filter((h) => !ours(h)) })).filter((g) => g.hooks.length);
+    if (!hooks[ev].length) delete hooks[ev];
+  }
+  if (on) {
+    const command = `"${process.execPath}" "${HOOK}"`;
+    const add = (ev, timeout, matcher) => { (hooks[ev] = hooks[ev] || []).push({ ...(matcher ? { matcher } : {}), hooks: [{ type: 'command', command, timeout }] }); };
+    add('PermissionRequest', 3600, '*');
+    add('UserPromptSubmit', 5); add('PreToolUse', 5, '*'); add('PostToolUse', 5, '*'); add('Stop', 5);
+  }
+  cfg.hooks = hooks; if (!Object.keys(hooks).length) delete cfg.hooks;
+  fs.mkdirSync(path.dirname(CLAUDE), { recursive: true });
+  fs.writeFileSync(CLAUDE, JSON.stringify(cfg, null, 2) + '\n');
+}
+function claude(sub) {
+  const isOn = () => { try { return JSON.stringify(JSON.parse(fs.readFileSync(CLAUDE, 'utf8')).hooks || {}).includes('.pocket-terminal'); } catch { return false; } };
+  if (sub === 'on') {
+    need(); claudeHooks(true);
+    console.log(`Claude Code is connected to Pocket Terminal.
+
+  • Away from the computer? Its permission questions go to your phone: Allow or Deny there.
+    At the computer, they show on screen as usual.
+  • While it works, the computer stays awake, even with the lid closed.
+  • Your phone tells you when it finishes.
+
+Works in the terminal, VS Code and the desktop app. Restart Claude Code to pick it up.
+Turn off:  npx pocket-terminal claude off`);
+  } else if (sub === 'off') { claudeHooks(false); console.log('Claude Code is no longer connected to Pocket Terminal.'); }
+  else console.log(isOn() ? 'Claude Code is connected. (npx pocket-terminal claude off to stop)' : 'Not connected. Run:  npx pocket-terminal claude on');
 }
 
 const node = (args) => process.exit(run(process.execPath, [path.join(AGENT, 'pair.js'), ...args], { cwd: AGENT }));
@@ -64,6 +114,8 @@ switch (cmd) {
   case 'pair': need(); node(rest); break;
   case 'list': need(); node(['--list']); break;
   case 'remove': need(); if (!rest.length) { console.error('Which phone? See:  npx pocket-terminal list'); process.exit(1); } node(['--remove', ...rest]); break;
+  case 'run': need(); process.exit(run(process.execPath, [path.join(AGENT, 'run.js'), ...rest]));
+  case 'claude': claude(rest[0]); break;
   case 'logs': {
     const log = path.join(HOME, 'agent.log');
     if (!fs.existsSync(log)) { console.error('No log yet.'); process.exit(1); }
@@ -80,6 +132,8 @@ switch (cmd) {
 
   npx pocket-terminal            install or update, then pair a phone
   npx pocket-terminal pair       pair another phone
+  npx pocket-terminal run CMD    run a command here and on your phone (e.g. run claude)
+  npx pocket-terminal claude on  Claude Code asks your phone when you're away
   npx pocket-terminal list       phones that can connect
   npx pocket-terminal remove N   lock a phone out (number, name or "all")
   npx pocket-terminal logs       what it's doing

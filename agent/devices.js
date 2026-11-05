@@ -116,8 +116,9 @@ function startDevices({ core, power, log, dir }) {
 
   // A program finished or is waiting for an answer: tell the phone whose session it is.
   core.events && core.events.on('alert', (ev) => {
-    const r = running.get(String(ev.key).split(':')[0]);
-    if (r && r.t.alert) r.t.alert(ev).catch?.(() => {});
+    const owner = String(ev.key).split(':')[0];
+    // "local:" belongs to the computer itself (started there, or an agent's hook): every phone hears it
+    for (const [id, r] of running) if ((owner === 'local' || owner === id) && r.t.alert) Promise.resolve(r.t.alert(ev)).catch(() => {});
   });
 
   sync();

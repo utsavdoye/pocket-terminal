@@ -10,7 +10,7 @@ import { search, riskOf, needsFill, askAi, PROVIDERS } from './helper.js';
 import { setupTools } from './tools.js';
 
 const $ = (id) => document.getElementById(id);
-const APP_VERSION = '7.2.0';
+const APP_VERSION = '7.3.0';
 // Demo mode (#demo): the whole app with sample data and a pretend shell. Connects to nothing,
 // and never touches this phone's real pairing, history or keys.
 const DEMO = location.hash === '#demo';
@@ -37,14 +37,14 @@ async function idbSet(k, v) { try { const db = await idb(); await new Promise((r
 async function idbDel(k) { try { const db = await idb(); await new Promise((res) => { const t = db.transaction('kv', 'readwrite'); t.objectStore('kv').delete(k); t.oncomplete = res; t.onerror = res; }); } catch {} }
 
 // ---------- boot: pair / lock / not paired ----------
-let pendingPair = null;
+let pendingPair = null, openAgentsSoon = false;
 async function boot() {
   if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
   if (DEMO) return startDemo();
   if (VIEW) return startViewer();
   const h = new URLSearchParams(location.hash.slice(1));
-  if (h.get('s')) { // opened from a notification: show that terminal
-    setSid(h.get('s')); attachFresh = false;
+  if (h.get('s')) { // opened from a notification: show that terminal (or, for an agent's question, the dashboard)
+    if (/^[QC]-/.test(h.get('s'))) openAgentsSoon = true; else { setSid(h.get('s')); attachFresh = false; }
     history.replaceState(null, '', location.pathname + location.search);
   }
   if (h.get('join') || h.get('pair')) {
@@ -423,6 +423,7 @@ function wire(ch) {
     attachFresh = true;
     fit.fit(); sendTerm({ t: 'r', cols: term.cols, rows: term.rows });
     flushPending();
+    if (openAgentsSoon) { openAgentsSoon = false; openSheet('sessions'); }
     paint();
   };
   ch.binaryType = 'arraybuffer';
@@ -948,7 +949,10 @@ function setupUi() {
     onPage: (t, fn) => { pageHooks[t] = fn; }, onInput: (fn) => inputHooks.push(fn),
     pushKey: () => pushKey, drain, ask: () => doAsk(), demo: DEMO, viewer: !!S.viewer,
     onSwitchRequest: (fn) => { switchReq = fn; },
-    openSession: (sid) => { if (dc && dc.readyState === 'open' && switchReq) switchReq(sid); else { setSid(sid); attachFresh = false; } },
+    openSession: (sid) => {
+      if (/^[QC]-/.test(String(sid))) return openSheet('sessions'); // an agent's question or status: the dashboard
+      if (dc && dc.readyState === 'open' && switchReq) switchReq(sid); else { setSid(sid); attachFresh = false; }
+    },
   });
   renderJobs(); renderSnips();
 }
@@ -1019,6 +1023,7 @@ function demoShell(m) {
   if (m.t === 'diff') return reply({ t: 'diff', id: m.id, folder: '~/Projects/web', cut: false, fresh: ['src/Cart.test.tsx'], diff: DEMO_DIFF });
   if (m.t === 'answer') {
     const x = demoSess.find((y) => y.sid === m.sid);
+    if (x && x.ask) { demoSess = demoSess.filter((y) => y !== x); return reply({ t: 'answered', sid: m.sid, ok: true }); }
     if (x && x.waiting) { x.waiting = false; x.question = null; x.lastOut = Date.now(); x.line = '✓ Edited src/auth.ts · running tests…'; }
     return reply({ t: 'answered', sid: m.sid, ok: !!x });
   }
@@ -1094,6 +1099,7 @@ diff --git a/src/api.ts b/src/api.ts
 -const BASE = 'http://localhost:3000';
 +const BASE = import.meta.env.VITE_API ?? 'http://localhost:3000';`;
 let demoSess = [
+  { sid: 'Q-demo', program: 'Claude Code', ask: true, busy: false, running: true, waiting: true, question: 'Run: npm run deploy:staging', askedAt: T0 - 40e3, created: T0 - 40e3, lastOut: T0 - 40e3, viewers: 0, cwd: '~/Projects/site (VS Code)', line: '' },
   { sid: 'agent1', program: 'claude', busy: true, running: true, waiting: true, menu: true, question: 'Do you want to make this edit to auth.ts?', askedAt: T0 - 3 * 60e3, since: T0 - 14 * 60e3, lastOut: T0 - 3 * 60e3, created: T0 - 15 * 60e3, viewers: 0, cwd: '~/Projects/shop-app', line: '❯ 1. Yes' },
   { sid: 'agent2', program: 'codex', busy: true, running: true, waiting: false, since: T0 - 22 * 60e3, lastOut: T0 - 4e3, created: T0 - 23 * 60e3, viewers: 0, cwd: '~/Projects/api', line: '● Running tests (38/60)…' },
   { sid: 'build1', program: null, busy: false, running: true, waiting: false, done: { program: 'npm', at: T0 - 4 * 60e3, seconds: 312, changes: { files: 4, add: 120, del: 8 } }, lastOut: T0 - 4 * 60e3, created: T0 - 10 * 60e3, viewers: 0, cwd: '~/Projects/web', line: 'webpack compiled successfully in 812 ms' },

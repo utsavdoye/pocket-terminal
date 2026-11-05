@@ -47,10 +47,12 @@ function main() {
     transport = require('./relay-transport').startRelay({ cfg: relay, core, power, log, dir: DIR });
   }
   if (power) power.start();
+  // Programs on this computer can reach the agent: "npx pocket-terminal run …" and AI agents' hooks.
+  const local = require('./lib/local').startLocal({ core, log, dir: DIR });
   log(`agent running in ${mode} mode`);
 
   const stop = async () => {
-    core.stop();
+    core.stop(); local.stop();
     try { transport.stop(); } catch {}
     if (power) await power.stop(); // never leave the Mac stuck awake
     process.exit(0);

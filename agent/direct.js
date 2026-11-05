@@ -150,7 +150,12 @@ function startDirect({ cfg, core, power, log, dir, x = {} }) {
     // after a moment they get the shared session. A viewer always gets the shared session.
     let sess = null, attachTimer = null, size = {};
     const deviceKey = cfg.deviceId || keys.topic.slice(3, 11);
-    const keyFor = (sid) => `${deviceKey}:${String(sid || 'shared').replace(/[^\w-]/g, '').slice(0, 40) || 'shared'}`;
+    // Sessions started on the computer (L-…), agents outside Pocket Terminal (C-…) and their
+    // permission questions (Q-…) belong to the computer, so every paired phone sees them.
+    const keyFor = (sid) => { const v = String(sid || 'shared').replace(/[^\w-]/g, '').slice(0, 40) || 'shared'; return /^[LQC]-/.test(v) ? `local:${v}` : `${deviceKey}:${v}`; };
+    const sidOf = (key) => (key.startsWith('local:') ? key.slice(6) : key.slice(deviceKey.length + 1));
+    const listAll = () => ({ t: 'sessions', list: [...core.list(deviceKey + ':'), ...core.list('local:')], current: sess ? sidOf(sess.key) : null });
+    let phoneSize = null;
     const show = (s) => {
       if (sess) sess.clients.delete(client);
       pend = ''; clearTimeout(flushT); flushT = null;
@@ -162,11 +167,12 @@ function startDirect({ cfg, core, power, log, dir, x = {} }) {
       if (sess) return sess;
       clearTimeout(attachTimer);
       if (viewer) { show(core.session(cfg.watchKey)); send({ t: 'hi', os: process.platform, viewer: true, canAnswer: !!cfg.canAnswer, name: cfg.name || os.hostname() }); const q = core.question(cfg.watchKey); if (q) send({ t: 'alert', kind: 'input', ...q }); return sess; }
-      const key = keyFor(sid);
+      let key = keyFor(sid);
+      if (/^local:[QC]-/.test(key) || (key.startsWith('local:') && !core.isSession(key))) key = keyFor(null); // not a terminal (any more)
       if (fresh) core.dropOthers(deviceKey + ':', key); // this phone started fresh: close its old terminals that sit idle
       const s = core.session(key);
       log(`terminal: ${s.hasShell() ? 'continuing' : 'new'} session ${key.split(':')[1].slice(0, 6)}`);
-      send({ t: 'hi', os: process.platform, push: x.pushKey || null, sid: key.slice(deviceKey.length + 1) });
+      send({ t: 'hi', os: process.platform, push: x.pushKey || null, sid: sidOf(key) });
       show(s);
       if (power) send({ t: 'power', ...power.status() });
       return sess;
@@ -195,24 +201,31 @@ function startDirect({ cfg, core, power, log, dir, x = {} }) {
         return;
       }
       switch (m.t) {
-        case 'attach': { bind(m.sid, { fresh: m.fresh !== false }); const c = m.cols || size.cols, r = m.rows || size.rows; if (c) sess.resize(c | 0, r | 0); break; }
-        case 'i': if (typeof m.d === 'string') bind(null).input(m.d); break;
-        case 'r': if (sess) sess.resize(m.cols | 0, m.rows | 0); else size = { cols: m.cols, rows: m.rows }; break; // size before attach: keep it
+        case 'attach': { bind(m.sid, { fresh: m.fresh !== false }); const c = m.cols || size.cols, r = m.rows || size.rows; if (c) { phoneSize = { cols: c | 0, rows: r | 0 }; sess.resize(c | 0, r | 0); } break; }
+        case 'i': if (typeof m.d === 'string') {
+          const io = bind(null), sz = io.size();
+          // a session shared with the computer's own window: whoever types sets the size
+          if (phoneSize && sz && (sz.cols !== phoneSize.cols || sz.rows !== phoneSize.rows)) io.resize(phoneSize.cols, phoneSize.rows);
+          io.input(m.d);
+        } break;
+        case 'r': phoneSize = { cols: m.cols | 0, rows: m.rows | 0 }; if (sess) sess.resize(m.cols | 0, m.rows | 0); else size = { cols: m.cols, rows: m.rows }; break; // size before attach: keep it
         case 'cmd': core.runJob(String(m.id), m.cmd, (r) => deliver(r)); break;
         case 'settings': applySettings(m.power); break;
         // --- sessions: everything this phone has running on the computer ---
-        case 'sessions': send({ t: 'sessions', list: core.list(deviceKey + ':'), current: sess ? sess.key.slice(deviceKey.length + 1) : null }); break;
+        case 'sessions': send(listAll()); break;
         case 'switch': {
-          const s = core.session(keyFor(m.sid)); show(s);
-          if (m.cols) s.resize(m.cols | 0, m.rows | 0);
-          send({ t: 'switched', sid: s.key.slice(deviceKey.length + 1) }); break;
+          const k = keyFor(m.sid);
+          if (/^local:[QC]-/.test(k) || (k.startsWith('local:') && !core.isSession(k))) { send(listAll()); break; } // not a terminal
+          const s = core.session(k); show(s);
+          if (m.cols) { phoneSize = { cols: m.cols | 0, rows: m.rows | 0 }; s.resize(m.cols | 0, m.rows | 0); }
+          send({ t: 'switched', sid: sidOf(s.key) }); break;
         }
         case 'reply': { const ok = core.reply(keyFor(m.sid), m.text); send({ t: 'answered', sid: m.sid, ok }); if (ok) log('answered a waiting terminal in words'); break; }
         case 'diff': core.diff(keyFor(m.sid), (r) => send({ t: 'diff', id: m.id, ...r })); break;
         case 'auto-get': send({ t: 'auto', ...core.getAuto() }); break;
         case 'auto-set': if (m.cfg && typeof m.cfg === 'object') send({ t: 'auto', ...core.setAuto(m.cfg) }); break;
         case 'answer': { const ok = core.answer(keyFor(m.sid), m.d); send({ t: 'answered', sid: m.sid, ok }); if (ok) log('answered a waiting terminal from the dashboard'); break; }
-        case 'close-session': if (keyFor(m.sid) !== (sess && sess.key)) core.close(keyFor(m.sid)); send({ t: 'sessions', list: core.list(deviceKey + ':'), current: sess ? sess.key.slice(deviceKey.length + 1) : null }); break;
+        case 'close-session': if (keyFor(m.sid) !== (sess && sess.key) && !/^local:Q-/.test(keyFor(m.sid))) core.close(keyFor(m.sid)); send(listAll()); break;
         // --- notifications ---
         case 'push-sub': if (x.saveSub && m.sub && webpush.allowedEndpoint(m.sub.endpoint) && m.sub.keys) { x.saveSub(m.sub); send({ t: 'push-ok', quiet: !!m.quiet }); } else fail('push-ok', null, 'That notification address is not allowed'); break;
         case 'push-off': x.removeSub && x.removeSub(m.endpoint); send({ t: 'push-ok', off: true }); break;
@@ -253,7 +266,7 @@ function startDirect({ cfg, core, power, log, dir, x = {} }) {
   const asks = new Map(); // id -> { key, k, choices, exp }
   const ASK_TTL = 30 * 60e3;
   function answerButtons(ev) {
-    const choices = choicesFor(ev.text, ev.menu);
+    const choices = Array.isArray(ev.choices) ? ev.choices : choicesFor(ev.text, ev.menu);
     if (!choices.length || !ev.key) return null;
     for (const [id, a] of asks) if (a.exp < Date.now() || a.key === ev.key) asks.delete(id); // one live question per terminal
     const id = crypto.randomBytes(9).toString('base64url'), k = crypto.randomBytes(32);
@@ -274,7 +287,7 @@ function startDirect({ cfg, core, power, log, dir, x = {} }) {
     log(core.answer(a.key, c.d) ? `answered "${c.a}" from a notification` : 'answer from a notification came after the question was gone: ignored');
   }
   async function notify(ev, force = false) {
-    if (viewer || ev.kind === 'auto') return 'none'; // auto-approved: shown in the app, no buzz
+    if (viewer || ev.kind === 'auto' || ev.kind === 'gone') return 'none'; // auto-approved: shown in the app, no buzz
     // Watching = showing that terminal AND heard from in the last 12 s (a closed app's link can linger ~30 s).
     const watching = [...peers.values()].some((p) => p.key === ev.key && Date.now() - p.seen < 12e3);
     if (watching && !force) return 'none';
@@ -282,7 +295,9 @@ function startDirect({ cfg, core, power, log, dir, x = {} }) {
     lastAlert.set(ev.key + ev.kind, Date.now());
     const prog = ev.program ? ev.program[0].toUpperCase() + ev.program.slice(1) : 'Your terminal';
     const sid = ev.key ? ev.key.split(':').slice(1).join(':') : '';
-    const msg = ev.kind === 'input' ? { title: `${prog} needs you`, body: ev.text || 'It is waiting for your answer.' }
+    const where = ev.cwd ? ` · ${ev.cwd}` : '';
+    const msg = ev.kind === 'input' && ev.ask ? { title: `${prog} asks for permission`, body: (ev.text || 'It is waiting for your answer.') + where }
+      : ev.kind === 'input' ? { title: `${prog} needs you`, body: ev.text || 'It is waiting for your answer.' }
       : ev.kind === 'done' ? { title: `${prog} finished`, body: `after ${ev.seconds >= 120 ? Math.round(ev.seconds / 60) + ' min' : ev.seconds + ' s'}${ev.changes && ev.changes.files ? ` · ${ev.changes.files} file${ev.changes.files === 1 ? '' : 's'} changed (+${ev.changes.add} −${ev.changes.del})` : ''}. Tap to see the result.` }
       : ev.kind === 'quiet' ? { title: 'Your terminal went quiet', body: ev.text || 'It may be done, or waiting for you.' }
       : { title: 'Notifications work ✅', body: `${cfg.name || os.hostname()} can reach this phone.` };
@@ -366,7 +381,10 @@ function startDirect({ cfg, core, power, log, dir, x = {} }) {
       board.stop(); power && power.setConnected(false); saveState();
     },
     onPower: (s) => { if (!viewer) for (const p of peers.keys()) p({ t: 'power', ...s }); },
-    alert: (ev) => notify(ev),
+    alert: (ev) => {
+      if (!viewer && /^local:[QC]-/.test(String(ev.key))) for (const p of peers.keys()) p({ t: 'alert', ...ev, key: undefined, sid: ev.key.slice(6) });
+      return notify(ev);
+    },
     closeAll: () => { for (const p of peers.keys()) p({ t: 'share-ended' }); },
     stop: () => { board.stop(); saveState(); },
     revoke: async () => { for (const p of peers.keys()) p({ t: 'revoked' }); await post('revoked'); },
