@@ -200,6 +200,10 @@ select.field-in { appearance: none; -webkit-appearance: none; }
   box-shadow: inset 0 0 0 1px var(--line), 0 1px 0 var(--line-strong); touch-action: manipulation; transition: transform .08s, box-shadow .08s; }
 .keys button:active { transform: translateY(1px); box-shadow: inset 0 0 0 1px var(--line-strong); }
 .keys button.on { background: var(--lamp); color: var(--lamp-ink); box-shadow: none; }
+.keys button { transition: background-color .18s, color .18s, transform .1s; }
+.keys button.down { background: color-mix(in srgb, var(--lamp) 30%, var(--key-top)); transform: scale(.94); box-shadow: inset 0 0 0 1px var(--lamp); }
+.keys button.hit { animation: keyhit .38s ease-out; }
+@keyframes keyhit { 0% { background: var(--lamp); color: var(--lamp-ink); box-shadow: 0 0 0 3px var(--lamp-glow); } 100% { } }
 .keys .kq { display: grid; place-items: center; }
 .keys .ksep { flex: none; width: 1px; margin: 7px 2px; background: var(--line-strong); }
 .keys.more-r { -webkit-mask-image: linear-gradient(90deg, #000 calc(100% - 36px), transparent); mask-image: linear-gradient(90deg, #000 calc(100% - 36px), transparent); }

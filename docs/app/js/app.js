@@ -597,12 +597,18 @@ function setupTerminal() {
 
 // A key on the bar: fire on touch end and cancel the tap's click, so the phone keyboard keeps its
 // focus (a normal tap first blurs the terminal on iPhone, and the key can get lost). Mouse: click.
-function tapKey(b, fire) {
+function tapKey(b, act) {
   let x = 0, y = 0, moved = false;
-  b.addEventListener('touchstart', (e) => { const t = e.touches[0]; x = t.clientX; y = t.clientY; moved = false; }, { passive: true });
-  b.addEventListener('touchmove', (e) => { const t = e.touches[0]; if (Math.abs(t.clientX - x) > 8 || Math.abs(t.clientY - y) > 8) moved = true; }, { passive: true });
-  b.addEventListener('touchend', (e) => { e.preventDefault(); if (!moved) fire(); }, { passive: false });
-  b.addEventListener('mousedown', (e) => e.preventDefault());
+  // The key lights up while held, and flashes amber when it fires, so you see every press.
+  const fire = () => { b.classList.remove('hit'); void b.offsetWidth; b.classList.add('hit'); act(); };
+  b.addEventListener('animationend', () => b.classList.remove('hit'));
+  b.addEventListener('touchstart', (e) => { const t = e.touches[0]; x = t.clientX; y = t.clientY; moved = false; b.classList.add('down'); }, { passive: true });
+  b.addEventListener('touchmove', (e) => { const t = e.touches[0]; if (Math.abs(t.clientX - x) > 8 || Math.abs(t.clientY - y) > 8) { moved = true; b.classList.remove('down'); } }, { passive: true });
+  b.addEventListener('touchend', (e) => { e.preventDefault(); b.classList.remove('down'); if (!moved) fire(); }, { passive: false });
+  b.addEventListener('touchcancel', () => b.classList.remove('down'));
+  b.addEventListener('mousedown', (e) => { e.preventDefault(); b.classList.add('down'); });
+  b.addEventListener('mouseup', () => b.classList.remove('down'));
+  b.addEventListener('mouseleave', () => b.classList.remove('down'));
   b.onclick = fire;
 }
 // Paste: the clipboard if the phone allows it, else a box you can long-press and paste into.
