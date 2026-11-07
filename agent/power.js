@@ -109,7 +109,10 @@ class PowerBrain {
     try {
       // A big gap between ticks means the Mac was asleep and just woke up.
       const now = this.sys.now();
-      if (now - this.lastTick > 30e3) {
+      // Also after any sleep we started ourselves, however short: if the lid was opened again at
+      // once (or sleep didn't happen), the agent must still reconnect, or it stays deaf to the phone.
+      if (now - this.lastTick > 30e3 || this.wentToSleep) {
+        this.wentToSleep = false;
         this.wokeAt = now;
         // The connection may already be back (it can win the race against this tick).
         if (!(this.connected && now - (this.connectedAt || 0) < 10e3)) this.firstContact = false;
@@ -171,7 +174,7 @@ class PowerBrain {
     this.hooks.onStatus && this.hooks.onStatus(this.status());
     this.hooks.onSleep && await this.hooks.onSleep(this.status());
     this.hooks.log(`sleeping, next check-in ${this.alarm ? this.alarm.toLocaleTimeString() : 'none'}`);
-    this.sleeping = true;
+    this.sleeping = true; this.wentToSleep = true;
     this.lastTick = this.sys.now();
     await this.sys.sleepNow();
     // sleepnow returns right away; the Mac falls asleep a moment later. Ticks resume on wake.

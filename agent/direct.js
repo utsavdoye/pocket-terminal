@@ -406,7 +406,12 @@ function startDirect({ cfg, core, power, log, dir, x = {} }) {
   log(`direct mode: mailbox ready on ${board.urls.join(', ')}`);
 
   return {
-    onWake: () => board.restart(onNote, onOpenStream), // pick up notes that arrived while asleep
+    onWake: () => {
+      board.restart(onNote, onOpenStream); // pick up notes that arrived while asleep
+      // Tell the phone at once that it's up (it may be showing "asleep"). Wi-Fi can take a few
+      // seconds to come back after a wake, so try again shortly.
+      if (!viewer) for (const ms of [500, 4000, 12000]) setTimeout(() => postStatus('online', { force: true }).catch?.(() => {}), ms);
+    },
     onSleep: async () => {
       await postStatus('sleeping');
       board.stop(); power && power.setConnected(false); saveState();

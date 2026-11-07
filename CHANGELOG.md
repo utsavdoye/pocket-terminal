@@ -1,5 +1,8 @@
 # Changelog
 
+## 7.3.2 (2026-11-07)
+- **Fixed: the app said "asleep" while the computer was open.** If the lid was opened again right after the computer started to sleep, the agent didn't notice it was awake and stayed deaf to the phone for minutes. Now it reconnects at once after any sleep, and tells the phone it's awake within a second or two of waking.
+
 ## 7.3.1 (2026-11-06)
 - **No more double notifications:** Claude Code started with `npx pocket-terminal run claude` (or from the phone) was reported twice, once from the screen and once from its hook. The hook now stays out inside Pocket Terminal.
 - **Clean screen when you switch to the phone:** opening a session that was started in a wide computer window used to show the wide screen squeezed and broken (Claude Code's boxes, vim, htop). The program now redraws at the phone's width first and the phone gets that clean screen. The same happens whenever you go back and forth between the computer and the phone.

@@ -24,7 +24,7 @@ const sys = {
 let woke = 0;
 const brain = new PowerBrain({}, { log: () => {}, onWake: () => woke++, onSleep: async () => {} }, sys);
 // the Mac stays awake between steps, so ticks kept running (no wake detected)
-const step = async (ms = 5e3) => { t += ms; brain.lastTick = t - 5e3; brain.sleeping = false; await brain.tick(); };
+const step = async (ms = 5e3) => { t += ms; brain.lastTick = t - 5e3; brain.sleeping = false; brain.wentToSleep = false; await brain.tick(); };
 const last = () => calls.slice(-3).join(' | ');
 
 (async () => {
@@ -65,6 +65,14 @@ const last = () => calls.slice(-3).join(' | ');
   calls.length = 0; brain.lastTick = t; t += 2 * 60e3; brain.sleeping = false; await brain.tick();
   assert.strictEqual(woke, 1); assert.ok(calls.includes('nosleep 1'));
   console.log('✓ wake detected, stays awake to check in');
+
+  // 3b. It went to sleep, but the lid was opened again at once (no clock jump): still counts as a
+  //     wake, so the agent reconnects to the mailbox instead of staying deaf until the next sleep.
+  {
+    const w0 = woke; brain.wentToSleep = true; brain.sleeping = false; brain.lastTick = t; t += 3e3; await brain.tick();
+    assert.strictEqual(woke, w0 + 1); assert.strictEqual(brain.wentToSleep, false);
+    console.log('✓ a sleep that didn\'t last still wakes the agent up properly');
+  }
 
   // 4. Phone connects during check-in → stays awake past the window
   brain.setConnected(true); brain.setPhoneWanting(true);
