@@ -575,6 +575,9 @@ function setupTerminal() {
   // and speed up to whole words after a moment. Turn those into terminal deletes, so holding it
   // clears text the way it does in a message. A real key press is left to the terminal (no doubles).
   let lastBs = 0;
+  // A terminal is not a chat box: no autocorrect, word predictions, auto-capitals or spell check.
+  // (On Android, Gboard otherwise "fixes" the word when you press space: "ls" becomes "Is".)
+  for (const [k, v] of [['autocorrect', 'off'], ['autocapitalize', 'off'], ['autocomplete', 'off'], ['spellcheck', 'false'], ['data-gramm', 'false'], ['enterkeyhint', 'send']]) term.textarea.setAttribute(k, v);
   term.textarea.addEventListener('keydown', (e) => { if (e.key === 'Backspace') lastBs = performance.now(); }, true);
   term.textarea.addEventListener('beforeinput', (e) => {
     const t = e.inputType;

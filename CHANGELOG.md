@@ -1,6 +1,7 @@
 # Changelog
 
 ## 7.3.2 (2026-11-07)
+- **Fixed: Android keyboards "correcting" commands.** Pressing space no longer turns `ls` into `Is` or swaps in a predicted word: the terminal turns off autocorrect, word suggestions, auto-capitals and spell check.
 - **Fixed: the app said "asleep" while the computer was open.** If the lid was opened again right after the computer started to sleep, the agent didn't notice it was awake and stayed deaf to the phone for minutes. Now it reconnects at once after any sleep, and tells the phone it's awake within a second or two of waking.
 
 ## 7.3.1 (2026-11-06)
