@@ -156,14 +156,21 @@ function startDirect({ cfg, core, power, log, dir, x = {} }) {
     const sidOf = (key) => (key.startsWith('local:') ? key.slice(6) : key.slice(deviceKey.length + 1));
     const listAll = () => ({ t: 'sessions', list: [...core.list(deviceKey + ':'), ...core.list('local:')], current: sess ? sidOf(sess.key) : null });
     let phoneSize = null;
-    const show = (s) => {
+    // Show a session on this phone, at this phone's size (sz). While a session shared with the
+    // computer's window redraws for the phone, its output waits, then comes as one clean screen.
+    const show = (s, sz) => {
       if (sess) sess.clients.delete(client);
       pend = ''; clearTimeout(flushT); flushT = null;
-      sess = s; info.key = s.key; sess.clients.add(client);
-      send({ t: 'reset', d: sess.screen() });
-      const sz = sess.size(); if (sz) send({ t: 'size', ...sz });
+      sess = s; info.key = s.key;
+      const go = (screen) => {
+        if (sess !== s || !dc.isOpen()) return;
+        sess.clients.add(client);
+        send({ t: 'reset', d: screen });
+        const z = sess.size(); if (z) send({ t: 'size', ...z });
+      };
+      if (sz && sz.cols) s.fit(sz.cols | 0, sz.rows | 0, go); else go(s.screen());
     };
-    const bind = (sid, { fresh = true } = {}) => {
+    const bind = (sid, { fresh = true, sz = null } = {}) => {
       if (sess) return sess;
       clearTimeout(attachTimer);
       if (viewer) { show(core.session(cfg.watchKey)); send({ t: 'hi', os: process.platform, viewer: true, canAnswer: !!cfg.canAnswer, name: cfg.name || os.hostname() }); const q = core.question(cfg.watchKey); if (q) send({ t: 'alert', kind: 'input', ...q }); return sess; }
@@ -173,7 +180,7 @@ function startDirect({ cfg, core, power, log, dir, x = {} }) {
       const s = core.session(key);
       log(`terminal: ${s.hasShell() ? 'continuing' : 'new'} session ${key.split(':')[1].slice(0, 6)}`);
       send({ t: 'hi', os: process.platform, push: x.pushKey || null, sid: sidOf(key) });
-      show(s);
+      show(s, sz);
       if (power) send({ t: 'power', ...power.status() });
       return sess;
     };
@@ -201,11 +208,15 @@ function startDirect({ cfg, core, power, log, dir, x = {} }) {
         return;
       }
       switch (m.t) {
-        case 'attach': { bind(m.sid, { fresh: m.fresh !== false }); const c = m.cols || size.cols, r = m.rows || size.rows; if (c) { phoneSize = { cols: c | 0, rows: r | 0 }; sess.resize(c | 0, r | 0); } break; }
+        case 'attach': {
+          const c = m.cols || size.cols, r = m.rows || size.rows;
+          if (c) phoneSize = { cols: c | 0, rows: r | 0 };
+          bind(m.sid, { fresh: m.fresh !== false, sz: phoneSize }); break;
+        }
         case 'i': if (typeof m.d === 'string') {
           const io = bind(null), sz = io.size();
-          // a session shared with the computer's own window: whoever types sets the size
-          if (phoneSize && sz && (sz.cols !== phoneSize.cols || sz.rows !== phoneSize.rows)) io.resize(phoneSize.cols, phoneSize.rows);
+          // a session shared with the computer's own window: whoever types sets the size (and gets a clean screen)
+          if (phoneSize && sz && (sz.cols !== phoneSize.cols || sz.rows !== phoneSize.rows)) show(io, phoneSize);
           io.input(m.d);
         } break;
         case 'r': phoneSize = { cols: m.cols | 0, rows: m.rows | 0 }; if (sess) sess.resize(m.cols | 0, m.rows | 0); else size = { cols: m.cols, rows: m.rows }; break; // size before attach: keep it
@@ -216,8 +227,9 @@ function startDirect({ cfg, core, power, log, dir, x = {} }) {
         case 'switch': {
           const k = keyFor(m.sid);
           if (/^local:[QC]-/.test(k) || (k.startsWith('local:') && !core.isSession(k))) { send(listAll()); break; } // not a terminal
-          const s = core.session(k); show(s);
-          if (m.cols) { phoneSize = { cols: m.cols | 0, rows: m.rows | 0 }; s.resize(m.cols | 0, m.rows | 0); }
+          const s = core.session(k);
+          if (m.cols) phoneSize = { cols: m.cols | 0, rows: m.rows | 0 };
+          show(s, m.cols ? phoneSize : null);
           send({ t: 'switched', sid: sidOf(s.key) }); break;
         }
         case 'reply': { const ok = core.reply(keyFor(m.sid), m.text); send({ t: 'answered', sid: m.sid, ok }); if (ok) log('answered a waiting terminal in words'); break; }

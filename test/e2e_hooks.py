@@ -52,6 +52,16 @@ try:
     check(5, 'run: answered on the phone, the computer window sees it', wait(lambda: 'mac-got-y' in ''.join(out), 8))
     check(6, 'run: the computer window ends when the command ends', wait(lambda: mac.poll() is not None, 10))
 
+    # 1b. A full-screen app started in a wide computer window: the phone gets a clean redraw at
+    #     its own width, not the wide screen squeezed in (that looked broken).
+    wide=subprocess.Popen(['node','run.js','node',R+'/test/resize-app.js'],cwd=R+'/agent',env=env,stdin=subprocess.PIPE,stdout=subprocess.PIPE,stderr=subprocess.PIPE,text=True)
+    time.sleep(2); pg.goto(APP); wait(lambda: awake(pg), 40); ph.nav(pg,'sessions')
+    wait(lambda: pg.is_visible('#sessList .agent:has-text("Node") [data-sw]') or len(pg.query_selector_all('#sessList [data-sw]'))>1, 10)
+    btns=pg.query_selector_all('#sessList [data-sw]'); [b for b in btns if 'on screen' not in b.inner_text()][0].click(); time.sleep(2)
+    rows=pg.evaluate(ROWS)
+    check('6b', 'a wide full-screen app opens clean on the phone (redrawn at its width)', 'REDRAWN-' in rows and 'START-' not in rows)
+    wide.kill()
+
     # 2. Claude Code hook, you're away (idle 10 min): the question goes to the phone.
     pg.goto(APP); wait(lambda: awake(pg), 40)
     h,inp=hook('PermissionRequest', 600, tool_name='Bash', tool_input={'command':'npm test'})
@@ -80,6 +90,14 @@ try:
     h,inp=hook('PermissionRequest', 2, tool_name='Bash', tool_input={'command':'ls'})
     t0=time.time(); o=h.communicate(inp, timeout=10)[0]
     check(13, 'hook: at the computer it steps aside at once (no answer, no phone)', o.strip()=='' and time.time()-t0 < 5 and len(pushed)==n)
+
+    # 3b. Claude running inside Pocket Terminal ("run claude"): the screen already shows its questions,
+    #     so the hook stays out (no second notification for the same question).
+    n=len(pushed)
+    h=subprocess.Popen(['node','hook.js'],cwd=R+'/agent',env=dict(env,POCKET_IDLE_SECONDS='600',POCKET_TERMINAL='1'),stdin=subprocess.PIPE,stdout=subprocess.PIPE,text=True)
+    t0=time.time(); o=h.communicate(json.dumps({'hook_event_name':'PermissionRequest','session_id':'x','cwd':S+'/u/proj','tool_name':'Bash','tool_input':{'command':'ls'}}), timeout=10)[0]
+    time.sleep(1.5)
+    check('13b', 'hook: inside a Pocket Terminal session it stays out (no double notification)', o.strip()=='' and time.time()-t0 < 4 and len(pushed)==n)
 
     # 4. The question is dropped (answered on the computer / Claude moved on): the phone stops showing it.
     h,inp=hook('PermissionRequest', 600, tool_name='Bash', tool_input={'command':'rm -rf build'})

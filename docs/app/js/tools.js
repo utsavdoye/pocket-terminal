@@ -145,6 +145,9 @@ export function setupTools(ctx) {
       : work.length ? (work.length === 1 ? `${one(work[0])} is working` : `${work.length} agents working`) : '';
     if (el.hidden !== !text) { el.hidden = !text; ctx.relayout(); } // the terminal gives it room
     el.classList.toggle('hot', !!wait.length);
+    const n = sessions.filter((s) => stateOf(s) === 'wait').length, badge = $('dockBadge'); // the dock's Agents button
+    badge.hidden = !n; if (n && badge.textContent !== String(n)) badge.textContent = n;
+    badge.parentElement.classList.toggle('hot', !!n);
     if (text && $('agStripText').textContent !== text) $('agStripText').textContent = text;
   }
   $('agStrip').onclick = () => { navigator.vibrate && navigator.vibrate(8); ctx.openSheet('sessions'); };

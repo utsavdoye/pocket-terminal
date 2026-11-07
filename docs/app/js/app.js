@@ -10,7 +10,7 @@ import { search, riskOf, needsFill, askAi, PROVIDERS } from './helper.js';
 import { setupTools } from './tools.js';
 
 const $ = (id) => document.getElementById(id);
-const APP_VERSION = '7.3.0';
+const APP_VERSION = '7.3.1';
 // Demo mode (#demo): the whole app with sample data and a pretend shell. Connects to nothing,
 // and never touches this phone's real pairing, history or keys.
 const DEMO = location.hash === '#demo';
@@ -520,7 +520,7 @@ function paint() {
     }
   } else $('banner').hidden = true;
   if (p && p.percent != null) {
-    $('batt').hidden = false; $('batt').textContent = `${p.onCharger ? '⚡' : ''}${p.percent}%`;
+    $('batt').hidden = false; $('batt').textContent = `${p.onCharger ? '⚡' : ''}${p.percent}%`; $('batt').style.setProperty('--lvl', `${Math.max(8, Math.min(100, p.percent))}%`);
     $('batt').className = 'batt tick' + (p.onCharger ? ' charging' : p.percent < 20 ? ' low' : '');
   }
   $('connInfo').textContent = linkState === 'direct' ? 'Direct and end-to-end encrypted' : linkState === 'backup' ? 'Backup route: encrypted notes through the message board' : 'Not connected right now';
@@ -853,6 +853,12 @@ function closeSheet() {
   setTimeout(() => { sh.classList.remove('show', 'closing'); }, matchMedia('(prefers-reduced-motion: reduce)').matches ? 0 : 190);
 }
 function setupUi() {
+  // The dock: keyboard, agents, send a command, files.
+  document.querySelectorAll('#dock [data-dock]').forEach((b) => b.addEventListener('click', () => {
+    navigator.vibrate && navigator.vibrate(6);
+    if (b.dataset.dock === 'kb') { term.focus(); return; }
+    openSheet(b.dataset.dock);
+  }));
   document.querySelectorAll('[data-mod]').forEach((b) => { modBtn[b.dataset.mod] = b;
     tapKey(b, () => { mods[b.dataset.mod] = !mods[b.dataset.mod]; b.classList.toggle('on'); term.focus(); }); });
   document.querySelectorAll('#keys [data-k], #keys [data-t]').forEach((b) => {

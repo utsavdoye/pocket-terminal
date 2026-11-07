@@ -197,7 +197,7 @@ function createCore({ log, power, dir }) {
     s.term = t;
     const send = (msg) => { for (const c of s.clients) { try { c(msg); } catch {} } };
     t.onData((d) => {
-      s.buffer += d; if (s.buffer.length > BUFFER_LIMIT) s.buffer = s.buffer.slice(-BUFFER_LIMIT);
+      s.buffer += d; s.total = (s.total || 0) + d.length; if (s.buffer.length > BUFFER_LIMIT) s.buffer = s.buffer.slice(-BUFFER_LIMIT);
       const pd = plain(d); s.tail = (s.tail + pd).slice(-2000); s.outN += pd.length;
       const now = Date.now();
       if (!s.burst) s.burst = now;
@@ -229,6 +229,29 @@ function createCore({ log, power, dir }) {
       },
       size: () => (s.term ? { cols: s.term.cols, rows: s.term.rows } : null),
       screen: () => s.buffer,
+      // The screen for a viewer of this size. Same size: the history as is. A different size (a
+      // session shared with the computer's own window): resize, let the program redraw itself for
+      // the new size, and give just that redraw on a clean screen. Replaying output drawn for
+      // another width is what makes full-screen apps (Claude Code, vim…) look broken.
+      fit: (cols, rows, cb) => {
+        const ok = cols > 0 && rows > 0 && cols < 1000 && rows < 1000;
+        if (!s.term) { if (ok) startShell(s, cols, rows); return cb(s.buffer); } // a new terminal starts at this size
+        if (!ok || (s.term.cols === cols && s.term.rows === rows)) return cb(s.buffer);
+        const mark = s.total || 0, t0 = Date.now();
+        s.term.resize(cols, rows);
+        for (const c of s.clients) { try { c({ t: 'size', cols, rows }); } catch {} }
+        checkPrograms();
+        if (!s.program) return cb(s.buffer); // just a shell: keep its history (it only redraws its prompt)
+        const check = () => {
+          const fresh = (s.total || 0) - mark, quiet = Date.now() - s.lastOut;
+          if (fresh > 0 && quiet >= 250 || Date.now() - t0 > 1500) {
+            if (fresh > 0 && fresh <= s.buffer.length) return cb('\x1b[H\x1b[2J\x1b[3J' + s.buffer.slice(-fresh));
+            return cb(s.buffer); // nothing redrew (a plain shell): the history is fine as is
+          }
+          setTimeout(check, 80);
+        };
+        setTimeout(check, 120);
+      },
       hasShell: () => !!s.term,
     };
   }

@@ -71,6 +71,10 @@ async function event(h, kind) {
   } catch { quit(); }
 }
 
+// Claude running inside a Pocket Terminal session ("npx pocket-terminal run claude", or started from
+// the phone): Pocket Terminal already sees its questions on screen. Stay out, so nothing comes twice.
+if (process.env.POCKET_TERMINAL === '1') process.exit(0);
+
 let raw = '';
 process.stdin.on('data', (d) => { raw += d; if (raw.length > 4 << 20) quit(); });
 process.stdin.on('end', () => {

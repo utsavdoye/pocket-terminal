@@ -1,5 +1,13 @@
 # Changelog
 
+## 7.3.1 (2026-11-06)
+- **No more double notifications:** Claude Code started with `npx pocket-terminal run claude` (or from the phone) was reported twice, once from the screen and once from its hook. The hook now stays out inside Pocket Terminal.
+- **Clean screen when you switch to the phone:** opening a session that was started in a wide computer window used to show the wide screen squeezed and broken (Claude Code's boxes, vim, htop). The program now redraws at the phone's width first and the phone gets that clean screen. The same happens whenever you go back and forth between the computer and the phone.
+- **A dock at the bottom:** Keyboard, Agents (with a badge when one needs you), Command and Files, one thumb away. It hides while you type.
+- **Cleaner header:** connection speed and battery in one small capsule, with a battery that fills to its level; round icon buttons.
+- **Keys light up** when you press them, and flash when they fire.
+- **Dependabot pull requests are off.**
+
 ## 7.3.0 (2026-11-05)
 - **Start on the computer, carry on from the phone:** `npx pocket-terminal run claude` (or any command) runs in your own terminal window as usual, and live on your phone. Close the window or walk away: it keeps running, its questions reach your phone, and you continue there. Whoever types sets the screen size.
 - **Claude Code anywhere, even in VS Code:** `npx pocket-terminal claude on` adds Pocket Terminal to Claude Code's official hooks (your other settings are kept, with a backup). When you're away from the computer (no keyboard or mouse for a minute), its permission questions come to your phone (app and notification) with Allow / Deny, and the answer goes straight back to Claude. At the computer, or back at it, they show on screen as usual. While Claude works the computer stays awake (lid closed too), and your phone hears when it finishes. `npx pocket-terminal claude off` removes it.
