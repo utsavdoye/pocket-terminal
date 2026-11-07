@@ -3,6 +3,7 @@
 ## 7.3.1 (2026-11-06)
 - **No more double notifications:** Claude Code started with `npx pocket-terminal run claude` (or from the phone) was reported twice, once from the screen and once from its hook. The hook now stays out inside Pocket Terminal.
 - **Clean screen when you switch to the phone:** opening a session that was started in a wide computer window used to show the wide screen squeezed and broken (Claude Code's boxes, vim, htop). The program now redraws at the phone's width first and the phone gets that clean screen. The same happens whenever you go back and forth between the computer and the phone.
+- **"Your computer is awake" notification:** open the app while the computer sleeps, then go do something else: when it wakes and finds you gone, your phone buzzes once ("MacBook is awake ✓, tap to connect") and it stays awake 3 minutes for you. The app also knocks the moment it opens, so a quick look is enough.
 - **A dock at the bottom:** Keyboard, Agents (with a badge when one needs you), Command and Files, one thumb away. It hides while you type.
 - **Cleaner header:** connection speed and battery in one small capsule, with a battery that fills to its level; round icon buttons.
 - **Keys light up** when you press them, and flash when they fire.

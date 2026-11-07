@@ -19,6 +19,8 @@ const VIEW = /(^#|&)watch=/.test(location.hash);
 const DEMO_KEEP = new Set(['theme', 'font']);
 const DEFAULT_BOARDS = ['https://ntfy.sh'];
 const ICE = [{ urls: ['stun:stun.l.google.com:19302', 'stun:stun.cloudflare.com:3478'] }];
+// Phone notifications are on (so the computer can say "I'm awake" while you're elsewhere).
+const pushReady = () => { try { return !!store.get('push') && 'Notification' in window && Notification.permission === 'granted'; } catch { return false; } };
 const store = {
   get(k, d = null) { try { const v = localStorage.getItem('pt_' + k); return v === null ? d : JSON.parse(v); } catch { return d; } },
   set(k, v) { if ((DEMO || VIEW) && !DEMO_KEEP.has(k)) return; try { localStorage.setItem('pt_' + k, JSON.stringify(v)); } catch {} },
@@ -362,6 +364,9 @@ async function connect({ hello = true } = {}) {
   lastAttempt = Date.now();
   try { pc && pc.close(); } catch {}
   linkState = 'connecting'; paint();
+  // Knock first, at once: if you switch apps a second later, the computer still hears it, and
+  // tells your phone when it's up (it may be asleep).
+  const hi = hello ? post('hello').catch((e) => e) : null;
   pc = new RTCPeerConnection({ iceServers: ICE });
   pc.oid = randomId(); // each attempt has its own id; only its own answer is accepted
   const ch = pc.createDataChannel('pt', { ordered: true });
@@ -374,7 +379,7 @@ async function connect({ hello = true } = {}) {
   await gatherDone(pc, 4000);
   const mine = pc;
   try {
-    if (hello) await post('hello');
+    if (hi) { const e = await hi; if (e instanceof Error) throw e; }
     if (pc !== mine) return; // a newer attempt replaced this one
     await post('offer', { oid: mine.oid, sdp: mine.localDescription.sdp });
     offerAt = Date.now();
@@ -497,7 +502,7 @@ function paint() {
   } else if (mac.state === 'sleeping' && nci) {
     look = 'asleep'; ring = 1 - Math.max(0, Math.min(1, (nci - Date.now()) / ((mac.checkIn || 2) * 60e3))); // the lamp line fills up towards the check-in
     status = `Asleep · wakes in ${until(nci)}`;
-    banner = [`${name} is asleep`, S.viewer ? `It checks in by itself in ${until(nci)}, then the live view continues.` : `It checks in by itself in ${until(nci)} and connects on its own. Anything you send now runs then.${queuedText}`, !S.viewer, []];
+    banner = [`${name} is asleep`, S.viewer ? `It checks in by itself in ${until(nci)}, then the live view continues.` : `It checks in by itself in ${until(nci)} and connects on its own. Anything you send now runs then.${pushReady() ? ' You can leave the app: your phone buzzes when it\'s ready.' : ''}${queuedText}`, !S.viewer, []];
   } else {
     status = mac.ts ? `Last seen ${ago(mac.ts)}` : 'Waiting…';
     const longWait = retryN >= 4 ? " Still nothing? Check that it's on and online. If you removed this phone there, open ⋯ → Settings → Unpair and pair again." : '';

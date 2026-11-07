@@ -13,7 +13,7 @@ push=subprocess.Popen(['node','test/push-receiver.js'],cwd=R,stdout=subprocess.P
 pushed=[]; threading.Thread(target=lambda: [pushed.append(json.loads(l)) for l in push.stdout],daemon=True).start()
 env=dict(os.environ,POCKET_HOME=S+'/home',POCKET_APP_URL=APP,SHELL='/bin/bash')
 ph.setup(R, env, 'TestMac', BOARD)
-agent=subprocess.Popen(['node','agent.js'],cwd=R+'/agent',env=dict(env,POWER_BRAIN='0',HOME=S+'/u',POCKET_PUSH_TEST='1'),stdout=open(S+'/agent.log','w'),stderr=subprocess.STDOUT)
+agent=subprocess.Popen(['node','agent.js'],cwd=R+'/agent',env=dict(env,POWER_BRAIN='0',HOME=S+'/u',POCKET_PUSH_TEST='1',POCKET_READY_AFTER_MS='4000'),stdout=open(S+'/agent.log','w'),stderr=subprocess.STDOUT)
 ROWS="[...document.querySelectorAll('.xterm-rows > div')].map(d=>d.textContent).join('\\n')"
 awake=lambda pg: 'awake' in (pg.get_attribute('#presence','class') or '')
 def wait(fn, t=20):
@@ -113,6 +113,17 @@ try:
     check(15, 'hook: the dashboard shows Claude Code working, in its folder', wait(lambda: 'Claude Code' in pg.inner_text('#sessList') and 'Working' in pg.inner_text('#sessList') and 'proj' in pg.inner_text('#sessList'), 10))
     h,inp=hook('Stop', 600); h.communicate(inp, timeout=10)
     check(16, 'hook: Stop marks it finished', wait(lambda: 'Finished' in pg.inner_text('#sessList'), 10))
+    # 6. You opened the app, then switched away before it connected (the computer was waking):
+    #    once it's up, the phone gets one "it's awake, tap to connect" notification.
+    import signal
+    pg.close(); time.sleep(2); n=len(pushed)
+    agent.send_signal(signal.SIGSTOP)  # the computer "sleeps"
+    q=ctx.new_page(); q.goto(APP); time.sleep(7); q.close()  # opened the app, saw "asleep", went elsewhere
+    time.sleep(6); agent.send_signal(signal.SIGCONT)  # it wakes and finds the phone's knock
+    got=wait(lambda: [x for x in pushed[n:] if x.get('ok') and 'is awake' in json.dumps(x)], 20)
+    check('16b', 'left the app before it connected: one "is awake, tap to connect" notification', bool(got) and len(got)==1)
+    pg=ctx.new_page(); pg.goto(APP); wait(lambda: awake(pg), 30); time.sleep(6)
+    check('16c', 'opening the app and connecting: no "awake" notification', len([x for x in pushed[n:] if 'is awake' in json.dumps(x)])==1)
     log=open(S+'/agent.log').read()
     check(17, 'never logs what the agent asked', 'npm test' not in log and 'rm -rf' not in log)
     check(18, 'no page errors', not errs)

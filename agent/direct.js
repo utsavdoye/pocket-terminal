@@ -40,7 +40,8 @@ function startDirect({ cfg, core, power, log, dir, x = {} }) {
   const maxCmdAge = (cfg.maxCommandAgeMinutes || 60) * 60e3;
   const peers = new Map(); // send -> { key: the session it shows }
   let lastStatus = { state: null, at: 0, checkIn: null };
-  let phoneWaitingTimer = null;
+  let phoneWaitingTimer = null, readyTimer = null, lastReady = 0;
+  const READY_AFTER = Number(process.env.POCKET_READY_AFTER_MS) || 15e3; // tests make it shorter
 
   let saveT;
   const saveState = () => { clearTimeout(saveT); saveT = setTimeout(() => {
@@ -312,16 +313,17 @@ function startDirect({ cfg, core, power, log, dir, x = {} }) {
       : ev.kind === 'input' ? { title: `${prog} needs you`, body: ev.text || 'It is waiting for your answer.' }
       : ev.kind === 'done' ? { title: `${prog} finished`, body: `after ${ev.seconds >= 120 ? Math.round(ev.seconds / 60) + ' min' : ev.seconds + ' s'}${ev.changes && ev.changes.files ? ` · ${ev.changes.files} file${ev.changes.files === 1 ? '' : 's'} changed (+${ev.changes.add} −${ev.changes.del})` : ''}. Tap to see the result.` }
       : ev.kind === 'quiet' ? { title: 'Your terminal went quiet', body: ev.text || 'It may be done, or waiting for you.' }
+      : ev.kind === 'ready' ? { title: `${cfg.name || os.hostname()} is awake ✓`, body: 'Ready when you are. Tap to connect (it stays awake for 3 minutes).' }
       : { title: 'Notifications work ✅', body: `${cfg.name || os.hostname()} can reach this phone.` };
     const subs = x.subs ? x.subs() : [];
     const ans = ev.kind === 'input' && subs.length ? answerButtons(ev) : null;
     let how = 'none';
     for (const sub of subs) {
-      const r = await webpush.send(x.pushKeys, sub, { ...msg, sid, kind: ev.kind, tag: `pt-${sid}`, ...(ans ? { ans } : {}) }, { topic: `pt${sid}` });
+      const r = await webpush.send(x.pushKeys, sub, { ...msg, sid: sid || null, kind: ev.kind, tag: ev.kind === 'ready' ? 'pt-ready' : `pt-${sid}`, ...(ans ? { ans } : {}) }, { topic: ev.kind === 'ready' ? 'ptready' : `pt${sid}` });
       if (r === 'gone') x.removeSub(sub.endpoint); if (r === 'ok') how = 'push';
     }
     if (how === 'none' && cfg.notify !== false) { // no phone notifications set up: the ntfy app, without any details
-      await board.publish(ev.kind === 'input' ? 'Your terminal needs you 👋' : ev.kind === 'test' ? 'Notifications work ✅' : 'A program finished ✅', keys.notifyTopic, { Title: 'Pocket Terminal' }).then(() => { how = 'ntfy'; }).catch(() => {});
+      await board.publish(ev.kind === 'input' ? 'Your terminal needs you 👋' : ev.kind === 'test' ? 'Notifications work ✅' : ev.kind === 'ready' ? 'Your computer is awake ✓ Open Pocket Terminal to connect.' : 'A program finished ✅', keys.notifyTopic, { Title: 'Pocket Terminal' }).then(() => { how = 'ntfy'; }).catch(() => {});
     }
     if (how !== 'none') log(`notified the phone (${ev.kind}, ${how})`);
     return how;
@@ -354,6 +356,21 @@ function startDirect({ cfg, core, power, log, dir, x = {} }) {
     for (const s of peers.keys()) s({ t: 'power', ...power.status() });
   }
 
+  // The phone opened the app while this computer slept, and has moved on since (nothing connected
+  // a little after it woke): tell it the computer is up now, so one tap connects. Once per 5 min.
+  function readySoon() {
+    if (viewer) return;
+    clearTimeout(readyTimer);
+    readyTimer = setTimeout(() => {
+      if (peers.size || Date.now() - lastReady < 5 * 60e3) return;
+      lastReady = Date.now();
+      power && power.setPhoneWanting(true);
+      clearTimeout(phoneWaitingTimer); // give the tap time to arrive
+      phoneWaitingTimer = setTimeout(() => power && power.setPhoneWanting(peers.size > 0), 3 * 60e3);
+      notify({ kind: 'ready' }).catch(() => {});
+    }, READY_AFTER);
+  }
+
   // --- reading the mailbox ---
   function onNote(text) {
     if (typeof text === 'string' && text.startsWith('pta1.')) { if (!viewer) onAnswer(text); return; }
@@ -371,9 +388,11 @@ function startDirect({ cfg, core, power, log, dir, x = {} }) {
       phoneWaitingTimer = setTimeout(() => power && power.setPhoneWanting(peers.size > 0), 2 * 60e3);
       log('phone said hello: staying awake for it');
       postStatus('online', { force: true });
+      if (age > 5e3) readySoon();
     } else if (m.type === 'offer' && age < FRESH.offer && typeof m.sdp === 'string') {
       if (process.env.POCKET_NO_DIRECT) return log('ignoring offer (POCKET_NO_DIRECT test switch)');
       answerOffer(m);
+      if (age > 5e3) readySoon(); // it was posted while this computer slept
     } else if (m.type === 'cmd' && age < maxCmdAge) {
       core.runJob(String(m.cid), m.cmd, (r) => deliver(r));
     } else if (m.type === 'settings' && age < FRESH.settings) {
