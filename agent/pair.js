@@ -125,6 +125,7 @@ board.stream(async (text) => {
     let name = device, n = 2; while (cfg.devices.some((d) => d.name === name)) name = `${device} ${n++}`;
     const dev = { id: msgId(), name, secret: newSecret(), added: new Date().toISOString() };
     cfg.devices.push(dev); save();
+    require('./lib/activity').record(DIR, { phone: name, ev: 'paired' });
     await post({ type: 'welcome', for: m.nonce, wrap: wrapFor(m.pub, m.nonce, { secret: dev.secret, name: cfg.name, boards: cfg.boards, device: name }) });
     console.log(`\n✅ Paired "${name}". It can connect now.`);
     console.log(`Notifications (optional): in the ntfy app, subscribe to  ${derive(dev.secret).notifyTopic}`);

@@ -1,6 +1,16 @@
 # Changelog
 
-## 7.3.2 (2026-11-07)
+## Next release
+- **Several computers on one phone.** Pair your laptop, a desktop and a server: tap the computer's name at the top to switch, or to pair another one (scan its QR code right there). Each keeps its own PIN, terminals and command history. Notifications come from the one you used last. Before, pairing a second computer replaced the first.
+- **Swipe between terminals:** swipe left or right on the terminal for the next or previous one.
+- **"Your computer runs an older version" bar:** when the computer is behind the app, one tap copies the update command.
+- **Fix buttons when something's wrong:** offline → Try again; computer not answering → Reconnect, or copy the start command.
+- **Settings in groups** (Notifications, AI agents, Look and feel, Security, About), plus **Bigger keys**, **Vibration on/off**, and **Copy info** for bug reports (no keys, nothing you typed).
+- **A short tour** the first time the app connects (Settings → Show the tour again).
+- **`npx pocket-terminal activity`:** what your phones did on this computer (connected, files, answers, live-view links). Never what you typed or what commands printed.
+- **Fixed: a long diff or a folder with thousands of files never loaded** (the message was too big and was dropped). Big messages are now packed or sent in parts.
+- **Clearer errors:** `claude on` and `run` say how to update when the computer's copy is too old.
+- **For contributors:** the phone app and the agent are split into small files by job, every message is documented in PROTOCOL.md, test failures show up as annotations on GitHub, and `node scripts/release.js` does a release in one command.
 - **Fixed: Android keyboards "correcting" commands.** Pressing space no longer turns `ls` into `Is` or swaps in a predicted word: the terminal turns off autocorrect, word suggestions, auto-capitals and spell check.
 - **Fixed: the app said "asleep" while the computer was open.** If the lid was opened again right after the computer started to sleep, the agent didn't notice it was awake and stayed deaf to the phone for minutes. Now it reconnects at once after any sleep, and tells the phone it's awake within a second or two of waking.
 

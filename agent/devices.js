@@ -12,6 +12,7 @@ const crypto = require('crypto');
 const { startDirect } = require('./direct');
 const webpush = require('./lib/webpush');
 const { newSecret } = require('./lib/crypto');
+const activity = require('./lib/activity');
 
 const DEFAULT_APP = 'https://pocket-terminal.utsavdoye.com/app/';
 
@@ -55,7 +56,7 @@ function startDevices({ core, power, log, dir }) {
   function startWatch(sh) {
     if (watching.has(sh.id)) return;
     const t = startDirect({ cfg: { ...cfg, secret: sh.secret, deviceId: sh.deviceId, role: 'viewer', watchKey: sh.key, canAnswer: !!sh.canAnswer, stateFile: `state-share-${sh.id}.json`, notify: false },
-      core, power: null, log: (...a) => log(`[share ${sh.id.slice(0, 4)}]`, ...a), dir });
+      core, power: null, log: (...a) => log(`[share ${sh.id.slice(0, 4)}]`, ...a), dir, x: { activity: (ev) => activity.record(dir, { phone: 'live-view link', ...ev }) } });
     const timer = setTimeout(() => stopWatch(sh.id), Math.min(sh.expires - Date.now(), 2 ** 31 - 1));
     watching.set(sh.id, { t, timer });
   }
@@ -98,13 +99,14 @@ function startDevices({ core, power, log, dir }) {
           for (const s of sharesAll()) if (s.deviceId === id) stopWatch(s.id);
         }
         log(`phone removed: ${r.name}`);
+        if (!d) activity.record(dir, { phone: r.name, ev: 'removed' });
       }
     }
     for (const d of devices) {
       if (running.has(d.id) || typeof d.secret !== 'string') continue;
       const plog = (...a) => log(`[${d.name}]`, ...a);
       try {
-        const x = { pushKeys, pushKey: pushKeys && webpush.publicKey(pushKeys), subs: () => subsOf(d.id), saveSub: (s) => saveSub(d.id, s), removeSub: (e) => removeSub(d.id, e), ...shareX(d.id) };
+        const x = { pushKeys, pushKey: pushKeys && webpush.publicKey(pushKeys), subs: () => subsOf(d.id), saveSub: (s) => saveSub(d.id, s), removeSub: (e) => removeSub(d.id, e), ...shareX(d.id), activity: (ev) => activity.record(dir, { phone: d.name, ...ev }) };
         const t = startDirect({ cfg: { ...cfg, secret: d.secret, deviceId: d.id, stateFile: `state-${d.id}.json`, role: 'owner' }, core, power: powerFor(d.id), log: plog, dir, x });
         running.set(d.id, { t, secret: d.secret, name: d.name });
         log(`phone ready: ${d.name}`);

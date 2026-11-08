@@ -52,7 +52,8 @@ npx pocket-terminal
 
 **A real terminal**
 - zsh, bash or PowerShell with colours, tab completion, and Ctrl, Esc and arrow keys on a touch key bar.
-- Several terminals at once. Programs keep running when you close the app.
+- Several terminals at once: swipe left or right to switch. Programs keep running when you close the app.
+- Several computers on one phone (laptop, desktop, a server): tap the name at the top to switch.
 - Send a command while the computer sleeps; it runs at the next check-in and the reply comes back to you.
 - Works on a weak signal: output is compressed, a slow link skips ahead to the current screen instead of lagging, and it reconnects by itself when you switch between Wi-Fi and mobile data.
 
@@ -125,6 +126,7 @@ The phone app handles your key, so the most careful setup hosts your own copy: f
 | `npx pocket-terminal pair` | Pair another phone |
 | `npx pocket-terminal list` | Show the phones that can connect |
 | `npx pocket-terminal remove 2` | Lock a phone out (number, name or `all`) |
+| `npx pocket-terminal activity` | What your phones did here: connected, files, answers (never what you typed) |
 | `npx pocket-terminal logs` | Follow the agent's log |
 | `npx pocket-terminal uninstall` | Remove it (`--purge` also deletes the pairing key) |
 
@@ -215,12 +217,24 @@ Run `npx pocket-terminal list`, then `npx pocket-terminal remove <number>`. That
 ## Development
 
 ```
-cli.js        npx entry: copies the agent to ~/.pocket-terminal/app and runs its installer
-agent/        runs on the computer: direct link, power manager, terminals, files, web push, pairing
-docs/         the website, and the phone app in docs/app (static, served by GitHub Pages)
-test/         offline end-to-end tests: fake board, fake sleeping computer, real WebRTC in a browser
-relay/        optional self-hosted relay
+cli.js              npx entry: copies the agent to ~/.pocket-terminal/app and runs its installer
+agent/              runs on the computer
+  agent.js          starts everything; devices.js runs one link per paired phone
+  link/             the link to one phone: mailbox (board notes), channel (WebRTC), messages, notify
+  lib/              terminals (core.js), files, local websites, web push, crypto, the local door
+docs/               the website, and the phone app in docs/app (static, served by GitHub Pages)
+  app/js/core/      storage, computers, shared state
+  app/js/connection/ the board, the direct link, incoming messages
+  app/js/terminal/  xterm, key row, typing
+  app/js/ui/        menu sheet, header and banner
+  app/js/features/  one file per feature (agents, files, push, pairing, computers, demo…)
+test/               offline end-to-end tests: fake board, fake sleeping computer, real WebRTC in a browser
+scripts/release.js  one-command release
+relay/              optional self-hosted relay
 ```
+
+Every message between the phone and the computer is listed in [PROTOCOL.md](PROTOCOL.md).
+To release: write the changes under "Next release" in CHANGELOG.md, then `node scripts/release.js minor`.
 
 ```bash
 cd agent && npm test         # unit tests: power manager, platform parsers, Web Push, boards
@@ -228,7 +242,7 @@ python3 test/e2e_direct.py   # phone app in a headless browser ⇄ agent, includ
 python3 test/e2e_tools.py    # notifications, terminals, files, local websites, sharing
 ```
 
-The other end-to-end suites in `test/` cover pairing, QR scanning, reconnecting, touch input and demo mode.
+The other end-to-end suites in `test/` cover pairing, QR scanning, several computers, reconnecting, touch input and demo mode.
 Contributions are welcome; read [CONTRIBUTING.md](CONTRIBUTING.md) first.
 
 ## Support the project

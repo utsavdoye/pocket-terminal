@@ -1,6 +1,17 @@
 # Shared by the end-to-end tests: pair a (headless) phone the real way.
 #   pair.js shows a one-time link → phone opens it → both show a code → "y" on the computer → PIN.
-import subprocess, time, re, json
+import subprocess, time, re, json, os, sys
+
+def ci(msg, title='end-to-end'):
+    """On GitHub, also show a failure as an annotation (readable without opening the log)."""
+    if os.environ.get('GITHUB_ACTIONS'):
+        name = os.path.basename(sys.argv[0])
+        print(f'::error title={name}: {title}::' + str(msg)[-3500:].replace('%', '%25').replace('\r', '').replace('\n', '%0A'), flush=True)
+
+def _hook(t, e, tb):  # a test that crashes: show where on GitHub too
+    import traceback; ci(''.join(traceback.format_exception(t, e, tb)), 'crashed')
+    sys.__excepthook__(t, e, tb)
+sys.excepthook = _hook
 
 def setup(R, env, name, board):
     """Create direct.json for a test computer (no phones yet)."""

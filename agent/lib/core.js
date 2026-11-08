@@ -11,6 +11,9 @@ const path = require('path');
 const { EventEmitter } = require('events');
 const { spawn, execFile } = require('child_process');
 const pty = require('node-pty');
+const { plain, asksForInput, lastLine, question, isMenu, DEFAULT_AUTO, autoDecision, choicesFor } = require('./rules');
+const { gitChanges, gitDiff } = require('./git');
+const { outsideAgents } = require('./outside');
 
 const BUFFER_LIMIT = 256 * 1024;
 const JOB_TIMEOUT_MS = 10 * 60e3;
@@ -24,42 +27,6 @@ const SHELLS = new Set(['zsh', 'bash', 'sh', 'fish', 'dash', 'ksh', 'tcsh', 'csh
 const jobArgs = (cmd) => WIN
   ? (/cmd(\.exe)?$/i.test(SHELL) ? ['/d', '/s', '/c', cmd] : ['-NoProfile', '-NonInteractive', '-Command', cmd])
   : ['-lc', cmd];
-
-// ---------- the watcher's rules ----------
-const ANSI = /\x1b\[[0-9;?<>=]*[ -\/]*[@-~]|\x1b\][^\x07\x1b]*(?:\x07|\x1b\\)|\x1b[P^_][^\x1b]*\x1b\\|\x1b[@-Z\\-_]|[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]/g;
-const plain = (s) => s.replace(ANSI, '').replace(/\r(?!\n)/g, '\n');
-// "Is the screen asking me something?" Checked on the last few lines, once output goes quiet.
-const ASKS = [
-  /do you want to\b/i,                                   // Claude Code, Codex: "Do you want to proceed?"
-  /(?:❯|›|>)\s*1\.\s*(?:yes|allow|approve)/i,            // numbered choice menus
-  /\b1\.\s*yes\b[\s\S]{0,240}\b2\.\s/i,
-  /[(\[]\s*(?:y\/n|y\/N|Y\/n|yes\/no)\s*[)\]]\s*[:?]?\s*$/im, // [y/N]  (yes/no)
-  /press (?:enter|return|any key)/i,
-  /^\s*\?\s.+(?:›|\(Y\/n\)|\(y\/N\)|:)\s*.*$/m,           // npm / inquirer style "? Pick one ›"
-  /\b(?:allow|approve|proceed|continue|overwrite|confirm)\b[^\n]{0,80}\?\s*$/im,
-  /(?:password|passphrase)[^\n]{0,40}:\s*$/im,           // sudo, ssh, git
-];
-const asksForInput = (tail) => ASKS.some((r) => r.test(tail));
-const lastLine = (tail) => tail.split('\n').map((l) => l.trim()).filter(Boolean).slice(-1)[0] || '';
-// The line that asks (has a "?", [y/N], "password:"…), else the last line.
-const question = (tail) => { const ls = tail.split('\n').map((l) => l.trim()).filter(Boolean); return [...ls].reverse().find((l) => /\?|\[y\/n\]|\(y\/n\)|password|passphrase|press (enter|return|any key)/i.test(l)) || ls.slice(-1)[0] || ''; };
-const isMenu = (tail) => /(?:^|\n)\s*(?:❯|›|>)?\s*1\.\s+\S[\s\S]*\n\s*2\.\s+\S/.test(tail);
-
-// ---------- smart auto-approve ----------
-// Off by default. When on, a question is answered "yes" by itself only if the screen shows one of
-// your allowed words AND none of the risky ones. Anything else still asks you.
-const RISKY = /\b(rm|rmdir|del|delete|remove|drop|truncate|force|--force|-f\b|push|deploy|publish|release|sudo|chmod|chown|kill|reset|revert|overwrite|format|mkfs|dd|curl|wget|install|uninstall|payment|secret|token|password|passphrase|prod|production|migrat)/i;
-const DEFAULT_AUTO = { enabled: false, allow: ['npm test', 'npm run test', 'pytest', 'go test', 'cargo test', 'git status', 'git diff', 'ls', 'cat ', 'Read(', 'Read file', 'Search(', 'Grep'] };
-function autoDecision(cfg, tail, text, menu) {
-  if (!cfg || !cfg.enabled || !Array.isArray(cfg.allow) || !cfg.allow.length) return null;
-  if (/password|passphrase/i.test(text)) return null;
-  const screen = tail.toLowerCase();
-  if (RISKY.test(tail)) return null;
-  const hit = cfg.allow.map((a) => String(a).trim()).filter(Boolean).find((a) => screen.includes(a.toLowerCase()));
-  if (!hit) return null;
-  const c = choicesFor(text, menu).find((x) => x.a === 'yes');
-  return c ? { d: c.d, rule: hit } : null;
-}
 
 function createCore({ log, power, dir }) {
   const events = new EventEmitter();
@@ -262,38 +229,7 @@ function createCore({ log, power, dir }) {
     return session(key);
   }
 
-  // ---- AI agents running outside Pocket Terminal (e.g. Claude Code in VS Code), via their hooks ----
-  // A permission question waits here until a phone answers, the computer answers it, or it's dropped.
-  function ask({ agent, text, cwd }) {
-    const key = 'local:Q-' + Math.random().toString(36).slice(2, 10);
-    let done;
-    const p = new Promise((res) => { done = res; });
-    const a = { key, agent: String(agent || 'AI agent').slice(0, 40), text: String(text || '').slice(0, 300), cwd: tidy(cwd), at: Date.now(), done };
-    asks.set(key, a);
-    log(`${a.agent} asks for permission (sent to the phone)`); // what it asks is never logged
-    events.emit('alert', { key, kind: 'input', program: a.agent, text: a.text, ask: true, cwd: a.cwd,
-      choices: [{ a: 'yes', title: 'Allow', d: 'yes' }, { a: 'no', title: 'Deny', d: 'no' }] });
-    const end = (v) => { if (!asks.has(key)) return; asks.delete(key); done(v); events.emit('alert', { key, kind: 'gone' }); };
-    return { key, decision: p, cancel: () => end(null), settle: end };
-  }
-  // Working / finished, from the agent's own hooks. Keeps the computer awake while it works.
-  function extEvent({ session, agent, cwd, kind, away = true }) {
-    const id = String(session || 'x').replace(/[^\w-]/g, '').slice(0, 12) || 'x';
-    const key = 'local:C-' + id, now = Date.now();
-    let e = ext.get(key);
-    if (!e) { e = { key, agent: String(agent || 'AI agent').slice(0, 40), cwd: null, since: now, last: now, busy: false, done: null, dir: null }; ext.set(key, e); }
-    if (cwd) { e.dir = String(cwd); e.cwd = tidy(e.dir); }
-    e.last = now;
-    if (kind === 'stop') {
-      if (e.busy) {
-        e.busy = false;
-        const seconds = Math.round((now - e.since) / 1000), d = { program: e.agent, at: now, seconds, changes: null }; e.done = d;
-        gitChanges(e.dir, (ch) => { d.changes = ch; if (seconds >= 20 && away !== false) events.emit('alert', { key, kind: 'done', program: e.agent, seconds, changes: ch }); });
-      }
-    } else if (!e.busy) { e.busy = true; e.since = now; e.done = null; }
-    for (const [k, x] of ext) if (now - x.last > 2 * 3600e3) ext.delete(k); // forget agents unheard of for 2 h
-    busyChanged();
-  }
+  const { ask, extEvent } = outsideAgents({ asks, ext, events, log, tidy: (d) => tidy(d), busyChanged }); // see outside.js
 
   // A phone started a new session: close its older sessions that nobody is looking at and
   // that are just sitting at the prompt. Anything still running is kept.
@@ -341,33 +277,12 @@ function createCore({ log, power, dir }) {
     cb(null);
   }
   function changesIn(s, cb) { folderOf(s, (dirp) => gitChanges(dirp, cb)); }
-  function gitChanges(dirp, cb) {
-    {
-      if (!dirp) return cb(null);
-      execFile('git', ['-C', dirp, 'diff', '--numstat', 'HEAD'], { timeout: 5000, maxBuffer: 1 << 20 }, (e, out) => {
-        if (e) return cb(null);
-        let files = 0, add = 0, del = 0;
-        for (const l of String(out).split('\n')) { const m = l.match(/^(\d+|-)\t(\d+|-)\t/); if (m) { files++; add += +m[1] || 0; del += +m[2] || 0; } }
-        execFile('git', ['-C', dirp, 'ls-files', '--others', '--exclude-standard'], { timeout: 5000, maxBuffer: 1 << 20 }, (e2, o2) => {
-          const fresh = e2 ? 0 : String(o2).split('\n').filter(Boolean).length;
-          cb({ files: files + fresh, add, del, fresh });
-        });
-      });
-    }
-  }
   // The full change list (git diff) of a terminal's folder, for "See changes" on the phone.
   function diff(key, cb) {
     const e = ext.get(key), s = sessions.get(key); if (!s && !e) return cb({ error: 'That terminal is gone.' });
     (e ? (f) => f(e.dir) : (f) => folderOf(s, f))((dirp) => {
       if (!dirp) return cb({ error: 'Could not find its folder.' });
-      execFile('git', ['-C', dirp, 'diff', '--no-color', '--stat', '-p', 'HEAD'], { timeout: 8000, maxBuffer: 4 << 20 }, (e, out) => {
-        if (e) return cb({ error: /not a git repository/i.test(String(e.message)) ? 'This folder is not a git project, so there is no change list.' : 'git could not show the changes.' });
-        execFile('git', ['-C', dirp, 'ls-files', '--others', '--exclude-standard'], { timeout: 5000 }, (e2, o2) => {
-          const fresh = e2 ? [] : String(o2).split('\n').filter(Boolean);
-          let text = String(out); const cut = text.length > 200e3; if (cut) text = text.slice(0, 200e3);
-          cb({ folder: tidy(dirp), diff: text, cut, fresh: fresh.slice(0, 100) });
-        });
-      });
+      gitDiff(dirp, (r) => cb(r.error ? r : { folder: tidy(dirp), ...r }));
     });
   }
   // Answer a terminal that is waiting for you, without switching to it. Does nothing if it isn't waiting.
@@ -424,17 +339,6 @@ function createCore({ log, power, dir }) {
     clients: legacy.clients, input: legacy.input, resize: legacy.resize, screen: legacy.screen, hasShell: legacy.hasShell,
     stop: () => { clearInterval(watch); for (const s of [...sessions.values()]) kill(s); },
   };
-}
-
-// The one-tap answers that fit a question. The phone only ever sends the choice's name;
-// what gets typed is decided here, on the computer.
-function choicesFor(text, menu) {
-  const t = String(text || '');
-  if (menu || /(?:❯|›)\s*1\./.test(t) || /do you want/i.test(t)) return [{ a: 'yes', title: '1 · Yes', d: '1' }, { a: 'no', title: 'No (Esc)', d: '\x1b' }];
-  if (/y\/n|yes\/no/i.test(t)) return [{ a: 'yes', title: 'Yes', d: 'y\r' }, { a: 'no', title: 'No', d: 'n\r' }];
-  if (/password|passphrase/i.test(t)) return []; // never from a notification
-  if (/press (?:enter|return|any key)/i.test(t)) return [{ a: 'yes', title: 'Enter', d: '\r' }];
-  return [];
 }
 
 module.exports = { createCore, asksForInput, plain, SHELL, choicesFor, autoDecision };

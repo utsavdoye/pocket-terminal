@@ -119,6 +119,9 @@ npx pocket-terminal remove 2      # lock phone number 2 out (or a name, or "all"
 npx pocket-terminal pair          # pair another phone</code></pre>
   <p>Share a live view: ⋯ → Agents &amp; terminals → <b>Share live view</b>, pick how long (30 min to 1 day), send the link. They can watch, not type. Tick <b>Let them answer</b> to also let them press Yes / No on its questions, nothing else. <b>Stop sharing</b> ends it at once.</p>
 
+  <h2 id="computers">Several computers</h2>
+  <p>On the other computer run <code>npx pocket-terminal</code> (or <code>npx pocket-terminal pair</code> if it's installed), then in the app tap the computer's name at the top → <b>Scan QR code</b>. Each computer gets its own PIN. Tap the name at the top any time to switch. Notifications come from the computer you used last.</p>
+
   <h2 id="update">Update &amp; uninstall</h2>
   <pre><code>npx pocket-terminal@latest        # update (or run your install line again)
 npx pocket-terminal uninstall     # remove it; add --purge to delete the pairing key too</code></pre>
@@ -126,6 +129,10 @@ npx pocket-terminal uninstall     # remove it; add --purge to delete the pairing
 
   <h2 id="logs">Logs</h2>
   <p><code>npx pocket-terminal logs</code>, or open <code>~/.pocket-terminal/agent.log</code> (Windows: <code>%USERPROFILE%\.pocket-terminal\agent.log</code>). It never contains your commands, their output, or file names, so it's safe to paste into an issue.</p>
+  <p>Reporting a problem? In the app: ⋯ → Settings → <b>Copy info</b> and paste it in the issue (no keys, nothing you typed).</p>
+
+  <h2 id="activity">What did my phones do?</h2>
+  <p><code>npx pocket-terminal activity</code> lists when each phone connected, opened a terminal, downloaded or uploaded a file, opened a local website, answered a question or made a live-view link. It never records what you typed or what commands printed.</p>
 </div></main>
 
 <footer class="foot">
@@ -139,7 +146,7 @@ npx pocket-terminal uninstall     # remove it; add --purge to delete the pairing
       <div><h4>Help</h4><ul><li><a href="help.html">Help &amp; setup</a></li><li><a href="https://github.com/utsavdoye/pocket-terminal/discussions">Feedback</a></li><li><a href="https://github.com/utsavdoye/pocket-terminal/issues">Report a bug</a></li><li><a href="privacy.html">Privacy</a></li></ul></div>
       <div><h4>Source</h4><ul><li><a href="https://github.com/utsavdoye/pocket-terminal">GitHub</a></li><li><a href="https://www.npmjs.com/package/pocket-terminal">npm</a></li><li><a href="https://github.com/utsavdoye/pocket-terminal/blob/main/SECURITY.md">Security</a></li><li><a href="https://github.com/utsavdoye/pocket-terminal/blob/main/LICENSE">MIT license</a></li><li><a href="https://buymeacoffee.com/utsavdoye">Buy me a coffee</a></li></ul></div>
     </div>
-    <div class="legal"><span>© 2026 Utsav Doye · MIT</span><span class="status">v7.3.2 · open source</span></div>
+    <div class="legal"><span>© 2026 Utsav Doye · MIT</span><span class="status">v7.3.1 · open source</span></div>
   </div>
 </footer>
 <script src="site.js"></script>

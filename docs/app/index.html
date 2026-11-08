@@ -113,6 +113,7 @@
     </div>
   </div>
 
+  <button class="agstrip upd" id="updBar" type="button" hidden><i class="st"></i><span id="updText"></span><em class="x" aria-label="Hide">×</em></button>
   <button class="agstrip" id="agStrip" type="button" hidden><i class="st"></i><span id="agStripText"></span><em>›</em></button>
   <div class="needs" id="needs" hidden role="status">
     <div class="needs-text"><b id="needsTitle">Needs you</b><span id="needsLine"></span></div>
@@ -166,6 +167,7 @@
         <button data-tab="web"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M3 12h18"/><path d="M12 3a14 14 0 0 1 0 18a14 14 0 0 1 0-18z"/></svg><span><b>Local websites</b><small>Open localhost:3000 on this phone</small></span></button>
       </div>
       <div class="group">
+        <button data-tab="computers"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="14" height="10" rx="1.5"/><path d="M5 18h8"/><rect x="17" y="7" width="5" height="12" rx="1"/></svg><span><b>Computers</b><small>Switch, or pair another one</small></span><em class="count" id="compCount"></em></button>
         <button data-tab="power"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="7" width="16" height="10" rx="2"/><path d="M22 11v2"/><path d="M7 10v4"/></svg><span><b>Power and battery</b><small>How it sleeps and wakes up</small></span></button>
         <button data-tab="settings"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg><span><b>Settings</b><small>AI helper, notifications, lock, unpair</small></span></button>
       </div>
@@ -248,15 +250,28 @@
         <div class="seg" data-set="awakeOnCharger"><button data-v="true">On</button><button data-v="false">Off</button></div></div>
       <div class="note" id="pNote"></div>
     </div>
+    <div class="pane" id="pane-computers">
+      <div class="list" id="compList"></div>
+      <div class="sub">Add a computer</div>
+      <p class="hint">On the other computer run <button class="cmd inline" id="compCopy" type="button"><span class="pr">$</span> npx pocket-terminal pair<span class="cp">copy</span></button> then scan the QR code it shows. Each computer has its own PIN.</p>
+      <div class="row2"><button class="btn" id="compScan" type="button">Scan QR code</button><button class="btn ghost" id="compPaste" type="button">Paste link</button></div>
+      <form class="row2" id="compPasteForm" hidden style="margin-top:10px">
+        <input class="field-in" id="compPasteIn" placeholder="https://…#join=…" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false">
+        <button class="btn">Pair</button>
+      </form>
+      <p class="hint" style="margin-top:12px">Notifications come from the computer you used last. To remove the one in use: Settings → Unpair.</p>
+    </div>
     <div class="pane" id="pane-diff">
       <p class="hint" id="diffInfo">Loading the changes…</p>
       <pre class="diff" id="diffOut"></pre>
     </div>
     <div class="pane" id="pane-settings">
       <div class="field"><div>Connection<small id="connInfo">–</small></div><button class="btn small ghost" id="retryDirect">Reconnect</button></div>
+      <div class="sub">Notifications</div>
       <div class="field"><div>Phone notifications<small id="pushInfo">When a program finishes or needs your answer.</small></div><button class="btn small ghost" id="pushBtn">Turn on</button></div>
       <div class="field"><div>Backup: ntfy app<small>Install the free <b>ntfy</b> app and subscribe to <code id="notifyTopic"></code></small></div>
         <button class="btn small ghost" id="copyTopic">Copy</button></div>
+      <div class="sub">AI agents</div>
       <div class="field"><div>Auto-approve safe steps<small id="autoInfo">Off. Every question asks you.</small></div><button class="btn small ghost" id="autoSetup">Set up</button></div>
       <form class="aiform" id="autoForm" hidden>
         <p class="hint">When an AI agent asks, it gets <b>"Yes" by itself</b> only if its screen shows one of your words below <b>and none of the risky ones</b> (delete, rm, push, deploy, install, sudo, curl, password, production…). Everything else still asks you. One per line.</p>
@@ -276,11 +291,20 @@
         <div class="row2"><button class="btn">Save</button><button type="button" class="btn ghost" id="aiTest">Test</button><button type="button" class="btn ghost" id="aiOff">Turn off</button></div>
         <p class="note" id="aiNote"></p>
       </form>
+      <div class="sub">Look and feel</div>
       <div class="field"><div>Appearance</div><div class="seg" id="themeSeg"><button data-v="light">Light</button><button data-v="dark">Dark</button><button data-v="auto">Auto</button></div></div>
       <div class="field"><div>Text size</div><div class="seg"><button id="smaller" aria-label="Smaller text">A−</button><button id="bigger" aria-label="Bigger text">A+</button></div></div>
-      <div class="field"><div>App version<small id="appVer">–</small></div><button class="btn small ghost" id="reloadApp">Reload app</button></div>
+      <div class="field"><div>Bigger keys<small>Easier to hit on the key row</small></div><div class="seg" id="bigKeysSeg"><button data-v="false">Normal</button><button data-v="true">Big</button></div></div>
+      <div class="field"><div>Vibration<small>A light tap when you press keys and buttons</small></div><div class="seg" id="hapticsSeg"><button data-v="true">On</button><button data-v="false">Off</button></div></div>
+      <div class="sub">Security</div>
       <div class="field"><div>Lock now<small>Asks for your PIN next time</small></div><button class="btn small ghost" id="lockNow">Lock</button></div>
-      <div class="field"><div>Unpair this phone<small>Removes the key from this phone. To lock it out from the computer instead, run <code>npx pocket-terminal remove</code>.</small></div><button class="btn small danger" id="unpair">Unpair</button></div>
+      <div class="field"><div>Activity<small>What your phones did on this computer (never what you typed): run <code>npx pocket-terminal activity</code> there.</small></div><button class="btn small ghost" id="copyActivity">Copy</button></div>
+      <div class="field"><div>Unpair <span id="unpairName">this computer</span><small>Removes its key from this phone. To lock it out from the computer instead, run <code>npx pocket-terminal remove</code>.</small></div><button class="btn small danger" id="unpair">Unpair</button></div>
+      <div class="sub">About</div>
+      <div class="field"><div>App version<small id="appVer">–</small></div><button class="btn small ghost" id="reloadApp">Reload app</button></div>
+      <div class="field"><div>Something not working?<small>Copies details that help find the problem (no keys, no commands, nothing you typed).</small></div><button class="btn small ghost" id="copyDebug">Copy info</button></div>
+      <div class="field"><div>Help<small>Install guide and answers</small></div><a class="btn small ghost" href="https://pocket-terminal.utsavdoye.com/help.html" target="_blank" rel="noopener">Open</a></div>
+      <button class="linkbtn" id="tourAgain" type="button">Show the tour again</button>
     </div>
   </div>
 </div>

@@ -36,6 +36,7 @@ def wait(fn, t=20):
 ok=True
 def check(n, label, v):
     global ok; ok = ok and bool(v); print(f'{n} {label}:', bool(v))
+    if not v: ph.ci(f'check {n} failed: {label}')
 def typ(pg, s): pg.click('#term'); pg.keyboard.type(s)
 def sessions(pg):
     ph.nav(pg,'sessions'); time.sleep(1.2); t=pg.inner_text('#sessList'); return t

@@ -23,6 +23,7 @@ def wait(fn, t=20):
 ok=True
 def check(n, label, v):
     global ok; ok = ok and bool(v); print(f'{n} {label}:', bool(v))
+    if not v: ph.ci(f'check {n} failed: {label}')
 def typ(pg, s): pg.click('#term'); pg.keyboard.type(s)
 try:
   with sync_playwright() as p:
@@ -52,7 +53,7 @@ try:
     pg.reload(); pg.wait_for_selector('#app:not([hidden])'); wait(lambda: awake(pg), 40); time.sleep(1)
     typ(pg, 'echo still-$MARK\n')
     check(5, 'back in the app: same terminal (history and variables kept)', wait(lambda: 'still-continue-42' in pg.evaluate(ROWS), 8))
-    if not ok: print(pg.evaluate(ROWS)[-600:]); print(pg.evaluate("sessionStorage.getItem('pt_sid')")); print(open(S+'/agent.log').read()[-1500:])
+    if not ok: print(pg.evaluate(ROWS)[-600:]); print(pg.evaluate("sessionStorage.getItem('pt_sid')")); L=open(S+'/agent.log').read()[-1500:]; print(L); ph.ci(L, 'agent log')
     # 6. a fresh launch (app was closed) gets a fresh terminal
     pg.close(); pg=ctx.new_page(); pg.goto(APP); wait(lambda: awake(pg), 40); time.sleep(1)
     typ(pg, 'echo fresh-[$MARK]\n')

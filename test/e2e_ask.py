@@ -35,6 +35,7 @@ ok=True
 errs=[]
 def check(n, label, v):
     global ok; ok = ok and bool(v); print(f'{n} {label}:', v)
+    if not v: ph.ci(f'check {n} failed: {label}')
 try:
   with sync_playwright() as p:
     b=p.chromium.launch(args=['--disable-features=WebRtcHideLocalIpsWithMdns'])

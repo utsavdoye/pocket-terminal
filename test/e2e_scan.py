@@ -22,6 +22,7 @@ def wait(fn, t=20):
 ok=True
 def check(n, label, v):
     global ok; ok = ok and bool(v); print(f'{n} {label}:', bool(v))
+    if not v: ph.ci(f'check {n} failed: {label}')
 def finish_pair(pg, pp):
     line,_=ph.read_until(pp,'Its code:'); pp.stdin.write('y\n'); pp.stdin.flush()
     pg.wait_for_selector('#pairPad:not([hidden])', timeout=20000)

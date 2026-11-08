@@ -22,6 +22,7 @@ def wait(fn, t=20):
 ok=True
 def check(n, label, v):
     global ok; ok = ok and bool(v); print(f'{n} {label}:', bool(v))
+    if not v: ph.ci(f'check {n} failed: {label}')
 try:
   with sync_playwright() as p:
     b=p.chromium.launch(args=['--disable-features=WebRtcHideLocalIpsWithMdns'])

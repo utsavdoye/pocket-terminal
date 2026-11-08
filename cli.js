@@ -7,6 +7,7 @@
 //   npx pocket-terminal remove N   lock a phone out (number or name, or "all")
 //   npx pocket-terminal run CMD    run a command here AND on your phone (e.g. run claude)
 //   npx pocket-terminal claude on  Claude Code's permission questions reach your phone when you're away
+//   npx pocket-terminal activity   what your phones did here (connected, files, answers…)
 //   npx pocket-terminal logs       what the agent is doing
 //   npx pocket-terminal uninstall  remove it (add --purge to delete the pairing key too)
 //
@@ -37,6 +38,14 @@ const run = (file, args, opts = {}) => {
 };
 const installed = () => fs.existsSync(path.join(AGENT, 'agent.js'));
 const need = () => { if (!installed()) { console.error('Not installed yet. Run:  npx pocket-terminal'); process.exit(1); } };
+// The installed agent is older than a feature needs (e.g. "claude on" with a 7.2 agent): say how to update.
+const needFile = (file, what) => {
+  need();
+  if (fs.existsSync(path.join(AGENT, file))) return;
+  let have = 'an older version'; try { have = fs.readFileSync(path.join(APP, 'VERSION'), 'utf8').trim(); } catch {}
+  console.error(`${what} needs a newer Pocket Terminal on this computer (you have ${have}). Update first:\n\n  npx pocket-terminal@latest\n\nthen run this again.`);
+  process.exit(1);
+};
 
 function copyAgent() {
   fs.mkdirSync(HOME, { recursive: true, mode: 0o700 });
@@ -93,7 +102,7 @@ function claudeHooks(on) {
 function claude(sub) {
   const isOn = () => { try { return JSON.stringify(JSON.parse(fs.readFileSync(CLAUDE, 'utf8')).hooks || {}).includes('.pocket-terminal'); } catch { return false; } };
   if (sub === 'on') {
-    need(); claudeHooks(true);
+    needFile('hook.js', '"claude on"'); claudeHooks(true);
     console.log(`Claude Code is connected to Pocket Terminal.
 
   • Away from the computer? Its permission questions go to your phone: Allow or Deny there.
@@ -114,8 +123,16 @@ switch (cmd) {
   case 'pair': need(); node(rest); break;
   case 'list': need(); node(['--list']); break;
   case 'remove': need(); if (!rest.length) { console.error('Which phone? See:  npx pocket-terminal list'); process.exit(1); } node(['--remove', ...rest]); break;
-  case 'run': need(); process.exit(run(process.execPath, [path.join(AGENT, 'run.js'), ...rest]));
+  case 'run': needFile('run.js', '"run"'); process.exit(run(process.execPath, [path.join(AGENT, 'run.js'), ...rest]));
   case 'claude': claude(rest[0]); break;
+  case 'activity': { // what your phones did here (never what was typed)
+    needFile('lib/activity.js', '"activity"');
+    const a = require(path.join(AGENT, 'lib', 'activity.js'));
+    const list = a.read(HOME, Number(rest[0]) || 50);
+    console.log(list.length ? list.map(a.line).join('\n') : 'Nothing yet. Phones connecting, files, answers and live-view links show up here.');
+    console.log('\nNever what you typed or what commands printed. Lock a phone out:  npx pocket-terminal remove N');
+    break;
+  }
   case 'logs': {
     const log = path.join(HOME, 'agent.log');
     if (!fs.existsSync(log)) { console.error('No log yet.'); process.exit(1); }
@@ -136,6 +153,7 @@ switch (cmd) {
   npx pocket-terminal claude on  Claude Code asks your phone when you're away
   npx pocket-terminal list       phones that can connect
   npx pocket-terminal remove N   lock a phone out (number, name or "all")
+  npx pocket-terminal activity   what your phones did here
   npx pocket-terminal logs       what it's doing
   npx pocket-terminal uninstall  remove it (--purge also deletes the pairing key)`);
 }

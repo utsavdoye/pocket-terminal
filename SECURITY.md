@@ -18,11 +18,12 @@ Fixes are released as soon as possible and credited in the [changelog](CHANGELOG
 | sits on your Wi-Fi or ISP | see encrypted traffic | read it, or get between your phone and computer |
 | photographs your pairing QR | try to pair *while it's still valid* | pair without you typing `y` next to a matching code; read the phone's key |
 | sends you a pairing link | ask you to pair with *their* computer | replace your pairing silently: the app warns that it's already paired |
-| steals your locked phone | try PINs | get past 10 wrong PINs (the key is wiped) or stay paired after `pair.js --remove` |
+| steals your locked phone | try PINs | get past 10 wrong PINs (the key is wiped) or stay paired after `npx pocket-terminal remove` |
 | takes over your GitHub account | change the phone app hosted from your repo | change the program on your computer (it never updates itself) |
 | changes a dependency on npm | publish a bad version | reach you: the installer uses `npm ci` with exact versions and a lockfile |
 | gets a live-view link you shared | watch that one terminal until the link expires or you stop it | type, run commands, open files or websites, see other terminals, or keep watching after **Stop sharing** |
 | works at Apple / Google push | see that a notification was sent to your phone, and when | read it: it's encrypted for your phone, and signed by your computer so nobody else can send to that address |
+| uses another account on your computer | see that Pocket Terminal is running | use the local door (`run`, the Claude Code hook): it's a socket in your private folder and needs a token only you can read |
 
 ## What protects you
 
@@ -38,12 +39,14 @@ Fixes are released as soon as possible and credited in the [changelog](CHANGELOG
 | **Phone at rest** | The phone's key is encrypted with your PIN (PBKDF2-SHA256, 600,000 rounds, AES-GCM; older vaults are upgraded at the next unlock). 10 wrong PINs wipe it. "Stay unlocked for 12 h" keeps only a non-extractable WebCrypto key. |
 | **Phone app** | Static files, strict Content-Security-Policy (no inline or third-party scripts, no `eval`), no analytics, no trackers. Everything shown on screen is escaped. |
 | **Computer: admin rights** | macOS: the program can run exactly 4 `pmset` sleep commands without a password; `sudo` for anything else still asks. Windows: no admin rights at all. |
-| **Computer: no self-updates** | The program on your computer only changes when *you* run `git pull`. Nothing is downloaded or updated in the background. |
-| **Dependencies** | 4 runtime dependencies, exact versions, installed with `npm ci` from the lockfile. Dependabot and CodeQL watch the repo. |
+| **Computer: no self-updates** | The program on your computer only changes when *you* run `npx pocket-terminal` (or `git pull`). Nothing is downloaded or updated in the background. |
+| **Dependencies** | 4 runtime dependencies, exact versions, installed with `npm ci` from the lockfile. CodeQL checks the code on every push. |
 | **Logs and notifications** | Command text and output are never written to the log (readable only by you). ntfy pings are content-free ("Command finished ✅"). |
 | **Live-view links** | A fresh random key per link, valid 5 min to 1 day. The computer gives that key exactly one role, *watch this one terminal*: it ignores typing, resizing, commands, files, websites, notifications and sharing from it. Removing a phone ends its links. |
 | **Phone notifications** | Standard Web Push (RFC 8291/8292): each one is encrypted for your phone (P-256 + AES-128-GCM) and signed with this computer's own VAPID key. Only Apple, Google, Mozilla and Microsoft push addresses are accepted. |
 | **Files and local websites** | Only over the direct link, only for paired phones. The website proxy only reaches this computer's own `localhost`; it never forwards cookies. File and page contents are never logged. |
+| **Local door** | `npx pocket-terminal run` and the Claude Code hook talk to the agent through a socket in your private `~/.pocket-terminal` folder (a named pipe on Windows). Every connection must first show a random token from a file only you can read; anything else is cut off. A permission question goes to your phone only when you're away from the keyboard. |
+| **Activity log** | `npx pocket-terminal activity` lists what your phones did here: connected, opened a terminal, downloaded or uploaded a file (with its path), opened a local website, answered a question, made a live-view link. Never what you typed (only how many keys) or what commands printed. Readable only by you. |
 | **AI helper (optional)** | Off by default. Your key is stored encrypted with the phone's key. Only what you type in **Ask** (and, for *Fix with AI*, that command and the end of its output) goes to the provider you chose. Suggestions never run by themselves and pass a local danger check that doesn't trust the AI's label. |
 
 ## If someone takes over your GitHub account
@@ -62,7 +65,7 @@ Protect the account, because it is the root of trust:
 4. **Protect the domain too.** The app is served at `pocket-terminal.utsavdoye.com`, so whoever controls its DNS
    (the Vercel account that holds `utsavdoye.com`) could point it elsewhere. Turn on two-factor login there as well.
 5. **Review sign-in alerts** and remove apps you don't use under Settings → Applications.
-6. **If you suspect anything:** run `node pair.js --remove all` on your computer. Every phone is
+6. **If you suspect anything:** run `npx pocket-terminal activity` to see what your phones did, then `npx pocket-terminal remove all` on your computer. Every phone is
    locked out at once; pair again when things are safe.
 
 If you don't want to trust anyone else's hosting, fork the repo: the installer then points your

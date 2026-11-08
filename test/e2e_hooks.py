@@ -27,6 +27,7 @@ def wait(fn, t=20):
 ok=True
 def check(n, label, v):
     global ok; ok = ok and bool(v); print(f'{n} {label}:', bool(v))
+    if not v: ph.ci(f'check {n} failed: {label}')
 def hook(event, idle, **extra):
     h={'hook_event_name':event,'session_id':'sess-123','cwd':S+'/u/proj', **extra}
     return subprocess.Popen(['node','hook.js'],cwd=R+'/agent',env=dict(env,POCKET_IDLE_SECONDS=str(idle)),stdin=subprocess.PIPE,stdout=subprocess.PIPE,text=True), json.dumps(h)
@@ -127,7 +128,7 @@ try:
     log=open(S+'/agent.log').read()
     check(17, 'never logs what the agent asked', 'npm test' not in log and 'rm -rf' not in log)
     check(18, 'no page errors', not errs)
-    if not ok: print(open(S+'/agent.log').read()[-2500:])
+    if not ok: L=open(S+'/agent.log').read()[-2500:]; print(L); ph.ci(L, 'agent log')
     print('ALL OK' if ok else 'FAILED')
 finally:
     agent.kill(); svc.kill(); push.kill()
