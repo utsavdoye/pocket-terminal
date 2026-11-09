@@ -1,6 +1,6 @@
 # Changelog
 
-## Next release
+## 7.4.0 (2026-11-09)
 **Several computers, a laptop that wakes when the app says, and a cleaner app.**
 
 ### New
