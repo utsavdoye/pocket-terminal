@@ -1,25 +1,27 @@
 # Changelog
 
 ## Next release
-- **Fixed: the app could run out of the free message board's daily limit** ("too many messages today") and then could not connect at all, even with both devices online. The free board allows a few hundred notes a day per internet connection, and the phone was knocking every 20 s while it waited. Now an offer is reused while it's good (90 s), "hello" goes at most every 4 min, a long wait knocks every 3 min, and the computer posts "I'm awake" once instead of three times. Waiting 75 s for a sleeping laptop now costs 2 notes instead of about 8.
-- **When the board is full anyway, the app says so** and what to do (mobile data, or a hotspot for the computer), instead of "This phone is offline".
-- **Wakes up when the app says, and faster.** The app now shows exactly when a sleeping laptop wakes ("wakes up in 14s") and it really connects then: the phone leaves its knock in the mailbox just before, so it connects the second it wakes. If a check-in is missed it says so ("taking longer than usual") instead of guessing.
-- **Smart wake-ups (new default):** with the lid closed on battery it checks in every 20 s for 30 min after you use it, every minute for the next 2 hours and in the hours you usually use it, and every 3 min at night. It learns your usual hours. Or pick Fast (20 s), 1 min, 3 min or Always on in Power settings. On the charger it never sleeps, as before.
-- **Leave the app while it wakes:** you get one "is awake ✓" notification when it's ready.
-- **Fixed: opening the app could skip its knock** when the mailbox still held an old "online" note, so a sleeping laptop didn't notice the phone until a later try.
-- **Check-ins are quiet:** a wake-up with the lid closed no longer posts to the mailbox each time, and notices the wake within a second.
-- **Several computers on one phone.** Pair your laptop, a desktop and a server: tap the computer's name at the top to switch, or to pair another one (scan its QR code right there). Each keeps its own PIN, terminals and command history. Notifications come from the one you used last. Before, pairing a second computer replaced the first.
-- **Swipe between terminals:** swipe left or right on the terminal for the next or previous one.
-- **"Your computer runs an older version" bar:** when the computer is behind the app, one tap copies the update command.
-- **Fix buttons when something's wrong:** offline → Try again; computer not answering → Reconnect, or copy the start command.
-- **Settings in groups** (Notifications, AI agents, Look and feel, Security, About), plus **Bigger keys**, **Vibration on/off**, and **Copy info** for bug reports (no keys, nothing you typed).
-- **A short tour** the first time the app connects (Settings → Show the tour again).
-- **`npx pocket-terminal activity`:** what your phones did on this computer (connected, files, answers, live-view links). Never what you typed or what commands printed.
-- **Fixed: a long diff or a folder with thousands of files never loaded** (the message was too big and was dropped). Big messages are now packed or sent in parts.
-- **Clearer errors:** `claude on` and `run` say how to update when the computer's copy is too old.
-- **For contributors:** the phone app and the agent are split into small files by job, every message is documented in PROTOCOL.md, test failures show up as annotations on GitHub, and `node scripts/release.js` does a release in one command.
-- **Fixed: Android keyboards "correcting" commands.** Pressing space no longer turns `ls` into `Is` or swaps in a predicted word: the terminal turns off autocorrect, word suggestions, auto-capitals and spell check.
-- **Fixed: the app said "asleep" while the computer was open.** If the lid was opened again right after the computer started to sleep, the agent didn't notice it was awake and stayed deaf to the phone for minutes. Now it reconnects at once after any sleep, and tells the phone it's awake within a second or two of waking.
+**Several computers, a laptop that wakes when the app says, and a cleaner app.**
+
+### New
+- **Several computers on one phone.** Pair your laptop, a desktop and a server. Tap the computer's name at the top to switch, or to pair another one (scan its QR code right there). Each keeps its own PIN, terminals and command history. Before, pairing a second computer replaced the first.
+- **Wakes up when the app says.** The app shows exactly when a sleeping laptop wakes ("wakes up in 14s"), and it connects then. Leave the app and you get one "is awake ✓" notification when it's ready.
+- **Smart wake-ups (new default).** With the lid closed on battery it checks for your phone every 20 s for 30 min after you use it, every minute in the hours you usually use it, and every 3 min at night. It learns your usual hours. Or pick Fast, 1 min, 3 min or Always on in Power settings. On the charger it never sleeps, as before.
+- **Swipe left or right** on the terminal to switch terminals.
+- **`npx pocket-terminal activity`** shows what your phones did on this computer (connected, files, answers, live-view links). Never what you typed.
+- **Settings in groups**, plus Bigger keys, Vibration on/off, Copy info for bug reports, and a short first-run tour.
+- **Update bar:** when your computer runs an older version than the app, one tap copies the update command.
+
+### Fixed
+- The app could say "asleep" while the computer was open.
+- Android keyboards "corrected" commands (`ls` became `Is`). Autocorrect and word suggestions are now off in the terminal.
+- The phone could use up the free message board's daily limit and then not connect at all. It now sends far fewer messages (waiting 75 s costs 2 instead of about 8), and if the board is ever full the app says so and what to do, instead of "This phone is offline".
+- Opening the app could skip its knock, so a sleeping laptop noticed the phone only on a later try.
+- A long diff or a folder with thousands of files never loaded.
+- Error screens now have buttons that fix the problem (Try again, Reconnect, copy the start command), and `claude on` / `run` say how to update when the computer's copy is too old.
+
+### For contributors
+- The phone app and the agent are split into small files by job, every message is documented in [PROTOCOL.md](PROTOCOL.md), test failures show as annotations on GitHub, `node scripts/release.js` does a release, and `python3 scripts/media.py` rebuilds every screenshot.
 
 ## 7.3.1 (2026-11-06)
 - **No more double notifications:** Claude Code started with `npx pocket-terminal run claude` (or from the phone) was reported twice, once from the screen and once from its hook. The hook now stays out inside Pocket Terminal.
