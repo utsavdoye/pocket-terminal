@@ -60,7 +60,20 @@ export function demoShell(m) {
   if (m.t === 'put') return reply({ t: 'put-ok', id: m.id, path: '/Users/utsav/' + m.name });
   if (m.t === 'put-end') return reply({ t: 'put-done', id: m.id, path: '/Users/utsav/uploaded-file' }, 300);
   if (m.t === 'http') {
-    const html = `<!doctype html><meta name="viewport" content="width=device-width,initial-scale=1"><body style="font:17px -apple-system,system-ui,sans-serif;margin:0;background:linear-gradient(160deg,#fff7e6,#fff);min-height:100vh;display:grid;place-items:center;text-align:center"><div><div style="font-size:54px">🚀</div><h1 style="margin:8px 0">My app</h1><p style="color:#666">Running on localhost:${m.port}<br>(in the demo, this page is pretend)</p></div>`;
+    // A pretend web app, like one you'd be building (a small shop's admin page).
+    const row = (id, who, amt, st, c) => `<tr><td>#${id}</td><td>${who}</td><td style="text-align:right">₹${amt}</td><td><span style="font-size:12px;padding:3px 8px;border-radius:99px;background:${c}1a;color:${c}">${st}</span></td></tr>`;
+    const html = `<!doctype html><meta name="viewport" content="width=device-width,initial-scale=1"><body style="font:15px/1.45 -apple-system,system-ui,Segoe UI,sans-serif;margin:0;background:#f6f7f9;color:#1d2330">
+<header style="display:flex;align-items:center;gap:10px;padding:14px 18px;background:#fff;border-bottom:1px solid #e6e8ec"><div style="width:26px;height:26px;border-radius:7px;background:#1d2330"></div><b>Northwind Store</b><span style="margin-left:auto;font:12px ui-monospace,monospace;color:#6b7280;border:1px solid #e6e8ec;border-radius:6px;padding:2px 7px">dev · :${m.port}</span></header>
+<main style="padding:18px">
+<h2 style="margin:0 0 4px;font-size:20px">Orders</h2><p style="margin:0 0 16px;color:#6b7280">Today, updated just now</p>
+<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:16px">
+${[['Orders', '48'], ['Revenue', '₹62,400'], ['Pending', '5']].map(([k, v]) => `<div style="background:#fff;border:1px solid #e6e8ec;border-radius:10px;padding:10px 12px"><div style="color:#6b7280;font-size:12px">${k}</div><b style="font-size:17px">${v}</b></div>`).join('')}
+</div>
+<table style="width:100%;border-collapse:collapse;background:#fff;border:1px solid #e6e8ec;border-radius:10px;overflow:hidden;font-size:14px">
+<thead><tr style="text-align:left;color:#6b7280;font-size:12px"><th style="padding:10px 12px">Order</th><th>Customer</th><th style="text-align:right">Total</th><th style="padding-left:10px">Status</th></tr></thead>
+<tbody>${row(1048, 'Aarav S.', '2,499', 'Paid', '#16a34a')}${row(1047, 'Meera K.', '1,150', 'Shipped', '#2563eb')}${row(1046, 'Rohan P.', '899', 'Pending', '#d97706')}${row(1045, 'Isha V.', '3,200', 'Paid', '#16a34a')}${row(1044, 'Kabir N.', '640', 'Refunded', '#6b7280')}</tbody></table>
+<p style="color:#9ca3af;font-size:12px;margin-top:18px;text-align:center">Pocket Terminal demo: a pretend page on localhost:${m.port}</p>
+</main><style>td{padding:10px 12px;border-top:1px solid #eef0f3}td:first-child{color:#6b7280;font-family:ui-monospace,monospace;font-size:13px}</style>`;
     reply({ t: 'http-h', id: m.id, status: 200, headers: { 'content-type': 'text/html; charset=utf-8' } });
     return reply({ t: 'http-c', id: m.id, n: 0, d: btoa(unescape(encodeURIComponent(html))), end: true }, 200);
   }

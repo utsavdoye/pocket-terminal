@@ -36,7 +36,7 @@ export function startDemo() {
   state.keys = null; mac.name = state.S.name;
   state.board = { up: new Set([1]), restart() {}, stop() {}, start() {}, publish: async () => {} };
   state.livePower = { t: 'power', percent: 78, onCharger: false, reasons: ['phone connected'],
-    settings: { batteryMode: 'saver', checkInMinutes: 2, smartCheckIn: true, minBattery: 20, awakeOnCharger: true } };
+    settings: { batteryMode: 'saver', speed: 'smart', minBattery: 20, awakeOnCharger: true } };
   const now = Date.now();
   replaceJobs([
     { cid: 'd1', cmd: 'git -C ~/pocket-terminal pull', created: now - 4 * 60e3, finished: now - 4 * 60e3 + 2000, status: 'done', code: 0, out: 'Already up to date.' },
@@ -45,7 +45,7 @@ export function startDemo() {
   ]);
   show('app'); $('notifyTopic').textContent = state.S.notifyTopic;
   setupTerminal(); setupUi(); paintAiInfo();
-  const tag = document.createElement('span'); tag.className = 'tick demo'; tag.textContent = 'Demo'; $('ping').before(tag);
+  // ("Demo" shows in the status line under the name, so the name keeps its room)
   state.linkState = 'connecting'; paint(); setInterval(paint, 1000);
   state.term.write(`${C.y}●${C.x} ${C.b}Pocket Terminal demo${C.x}\r\n${C.dim}A pretend computer, nothing real.${C.x}\r\n${C.dim}Type ${C.x}claude${C.dim} or ${C.x}help${C.dim}, or tap ⋯${C.x}\r\n\r\n`);
   setTimeout(() => { demoWake(); handleMsg({ t: 'o', d: PROMPT }); }, 1100);

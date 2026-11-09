@@ -539,3 +539,6 @@ body.bigkeys .keys .ksep { margin: 9px 3px; }
 @keyframes tourin { from { opacity: 0; transform: translateY(8px); } }
 @media (prefers-reduced-motion: reduce) { .tour { animation: none; } }
 a.btn { text-decoration: none; display: inline-flex; align-items: center; }
+.field.col { flex-direction: column; align-items: stretch; gap: 10px; }
+.seg.wide { width: 100%; }
+.seg.wide button { flex: 1; padding: 7px 4px; white-space: nowrap; }

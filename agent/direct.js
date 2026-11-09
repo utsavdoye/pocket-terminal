@@ -41,17 +41,22 @@ function startDirect({ cfg, core, power, log, dir, x = {} }) {
   startChannel(ctx); // answerOffer
   const { viewer, peers, board, onNote, post, postStatus, saveState, notify } = ctx;
 
-  const onOpenStream = () => { power && power.setConnected(true); };
+  // How long each step takes after a wake-up (to keep "wakes in 20 s" honest): logged, nothing private.
+  const since = () => ctx.wokeAt && Date.now() - ctx.wokeAt < 120e3 ? ` ${((Date.now() - ctx.wokeAt) / 1000).toFixed(1)} s after waking` : '';
+  ctx.since = since;
+  const onOpenStream = () => { power && power.setConnected(true); const s = since(); if (s) log('mailbox reachable' + s); };
   board.stream(onNote, onOpenStream);
   postStatus('online', { force: true });
   log(`direct mode: mailbox ready on ${board.urls.join(', ')}`);
 
   return {
-    onWake: () => {
-      board.restart(onNote, onOpenStream); // pick up notes that arrived while asleep
-      // Tell the phone at once that it's up (it may be showing "asleep"). Wi-Fi can take a few
-      // seconds to come back after a wake, so try again shortly.
-      if (!viewer) for (const ms of [500, 4000, 12000]) setTimeout(() => postStatus('online', { force: true }).catch?.(() => {}), ms);
+    onWake: (kind) => {
+      ctx.wokeAt = Date.now();
+      board.restart(onNote, onOpenStream); // pick up notes that arrived while asleep (a phone's knock)
+      // A quiet check-in with the lid closed: say nothing; if the phone knocked, its hello wakes the
+      // link up. Otherwise (lid opened): tell the phone at once that it's up (it may be showing
+      // "asleep"). Wi-Fi can take a few seconds to come back after a wake, so try again shortly.
+      if (!viewer && kind !== 'checkin') for (const ms of [500, 4000, 12000]) setTimeout(() => postStatus('online', { force: true }).catch?.(() => {}), ms);
     },
     onSleep: async () => {
       await postStatus('sleeping');

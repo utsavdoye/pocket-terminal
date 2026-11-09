@@ -5,8 +5,8 @@
 //   On charger            → stay awake (lid closed is fine). Instant access. No battery used.
 //   On battery, you're    → stay awake while your phone is connected, a queued job is
 //   using it                running, or you typed something in the last few minutes.
-//   On battery, idle      → really sleep. Set an alarm to wake up every few minutes,
-//                           check in with the relay, run queued jobs, sleep again.
+//   On battery, idle      → really sleep. Set an alarm to wake up and check in (how often:
+//                           lib/schedule.js), run queued jobs, sleep again.
 //   Battery very low      → sleep and stop the alarms, so the battery never dies.
 //
 // The actual on/off switches live in platform/mac.js and platform/windows.js.
@@ -15,12 +15,14 @@ const DEFAULTS = {
   enabled: true,
   awakeOnCharger: true,   // on charger: always reachable, even with the lid closed
   batteryMode: 'saver',   // 'saver' = sleep when idle and check in; 'instant' = stay awake on battery too
-  checkInMinutes: 2,      // on battery: how often a sleeping Mac wakes to check for work
-  smartCheckIn: true,     // check in faster right after you used it: 1 min for 30 min, 2 min for 2 h
+  speed: 'smart',         // how often a sleeping Mac wakes to check for your phone: smart / fast / balanced / saver (lib/schedule.js)
   idleMinutes: 5,         // on battery: stay awake this long after your last keystroke
   minBattery: 20,         // below this %: never stay awake on battery
   stopAlarmsBelow: 10,    // below this %: stop waking up at all
 };
+
+const fs = require('fs');
+const { planFor, nextWake, usualHours } = require('./lib/schedule');
 
 class PowerBrain {
   // hooks: { log, onStatus(status), onWake() }
@@ -39,12 +41,39 @@ class PowerBrain {
     this.battery = { percent: null, onCharger: true, state: 'unknown' };
     this.lastTick = this.sys.now();
     this.sleeping = false;
+    this.usageFile = hooks.usageFile || null; // which hours you use it, to wake more often then
+    try { this.usage = this.usageFile ? JSON.parse(fs.readFileSync(this.usageFile, 'utf8')) : {}; } catch { this.usage = {}; }
   }
 
+  // Remember the hour of day you used it (kept 14 days). Only when it changes, so it's cheap.
+  noteUse() {
+    const d = new Date(this.sys.now());
+    const day = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    const hours = this.usage[day] || (this.usage[day] = []);
+    if (hours.includes(d.getHours())) return;
+    hours.push(d.getHours());
+    for (const k of Object.keys(this.usage).sort().slice(0, -14)) delete this.usage[k];
+    if (this.usageFile) fs.writeFile(this.usageFile, JSON.stringify(this.usage), { mode: 0o600 }, () => {});
+  }
+
+  // When it will wake up from now on (see lib/schedule.js). The phone gets this to count down.
+  plan() {
+    const b = this.battery, now = this.sys.now();
+    return planFor({
+      speed: this.s.speed, now,
+      lastUse: Math.max(this.lastActivity, this.phoneLeft || 0, this.phoneSince || 0),
+      lowBattery: b && b.percent !== null && !b.onCharger && b.percent < this.s.minBattery,
+      usual: usualHours(this.usage, now),
+      minEvery: this.sys.minWakeEvery || (process.platform === 'win32' ? 60 : 20),
+    });
+  }
+  // Next wake-up, at least 5 s from now (pmset needs a moment; the Mac needs to fall asleep first).
+  nextAlarm() { return new Date(nextWake(this.plan(), this.sys.now() + 5e3)); }
+
   update(settings) { this.s = { ...this.s, ...settings }; this.tick(); }
-  activity() { this.lastActivity = this.sys.now(); }
+  activity() { this.lastActivity = this.sys.now(); this.noteUse(); }
   setPhoneWanting(v) {
-    if (v && !this.wantedByPhone) this.phoneSince = this.sys.now();
+    if (v && !this.wantedByPhone) { this.phoneSince = this.sys.now(); this.noteUse(); }
     if (!v && this.wantedByPhone) this.phoneLeft = this.sys.now();
     this.wantedByPhone = !!v; this.tick();
   }
@@ -55,18 +84,8 @@ class PowerBrain {
     if (v) { this.firstContact = true; this.connectedAt = this.sys.now(); setTimeout(() => this.tick(), 5500); }
   }
 
-  // How long to sleep before the next check-in.
-  // Right after you used it you'll likely need it again soon, so check in more often.
-  nextCheckInMinutes() {
-    const base = this.s.checkInMinutes;
-    const b = this.battery;
-    if (b && b.percent !== null && !b.onCharger && b.percent < this.s.minBattery) return Math.max(base, 10); // low battery: check in less often
-    if (!this.s.smartCheckIn) return base;
-    const sinceUse = this.sys.now() - Math.max(this.lastActivity, this.phoneLeft || 0, this.phoneSince || 0);
-    if (sinceUse < 30 * 60e3) return Math.min(base, 1);
-    if (sinceUse < 120 * 60e3) return Math.min(base, 2);
-    return base;
-  }
+  // How long between check-ins right now, in minutes (older phones show this).
+  nextCheckInMinutes() { return this.plan()[0][2] / 60; }
 
   // Why the Mac must stay awake right now (empty list = it may sleep).
   reasons() {
@@ -76,7 +95,9 @@ class PowerBrain {
     const r = [];
     // After waking up: up to 60 s to get Wi-Fi and reach the board. Once connected,
     // 5 s is enough to receive any queued command. Nothing to do? Straight back to sleep.
-    const checking = this.firstContact ? now - (this.connectedAt || 0) < 5e3 : now - this.wokeAt < 60e3;
+    // With frequent check-ins (every 20 s) a check-in must be short, or it never really sleeps.
+    const every = this.plan()[0][2] * 1000;
+    const checking = this.firstContact ? now - (this.connectedAt || 0) < 3e3 : now - this.wokeAt < Math.max(20e3, Math.min(60e3, every));
     // Low battery: no staying awake for the phone or typing, but still do the short check-in,
     // otherwise waking up would be pointless (it would sleep before reading any command).
     if (b.percent !== null && b.percent < s.minBattery) return checking ? ['checking in'] : r;
@@ -96,7 +117,7 @@ class PowerBrain {
     const r = this.reasons();
     return {
       percent: this.battery.percent, onCharger: this.battery.onCharger,
-      mode: this.s.batteryMode, checkInMinutes: this.s.checkInMinutes, nextCheckInMinutes: this.nextCheckInMinutes(),
+      mode: this.s.batteryMode, speed: this.s.speed, nextCheckInMinutes: this.nextCheckInMinutes(), plan: this.plan(),
       awake: r.length > 0, reasons: r,
       nextWake: this.alarm ? this.alarm.getTime() : null,
       settings: this.s,
@@ -112,11 +133,14 @@ class PowerBrain {
       // Also after any sleep we started ourselves, however short: if the lid was opened again at
       // once (or sleep didn't happen), the agent must still reconnect, or it stays deaf to the phone.
       if (now - this.lastTick > 30e3 || this.wentToSleep) {
+        // Woken by our own alarm with the lid still closed: a quiet check-in (nobody to tell).
+        // Otherwise someone opened the lid or the phone is waiting: tell the phone it's up.
+        const byAlarm = this.alarm && Math.abs(now - this.alarm.getTime()) < 20e3 && await this.sys.lidClosed();
         this.wentToSleep = false;
         this.wokeAt = now;
         // The connection may already be back (it can win the race against this tick).
         if (!(this.connected && now - (this.connectedAt || 0) < 10e3)) this.firstContact = false;
-        this.hooks.log('woke up'); this.hooks.onWake && this.hooks.onWake();
+        this.hooks.log(byAlarm ? 'woke up to check in' : 'woke up'); this.hooks.onWake && this.hooks.onWake(byAlarm ? 'checkin' : 'user');
       }
       this.lastTick = now;
 
@@ -153,10 +177,10 @@ class PowerBrain {
       if (this.alarm && this.alarm.getTime() > now) { await this.sys.cancelWake(this.alarm); }
       this.alarm = null; return;
     }
-    const every = this.nextCheckInMinutes() * 60e3;
-    if (this.alarm && this.alarm.getTime() - now > Math.min(45e3, every / 2)) return; // still far enough ahead
+    const at = this.nextAlarm();
+    if (this.alarm && this.alarm.getTime() === at.getTime()) return; // already set (pmset is called only when it changes)
     if (this.alarm && this.alarm.getTime() > now) await this.sys.cancelWake(this.alarm);
-    this.alarm = new Date(now + every);
+    this.alarm = at;
     const r = await this.sys.scheduleWake(this.alarm);
     if (!r.ok) this.hooks.log('could not set wake alarm (sudo rule missing?): ' + String(r.err || '').trim());
   }
@@ -165,7 +189,7 @@ class PowerBrain {
     const b = this.battery;
     if (this.alarm) { await this.sys.cancelWake(this.alarm); this.alarm = null; }
     if (b.percent === null || b.percent >= this.s.stopAlarmsBelow) {
-      this.alarm = new Date(this.sys.now() + this.nextCheckInMinutes() * 60e3);
+      this.alarm = this.nextAlarm();
       const r = await this.sys.scheduleWake(this.alarm);
       if (!r.ok) this.hooks.log('could not set wake alarm (sudo rule missing?): ' + r.err.trim());
     } else {
@@ -183,12 +207,20 @@ class PowerBrain {
 
   start() {
     this.timer = setInterval(() => this.tick(), 3e3);
+    // A cheap heartbeat (no commands run) to notice a wake-up within a second: a sleeping computer
+    // freezes this program, so a beat that comes seconds late means it just woke up. Check in at
+    // once instead of waiting for the next tick (with check-ins every 20 s, seconds matter).
+    this.beat = Date.now();
+    this.heart = setInterval(() => {
+      const n = Date.now(), gap = n - this.beat; this.beat = n;
+      if (gap > 4e3) { this.sleeping = false; this.tick(); }
+    }, 1e3);
     this.tick();
   }
 
   // Put macOS back to normal when the agent stops.
   async stop() {
-    clearInterval(this.timer);
+    clearInterval(this.timer); clearInterval(this.heart);
     if (this.noSleep) await this.sys.setNoSleep(false);
   }
 }

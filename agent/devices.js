@@ -127,7 +127,7 @@ function startDevices({ core, power, log, dir }) {
   fs.watchFile(FILE, { interval: 1500 }, sync);
   const each = (fn) => Promise.all([...running.values(), ...watching.values()].map((r) => Promise.resolve().then(() => fn(r.t)).catch(() => {})));
   return {
-    onWake: () => each((t) => t.onWake()),
+    onWake: (kind) => each((t) => t.onWake(kind)),
     onSleep: (s) => each((t) => t.onSleep(s)),
     onPower: (s) => { for (const r of running.values()) r.t.onPower(s); },
     stop: () => { fs.unwatchFile(FILE); for (const r of running.values()) r.t.stop(); for (const w of watching.values()) { clearTimeout(w.timer); w.t.stop(); } },

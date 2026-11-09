@@ -12,9 +12,9 @@ function startRelay({ cfg, core, power, log, dir }) {
 
   function applySettings(p) {
     if (!power || !p) return;
-    const allowed = ['enabled', 'awakeOnCharger', 'batteryMode', 'checkInMinutes', 'smartCheckIn', 'idleMinutes', 'minBattery', 'stopAlarmsBelow'];
+    const allowed = ['enabled', 'awakeOnCharger', 'batteryMode', 'speed', 'idleMinutes', 'minBattery', 'stopAlarmsBelow'];
     const next = {}; for (const k of allowed) if (k in p) next[k] = p[k];
-    if ('checkInMinutes' in next) next.checkInMinutes = Math.min(120, Math.max(1, Number(next.checkInMinutes) || 5));
+    if ('speed' in next && !['smart', 'fast', 'balanced', 'saver'].includes(next.speed)) delete next.speed;
     if ('minBattery' in next) next.minBattery = Math.min(90, Math.max(5, Number(next.minBattery) || 20));
     power.update(next);
     try { fs.writeFileSync(path.join(dir, 'power.json'), JSON.stringify(power.s, null, 2), { mode: 0o600 }); } catch {}

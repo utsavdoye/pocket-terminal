@@ -37,10 +37,10 @@ const last = () => calls.slice(-3).join(' | ');
   mac.onCharger = false; brain.wokeAt = t; brain.firstContact = false;
   await step(10e3); assert.ok(!calls.includes('SLEEP'), 'should wait to reach the relay');
   brain.firstContact = true; brain.connectedAt = t; // relay reached
-  await step(3e3); assert.ok(!calls.includes('SLEEP'), 'gives the relay 5 s to send work');
-  await step(3e3);
-  assert.strictEqual(calls.slice(-2).join(' | '), 'alarm +2m | SLEEP');
-  console.log('✓ on battery + idle: quick check-in (5 s after connecting), 2 min alarm, sleeps');
+  await step(2e3); assert.ok(!calls.includes('SLEEP'), 'gives the mailbox 3 s to send work');
+  await step(2e3);
+  assert.match(calls.slice(-2).join(' | '), /^alarm \+[0-3]m \| SLEEP$/);
+  console.log('✓ on battery + idle: quick check-in (3 s after connecting), next check-in alarm, sleeps');
 
   // 2b. macOS sleeps on its own before the brain acts: an alarm must already be set
   {
@@ -48,7 +48,7 @@ const last = () => calls.slice(-3).join(' | ');
     const sys2 = { ...sys, now: () => t2, battery: async () => ({ percent: m2.percent, onCharger: m2.onCharger }), lidClosed: async () => m2.lid,
       scheduleWake: async (d) => { c2.push(['set', d.getTime()]); return { ok: true }; }, cancelWake: async () => { c2.push(['cancel']); return { ok: true }; },
       setNoSleep: async () => ({ ok: true }), sleepNow: async () => { c2.push(['SLEEP']); return { ok: true }; } };
-    const b2 = new PowerBrain({ smartCheckIn: false }, { log: () => {} }, sys2);
+    const b2 = new PowerBrain({ speed: 'balanced' }, { log: () => {} }, sys2);
     b2.lastTick = t2; b2.wokeAt = t2 - 600e3; await b2.tick(); // lid open, idle, on battery: allowed to sleep
     const armed = c2.filter((x) => x[0] === 'set');
     assert.ok(armed.length === 1 && armed[0][1] - t2 <= 2 * 60e3, 'alarm armed ahead while lid open');
@@ -94,13 +94,13 @@ const last = () => calls.slice(-3).join(' | ');
   // 7. Low battery (below 20%) beats the phone → sleeps
   mac.percent = 15; await step();
   assert.ok(calls.includes('SLEEP')); assert.ok(calls.some((c) => c.startsWith('alarm')));
-  assert.ok(calls.some((c) => c === 'alarm +10m'), 'low battery: checks in every 10 min');
+  assert.ok(calls.some((c) => /^alarm \+[0-5]m$/.test(c)), 'low battery: checks in every 5 min');
   // waking up at 15% still reads the mailbox before sleeping again
-  calls.length = 0; brain.lastTick = t; t += 10 * 60e3; brain.sleeping = false; await brain.tick();
+  calls.length = 0; brain.lastTick = t; t += 5 * 60e3; brain.sleeping = false; await brain.tick();
   assert.deepStrictEqual(brain.reasons(), ['checking in']); assert.ok(!calls.includes('SLEEP'));
   brain.setConnected(true); t += 6e3; brain.lastTick = t - 3e3; await brain.tick();
   assert.ok(calls.includes('SLEEP'));
-  console.log('✓ battery 15%: sleeps even with phone open, still checks in every 10 min');
+  console.log('✓ battery 15%: sleeps even with phone open, still checks in every 5 min');
 
   // 8. Critical battery: no more alarms
   calls.length = 0; mac.percent = 8; brain.lastTick = t; t += 60e3; await brain.tick(); await step(100e3);
@@ -118,13 +118,17 @@ const last = () => calls.slice(-3).join(' | ');
   assert.ok(brain.reasons().includes('instant mode')); assert.ok(!calls.includes('SLEEP'));
   console.log('✓ instant mode: stays awake on battery');
 
-  // 11. Smart check-ins: faster right after you used it
-  brain.update({ batteryMode: 'saver' });
-  brain.activity();                      assert.strictEqual(brain.nextCheckInMinutes(), 1);
-  t += 45 * 60e3;                        assert.strictEqual(brain.nextCheckInMinutes(), 2);
-  t += 3 * 3600e3;                       assert.strictEqual(brain.nextCheckInMinutes(), 2);
-  brain.update({ smartCheckIn: false }); brain.activity(); assert.strictEqual(brain.nextCheckInMinutes(), 2);
-  console.log('✓ smart check-ins: 1 min after use, then 2 min, then your setting');
+  // 11. Smart check-ins: every 20 s right after you used it, then 1 min, then 1 or 3 min by the hour
+  brain.update({ batteryMode: 'saver', speed: 'smart' }); mac.percent = 60;
+  const every = () => brain.plan()[0][2];
+  brain.activity();                      assert.strictEqual(every(), 20);
+  t += 45 * 60e3;                        assert.strictEqual(every(), 60);
+  t += 3 * 3600e3;                       assert.ok([60, 180].includes(every()));
+  brain.update({ speed: 'fast' });       assert.strictEqual(every(), 20);
+  brain.update({ speed: 'saver' });      assert.strictEqual(every(), 180);
+  mac.percent = 15; brain.battery.percent = 15; assert.strictEqual(every(), 300);
+  mac.percent = 60; brain.battery.percent = 60; brain.update({ speed: 'smart' });
+  console.log('✓ wake-up speed: smart (20 s → 1 min → by the hour), fast, saver, low battery 5 min');
 
   // 12. stop() never leaves the Mac stuck awake
   await brain.stop(); assert.strictEqual(calls.at(-1), 'nosleep 0');

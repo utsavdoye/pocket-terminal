@@ -15,14 +15,19 @@ function startResults(ctx) {
   // --- status: posted rarely, to stay well inside the board's free daily limit ---
   function statusBody(st) {
     const p = power ? power.status() : null;
+    // plan: when it wakes up from now on, so the phone can count down to the next check-in exactly.
     return { state: st, name: cfg.name || os.hostname(), os: process.platform, nextWake: p && st === 'sleeping' ? p.nextWake : null,
+      plan: p && st === 'sleeping' ? p.plan : null,
       checkIn: p ? p.nextCheckInMinutes : null, power: p ? { percent: p.percent, onCharger: p.onCharger, settings: p.settings } : null };
   }
+  // Posted only when something changed (not at every check-in: with check-ins every 20 s that
+  // would flood the board), and at least once an hour so it never drops out of the board's memory.
   async function postStatus(st, { force = false } = {}) {
     const b = statusBody(st);
-    const same = lastStatus.state === st && lastStatus.checkIn === b.checkIn && Date.now() - lastStatus.at < 60 * 60e3;
+    const key = JSON.stringify([b.plan && b.plan.slice(1), b.plan && b.plan[0].slice(1)]);
+    const same = lastStatus.state === st && lastStatus.key === key && Date.now() - lastStatus.at < 60 * 60e3;
     if (same && !force) return;
-    lastStatus = { state: st, at: Date.now(), checkIn: b.checkIn };
+    lastStatus = { state: st, at: Date.now(), key };
     await post('status', b);
   }
 
@@ -42,9 +47,9 @@ function startResults(ctx) {
 
   function applySettings(p) {
     if (!power || !p || typeof p !== 'object') return;
-    const allowed = ['enabled', 'awakeOnCharger', 'batteryMode', 'checkInMinutes', 'smartCheckIn', 'idleMinutes', 'minBattery', 'stopAlarmsBelow'];
+    const allowed = ['enabled', 'awakeOnCharger', 'batteryMode', 'speed', 'idleMinutes', 'minBattery', 'stopAlarmsBelow'];
     const next = {}; for (const k of allowed) if (k in p) next[k] = p[k];
-    if ('checkInMinutes' in next) next.checkInMinutes = Math.min(120, Math.max(1, Number(next.checkInMinutes) || 5));
+    if ('speed' in next && !['smart', 'fast', 'balanced', 'saver'].includes(next.speed)) delete next.speed;
     if ('minBattery' in next) next.minBattery = Math.min(90, Math.max(5, Number(next.minBattery) || 20));
     if ('batteryMode' in next && !['saver', 'instant'].includes(next.batteryMode)) delete next.batteryMode;
     power.update(next);

@@ -6,6 +6,7 @@ import { toast } from '../core/dom.js';
 import { DEMO, ICE } from '../core/env.js';
 import { state, mac } from '../core/state.js';
 import { noteSeen } from '../core/computers.js';
+import { nextWake } from '../core/schedule.js';
 import { post } from './notes.js';
 import { handleMsg } from './messages.js';
 import { paint, paintPing } from '../ui/status.js';
@@ -24,7 +25,7 @@ setInterval(() => { if (state.dc && state.dc.readyState === 'open' && document.v
 export function watchLink() {
   document.addEventListener('visibilitychange', () => {
     if (document.visibilityState !== 'visible') { clearTimeout(state.retryTimer); return; }
-    state.retryN = 0;
+    state.retryN = 0; state.knockAt = null; // a fresh knock now; earlier ones don't count as missed
     state.board.restart(); // phones kill background connections
     checkLink(2500);
   });
@@ -69,6 +70,7 @@ export async function connect({ hello = true } = {}) {
   // Knock first, at once: if you switch apps a second later, the computer still hears it, and
   // tells your phone when it's up (it may be asleep).
   const hi = hello ? post('hello').catch((e) => e) : null;
+  if (hello && !state.knockAt) state.knockAt = Date.now(); // when we first knocked (to tell a missed check-in)
   state.pc = new RTCPeerConnection({ iceServers: ICE });
   state.pc.oid = randomId(); // each attempt has its own id; only its own answer is accepted
   const ch = state.pc.createDataChannel('pt', { ordered: true });
@@ -96,14 +98,19 @@ function scheduleRetry(net = false) {
   clearTimeout(state.retryTimer);
   if (document.visibilityState !== 'visible') return;
   // net: this phone's own internet failed, so try again soon. Otherwise the computer is likely asleep.
-  const ms = net ? [3e3, 6e3, 12e3, 20e3][Math.min(state.retryN++, 3)] : [45e3, 60e3, 90e3, 120e3][Math.min(state.retryN++, 3)];
+  let ms = net ? [3e3, 6e3, 12e3, 20e3][Math.min(state.retryN++, 3)] : [45e3, 60e3, 90e3, 120e3][Math.min(state.retryN++, 3)];
+  // Asleep, and we know when it checks in next: knock again just before that (a fresh offer takes
+  // ~4 s to prepare), so it's waiting in the mailbox the moment the computer looks. Then it can
+  // connect within a couple of seconds of waking.
+  const nw = !net && mac.state === 'sleeping' && nextWake(mac.plan, Date.now() + 8e3);
+  if (nw) ms = Math.max(3e3, nw - Date.now() - 6e3);
   state.retryTimer = setTimeout(() => { if (!state.dc || state.dc.readyState !== 'open') { state.lastAttempt = 0; connect(); } }, ms);
 }
 
 function wire(ch) {
   ch.onopen = () => {
     setTimeout(() => showTour(), 1500);
-    state.dc = ch; state.linkState = 'direct'; clearTimeout(state.answerTimer); clearTimeout(state.openTimer); clearTimeout(state.retryTimer); state.retryN = 0;
+    state.dc = ch; state.linkState = 'direct'; state.knockAt = null; clearTimeout(state.answerTimer); clearTimeout(state.openTimer); clearTimeout(state.retryTimer); state.retryN = 0;
     mac.state = 'online'; mac.ts = Date.now(); state.lastPong = Date.now(); if (state.S && !state.S.viewer) noteSeen(state.S.topic, mac.ts);
     lastRx = Date.now();
     sendTerm({ t: 'attach', sid: state.SID, fresh: state.attachFresh, cols: state.term.cols, rows: state.term.rows, z: CAN_INFLATE ? 1 : 0 }); // first, before any resize

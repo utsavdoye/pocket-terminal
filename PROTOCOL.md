@@ -79,7 +79,7 @@ The phone drops a note if it does not decrypt, `from` is not `mac`, or its `id` 
 | `hello` | none | 3 min | "The app is open." The computer stays awake ~2 min and posts `status: online`. If the note is older than 5 s (it waited while the computer slept), the computer may send a "ready" push 15 s later. |
 | `offer` | `oid`, `sdp` | 90 s | A WebRTC offer. The computer answers it. Older than 5 s: also the "ready" push logic. |
 | `cmd` | `cid`, `cmd` | 60 min (`maxCommandAgeMinutes`) | Run one command by itself (backup route). Each `cid` runs only once. Max 4000 characters. |
-| `settings` | `power` (object) | 24 h | Change power settings. Allowed keys: `enabled`, `awakeOnCharger`, `batteryMode` (`saver` / `instant`), `checkInMinutes` (1–120), `smartCheckIn`, `idleMinutes`, `minBattery` (5–90), `stopAlarmsBelow`. |
+| `settings` | `power` (object) | 24 h | Change power settings. Allowed keys: `enabled`, `awakeOnCharger`, `batteryMode` (`saver` / `instant`), `checkInMinutes`/`smartCheckIn` (older phones; ignored now), `speed` (`smart` / `fast` / `balanced` / `saver`), `idleMinutes`, `minBattery` (5–90), `stopAlarmsBelow`. |
 
 A **viewer** (share link) computer only reacts to `hello` and `offer`.
 
@@ -87,7 +87,7 @@ A **viewer** (share link) computer only reacts to `hello` and `offer`.
 
 | `type` | Fields | What it does |
 |---|---|---|
-| `status` | `state` (`online` / `sleeping`), `name`, `os`, `nextWake`, `checkIn`, `power` {`percent`, `onCharger`, `settings`} | Shows awake or asleep. Posted rarely: on start, on `hello`, after a wake (at 0.5 s, 4 s, 12 s), before sleep, or when it changes. Otherwise at most once an hour. The phone ignores a status older than the last one. If it is `online`, less than 3 min old, there is no open link, and no offer was sent in the last 80 s, the phone connects (without a new `hello`). |
+| `status` | `state` (`online` / `sleeping`), `name`, `os`, `nextWake`, `plan` (when sleeping: `[start, end, every seconds]` pieces, `end` null = from then on; wake-ups fall on the clock grid of `every`, see agent/lib/schedule.js), `checkIn`, `power` {`percent`, `onCharger`, `settings`} | Shows awake or asleep, and counts down to the next wake-up. Posted rarely: on start, on `hello`, after a wake the user caused (at 0.5 s, 4 s, 12 s; quiet check-ins post nothing), before sleep when the plan changed, or when it changes. Otherwise at most once an hour. The phone ignores a status older than the last one. If it is `online`, less than 3 min old, there is no open link, and no offer was sent in the last 80 s, the phone connects (without a new `hello`). |
 | `answer` | `oid`, `sdp` | The WebRTC answer. The phone only takes it if `oid` matches its current attempt and it is still waiting for an answer. |
 | `result` | `cid`, `code`, `out` | Output of a `cmd` sent through the mailbox. If the note is too big, the start of `out` is cut (`…(start cut)…`) until it fits. Also pings the notify topic. |
 | `revoked` | none | This phone was removed on the computer. The phone forgets its key. |

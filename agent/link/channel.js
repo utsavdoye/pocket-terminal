@@ -147,6 +147,7 @@ function startChannel(ctx) {
       if (!viewer) power && power.setPhoneWanting(true);
       log(`${viewer ? 'viewer' : 'phone'} connected directly (${peers.size} open)`);
       act({ ev: 'connected' });
+      if (ctx.since && ctx.since()) log('phone connected' + ctx.since());
       attachTimer = setTimeout(() => { bind(null); if (L.size.cols && !viewer) sess.resize(L.size.cols | 0, L.size.rows | 0); }, 1500);
     };
     if (dc.isOpen()) onOpen(); else dc.onOpen(onOpen);

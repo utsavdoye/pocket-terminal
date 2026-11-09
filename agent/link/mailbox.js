@@ -7,7 +7,7 @@ const path = require('path');
 const { seal, open, msgId } = require('../lib/crypto');
 const { Board } = require('../lib/board');
 
-const FRESH = { hello: 3 * 60e3, offer: 90e3, settings: 24 * 3600e3 };
+const FRESH = { hello: 10 * 60e3, offer: 90e3, settings: 24 * 3600e3 };
 
 // Sets ctx.board, ctx.post, ctx.saveState, ctx.readySoon and ctx.onNote.
 function startMailbox(ctx) {
@@ -51,6 +51,7 @@ function startMailbox(ctx) {
     const m = open(keys, text);
     if (!m || m.from !== 'phone' || typeof m.id !== 'string' || seen.has(m.id)) return;
     seen.add(m.id); saveState();
+    if (process.env.POCKET_DEBUG_NOTES) log(`note ${m.type} ${Math.round((Date.now() - Number(m.ts)) / 1000)}s old`);
     const age = Date.now() - Number(m.ts);
     if (!(age > -2 * 60e3)) return; // clocks wildly off: ignore
     if (viewer && m.type !== 'hello' && m.type !== 'offer') return; // a viewer can only connect and watch
@@ -60,7 +61,7 @@ function startMailbox(ctx) {
       power && power.setPhoneWanting(true);
       clearTimeout(phoneWaitingTimer);
       phoneWaitingTimer = setTimeout(() => power && power.setPhoneWanting(peers.size > 0), 2 * 60e3);
-      log('phone said hello: staying awake for it');
+      log('phone said hello: staying awake for it' + (ctx.since ? ctx.since() : ''));
       ctx.postStatus('online', { force: true });
       if (age > 5e3) readySoon();
     } else if (m.type === 'offer' && age < FRESH.offer && typeof m.sdp === 'string') {

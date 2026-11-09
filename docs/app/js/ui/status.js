@@ -2,11 +2,13 @@
 // ticks, and the banner that says what's going on when the live link isn't up.
 
 import { $, ago, toast } from '../core/dom.js';
+import { DEMO } from '../core/env.js';
 import { pushReady } from '../core/store.js';
 import { state, mac } from '../core/state.js';
 import { connect } from '../connection/link.js';
 import { jobs } from '../features/commands.js';
 import { paintPower } from '../features/power.js';
+import { nextWake } from '../core/schedule.js';
 
 export function paintPing() {
   const el = $('ping'); const on = state.dc && state.dc.readyState === 'open' && state.rtt !== null;
@@ -14,11 +16,26 @@ export function paintPing() {
 }
 
 // ---------- status bar + banner ----------
-function nextCheckIn() {
-  if (mac.state !== 'sleeping' || !mac.nextWake) return null;
+// When the sleeping computer next checks in. With its plan we know to the second; it then needs a
+// few seconds (Wi-Fi, mailbox, link) to connect. 'late': a check-in we knocked before went by with
+// no answer (it may be off, out of battery, or offline).
+const CONNECT = 12e3;
+export function nextCheckIn() {
+  if (mac.state !== 'sleeping') return null;
+  const now = Date.now();
+  if (mac.plan) {
+    // A check-in in the last few seconds counts ("waking up") only if it came after our knock:
+    // earlier ones couldn't have seen it.
+    const at = nextWake(mac.plan, Math.max(now - CONNECT, (state.knockAt || now) + 2e3)); if (!at) return null;
+    const first = state.knockAt && nextWake(mac.plan, state.knockAt + 3e3);
+    const late = first && now > first + CONNECT + 20e3;
+    const piece = mac.plan.find(([s, e]) => s <= at && (e === null || at < e)) || mac.plan[0];
+    return { at: at > now ? at : nextWake(mac.plan, now) || at, waking: at <= now, late, every: piece[2] * 1000 };
+  }
+  if (!mac.nextWake) return null; // a computer from before plans: step by its check-in time
   let t = mac.nextWake; const step = (mac.checkIn || 5) * 60e3;
-  while (t < Date.now() - 30e3 && step > 0) t += step;
-  return t;
+  while (t < now - 30e3 && step > 0) t += step;
+  return { at: t, waking: t <= now, late: false, every: step };
 }
 export function until(t) {
   const s = Math.round((t - Date.now()) / 1000); if (s <= 0) return 'any moment';
@@ -39,7 +56,7 @@ export function paint() {
   const queued = jobs.filter((j) => j.status === 'waiting').length;
   const queuedText = queued ? ` ${queued} command${queued > 1 ? 's' : ''} will run then.` : '';
   if (linkState === 'ended') { status = 'Live view ended'; }
-  else if (linkState === 'direct') { look = 'awake'; ring = 1; status = S.viewer ? 'Live · view only' : 'Live · encrypted'; }
+  else if (linkState === 'direct') { look = 'awake'; ring = 1; status = S.viewer ? 'Live · view only' : DEMO ? 'Live · demo' : 'Live · encrypted'; }
   else if (linkState === 'connecting' && !(mac.state === 'sleeping' && nci)) { look = 'connecting'; ring = 0.25; status = 'Connecting…'; }
   else if (linkState === 'noboard' || state.board.up.size === 0) {
     status = 'Offline';
@@ -48,9 +65,18 @@ export function paint() {
     look = 'backup'; ring = 1; status = 'Backup route (slower)';
     banner = ['This network blocks the direct link', "Commands still work, a few seconds slower. The live terminal needs the direct link.", true, [['Try again', () => { state.lastAttempt = 0; connect(); }]]];
   } else if (mac.state === 'sleeping' && nci) {
-    look = 'asleep'; ring = 1 - Math.max(0, Math.min(1, (nci - Date.now()) / ((mac.checkIn || 2) * 60e3))); // the lamp line fills up towards the check-in
-    status = `Asleep · wakes in ${until(nci)}`;
-    banner = [`${name} is asleep`, S.viewer ? `It checks in by itself in ${until(nci)}, then the live view continues.` : `It checks in by itself in ${until(nci)} and connects on its own. Anything you send now runs then.${pushReady() ? ' You can leave the app: your phone buzzes when it\'s ready.' : ''}${queuedText}`, !S.viewer, []];
+    look = 'asleep'; ring = nci.waking ? 1 : 1 - Math.max(0, Math.min(1, (nci.at - Date.now()) / nci.every)); // the lamp line fills up towards the check-in
+    const leave = pushReady() ? ' You can leave the app: your phone buzzes when it\'s ready.' : ' Turn on notifications in Settings to get a buzz when it\'s ready.';
+    if (nci.waking) {
+      status = 'Waking up · connecting…';
+      banner = [`${name} is waking up`, `Connecting now, a few seconds.${S.viewer ? '' : leave}${queuedText}`, !S.viewer, []];
+    } else if (nci.late) {
+      status = `Asleep · next try in ${until(nci.at)}`;
+      banner = [`${name} is taking longer than usual`, `It missed its check-in. It may be off, out of battery, or offline. It tries again in ${until(nci.at)}.${queuedText}`, !S.viewer, [['Try now', () => { state.lastAttempt = 0; connect(); }]]];
+    } else {
+      status = `Asleep · wakes in ${until(nci.at)}`;
+      banner = [`${name} is asleep`, S.viewer ? `It wakes up in ${until(nci.at)}, then the live view continues.` : `It wakes up in ${until(nci.at)} and connects by itself.${leave} Anything you send now runs then.${queuedText}`, !S.viewer, []];
+    }
   } else {
     status = mac.ts ? `Last seen ${ago(mac.ts)}` : 'Waiting…';
     const stuck = state.retryN >= 4;
@@ -80,5 +106,5 @@ export function paint() {
     $('batt').className = 'batt tick' + (p.onCharger ? ' charging' : p.percent < 20 ? ' low' : '');
   }
   $('connInfo').textContent = linkState === 'direct' ? 'Direct and end-to-end encrypted' : linkState === 'backup' ? 'Backup route: encrypted notes through the message board' : 'Not connected right now';
-  paintPower(p, nci);
+  paintPower(p, nci && nci.at);
 }

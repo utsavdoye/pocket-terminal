@@ -238,12 +238,8 @@
         <div><small>Next check-in</small><span id="pNext">–</span></div>
       </div>
       <p class="hint" id="pWhy"></p>
-      <div class="field"><div>On battery<small>Saver sleeps when idle and wakes to check in. Instant stays awake (uses more battery).</small></div>
-        <div class="seg" data-set="batteryMode"><button data-v="saver">Saver</button><button data-v="instant">Instant</button></div></div>
-      <div class="field"><div>Check in every<small>How often it wakes up while asleep</small></div>
-        <div class="seg" data-set="checkInMinutes"><button data-v="1">1m</button><button data-v="2">2m</button><button data-v="5">5m</button><button data-v="15">15m</button></div></div>
-      <div class="field"><div>Faster after use<small>Every minute for 30 min after you use it</small></div>
-        <div class="seg" data-set="smartCheckIn"><button data-v="true">On</button><button data-v="false">Off</button></div></div>
+      <div class="field col"><div>Wake-up speed on battery<small id="pSpeedHint">How quickly the sleeping computer answers your phone</small></div>
+        <div class="seg wide" id="speedSeg"><button data-v="smart">Smart</button><button data-v="fast">Fast</button><button data-v="balanced">1 min</button><button data-v="saver">3 min</button><button data-v="instant">Always on</button></div></div>
       <div class="field"><div>Battery floor<small>Below this it stops staying awake</small></div>
         <div class="seg" data-set="minBattery"><button data-v="10">10%</button><button data-v="20">20%</button><button data-v="30">30%</button></div></div>
       <div class="field"><div>Awake on charger<small>Reachable with the lid closed while charging</small></div>

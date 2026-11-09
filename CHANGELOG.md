@@ -1,6 +1,11 @@
 # Changelog
 
 ## Next release
+- **Wakes up when the app says, and faster.** The app now shows exactly when a sleeping laptop wakes ("wakes up in 14s") and it really connects then: the phone leaves its knock in the mailbox just before, so it connects the second it wakes. If a check-in is missed it says so ("taking longer than usual") instead of guessing.
+- **Smart wake-ups (new default):** with the lid closed on battery it checks in every 20 s for 30 min after you use it, every minute for the next 2 hours and in the hours you usually use it, and every 3 min at night. It learns your usual hours. Or pick Fast (20 s), 1 min, 3 min or Always on in Power settings. On the charger it never sleeps, as before.
+- **Leave the app while it wakes:** you get one "is awake ✓" notification when it's ready.
+- **Fixed: opening the app could skip its knock** when the mailbox still held an old "online" note, so a sleeping laptop didn't notice the phone until a later try.
+- **Check-ins are quiet:** a wake-up with the lid closed no longer posts to the mailbox each time, and notices the wake within a second.
 - **Several computers on one phone.** Pair your laptop, a desktop and a server: tap the computer's name at the top to switch, or to pair another one (scan its QR code right there). Each keeps its own PIN, terminals and command history. Notifications come from the one you used last. Before, pairing a second computer replaced the first.
 - **Swipe between terminals:** swipe left or right on the terminal for the next or previous one.
 - **"Your computer runs an older version" bar:** when the computer is behind the app, one tap copies the update command.

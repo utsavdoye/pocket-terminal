@@ -35,7 +35,8 @@ function main() {
     power = new PowerBrain(readJson('power.json') || {}, {
       log,
       onStatus: (s) => transport && transport.onPower(s),
-      onWake: () => transport && transport.onWake(),
+      onWake: (kind) => transport && transport.onWake(kind),
+      usageFile: path.join(DIR, 'usage.json'), // hours you use it, to wake up more often then
       onSleep: async (s) => transport && transport.onSleep(s),
     }, sim || {});
   }

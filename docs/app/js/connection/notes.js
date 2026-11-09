@@ -26,11 +26,13 @@ export async function onNoteText(text) {
   if (m.type === 'revoked') return revoked();
   if (m.type === 'status') {
     if (m.ts < mac.ts) return;
-    Object.assign(mac, { state: m.state, ts: m.ts, nextWake: m.nextWake, checkIn: m.checkIn, power: m.power, name: m.name || mac.name });
+    Object.assign(mac, { state: m.state, ts: m.ts, nextWake: m.nextWake, plan: m.plan, checkIn: m.checkIn, power: m.power, name: m.name || mac.name });
     if (m.os) setOs(m.os);
     // The Mac just woke up and saw our hello: open the direct link now.
     // (If an offer is still waiting, the Mac answers that one; don't start another.)
-    if (m.state === 'online' && Date.now() - m.ts < 3 * 60e3 && (!state.dc || state.dc.readyState !== 'open') && Date.now() - state.offerAt > 80e3) connect({ hello: false });
+    // Only an answer to our own knock counts: an old "online" from the mailbox's backlog (the
+    // computer has slept since) must not replace this visit's knock.
+    if (m.state === 'online' && state.knockAt && m.ts > state.knockAt - 2e3 && Date.now() - m.ts < 3 * 60e3 && (!state.dc || state.dc.readyState !== 'open') && Date.now() - state.offerAt > 80e3) connect({ hello: false });
   } else if (m.type === 'answer') {
     if (localStorage.getItem('pt_debug')) console.log('answer', m.oid, 'mine', state.pc && state.pc.oid, state.pc && state.pc.signalingState);
   }

@@ -66,7 +66,7 @@ sudo pacman -S --needed base-devel python         # Arch</code></pre>
   <h2 id="connect">Can't connect</h2>
   <h3>It says "Waiting for …"</h3>
   <ul>
-    <li>Check the computer is on and online. Asleep is fine; it wakes every minute or two and connects by itself.</li>
+    <li>Check the computer is on and online. Asleep is fine; it wakes by itself and connects. The app shows when ("wakes up in 14s").</li>
     <li>Check the program is running: <code>npx pocket-terminal logs</code> should show recent lines.</li>
     <li>Restart it: Mac <code>launchctl kickstart -k gui/$(id -u)/com.pocketterminal.agent</code> · Linux <code>systemctl --user restart pocket-terminal</code> · Windows: run the install line again.</li>
     <li>Removed this phone on the computer? In the app, open ⋯ → Settings → Unpair, and pair again.</li>
@@ -77,7 +77,7 @@ sudo pacman -S --needed base-devel python         # Arch</code></pre>
   <h2 id="sleep">Lid closed &amp; battery</h2>
   <ul>
     <li><b>On charger</b> it stays awake and answers instantly, lid closed or not.</li>
-    <li><b>On battery</b> it sleeps and wakes every 1–2 minutes to check for you. Set the interval in the app: ⋯ → Power and battery.</li>
+    <li><b>On battery</b> it sleeps and wakes to check for you: every 20 s for 30 min after you use it, every minute in the hours you usually use it, every 3 min at night. Change it in the app: ⋯ → Power and battery → Wake-up speed.</li>
     <li>Below <b>20%</b> it stops staying awake; below <b>10%</b> it stops waking up, so your battery never dies.</li>
     <li>Windows can't tell when the lid is closed, so it sleeps after 10 minutes without keyboard or mouse use. Some "Modern Standby" laptops ignore wake-up alarms on battery: keep them plugged in, or use Instant mode.</li>
   </ul>

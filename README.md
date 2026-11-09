@@ -149,18 +149,21 @@ If a strict network blocks direct links, commands still travel as encrypted note
 ### Lid closed, battery safe
 
 <p align="center">
-  <img src="docs/readme/night-on-battery.svg" alt="A night on battery: short check-ins every 1 to 2 minutes; a command sent at 3:10 runs at the next check-in" width="100%">
+  <img src="docs/readme/night-on-battery.svg" alt="A night on battery: short check-ins; a command sent at 3:10 runs at the next check-in" width="100%">
 </p>
 
-| Your computer is | Your command runs |
+| Your computer is | It answers your phone |
 |---|---|
 | Plugged in, lid closed | Instantly |
-| On battery, used in the last 30 minutes | Within about 1 minute |
-| On battery, idle for hours | Within about 2 minutes |
-| On battery, Instant mode on | Instantly (uses more battery) |
+| On battery, used in the last 30 minutes | Within 20 seconds |
+| On battery, in the hours you usually use it | Within 1 minute |
+| On battery, at night | Within 3 minutes |
+| Below 20% battery | Within 5 minutes |
 | Below 10% battery | After you charge |
 
-Each check-in keeps the computer awake for about 6 seconds. It never stays awake below 20% battery.
+That's the default (**Smart**: it learns your usual hours). You can pick Fast (every 20 s), 1 min, 3 min or Always on.
+The app counts down to the exact second it wakes, and connects then; leave the app and your phone buzzes when it's ready.
+A check-in is a few seconds awake (Windows: at most one a minute). It never stays awake below 20% battery.
 Change any of this from the phone under **⋯ → Power and battery**.
 
 ## Security
