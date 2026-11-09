@@ -127,6 +127,7 @@ const sys = {
     "$a = New-ScheduledTaskAction -Execute 'cmd.exe' -Argument '/c exit'; " +
     `Register-ScheduledTask -TaskName '${TASK}' -Trigger $t -Settings $s -Action $a -Force | Out-Null`),
   cancelWake: async () => ps(`Unregister-ScheduledTask -TaskName '${TASK}' -Confirm:$false -ErrorAction SilentlyContinue`),
+  minWakeEvery: 60, // wake alarms go through Task Scheduler: too heavy to set every 20 s
   sleepNow: async () => { cache = null; cacheAt = 0; return ps("Add-Type -AssemblyName System.Windows.Forms; [System.Windows.Forms.Application]::SetSuspendState('Suspend', $false, $false) | Out-Null"); },
 };
 

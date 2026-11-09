@@ -64,7 +64,7 @@ class PowerBrain {
       lastUse: Math.max(this.lastActivity, this.phoneLeft || 0, this.phoneSince || 0),
       lowBattery: b && b.percent !== null && !b.onCharger && b.percent < this.s.minBattery,
       usual: usualHours(this.usage, now),
-      minEvery: this.sys.minWakeEvery || (process.platform === 'win32' ? 60 : 20),
+      minEvery: this.sys.minWakeEvery || 20, // Windows says 60 (platform/windows.js)
     });
   }
   // Next wake-up, at least 5 s from now (pmset needs a moment; the Mac needs to fall asleep first).

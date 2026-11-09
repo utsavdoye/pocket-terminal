@@ -14,6 +14,7 @@ const calls = [];
 const mac = { percent: 80, onCharger: true, lid: true };
 const sys = {
   now: () => t,
+  minWakeEvery: 20,
   battery: async () => ({ percent: mac.percent, onCharger: mac.onCharger, state: 'x' }),
   lidClosed: async () => mac.lid,
   setNoSleep: async (on) => { calls.push(`nosleep ${on ? 1 : 0}`); return { ok: true }; },

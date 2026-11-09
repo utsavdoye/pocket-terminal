@@ -72,7 +72,7 @@ try:
     ans=got and got[-1]['msg'].get('ans')
     check(8, 'hook: the notification has Allow / Deny', bool(ans) and [a['title'] for a in ans['acts']]==['Allow','Deny'])
     pg.click('#needsBtns button.yes')
-    o=h.communicate(timeout=10)[0]
+    h.wait(timeout=10); o=h.stdout.read()  # (communicate() after closing stdin crashes on Python 3.12)
     check(9, 'hook: Allow goes back to Claude Code as "allow"', '"behavior": "allow"' in o or '"behavior":"allow"' in o)
     check(10, 'hook: the question disappears from the phone', wait(lambda: not pg.is_visible('#needs'), 5))
 
@@ -82,7 +82,7 @@ try:
     qcard='#sessList .agent.s-wait:has-text("Write")'
     check(11, 'hook: the dashboard lists it with Allow / Deny', wait(lambda: pg.is_visible(qcard) and 'Deny' in pg.inner_text(qcard), 15))
     pg.click(qcard+' button:has-text("Deny")')
-    o=h.communicate(timeout=10)[0]
+    h.wait(timeout=10); o=h.stdout.read()  # (communicate() after closing stdin crashes on Python 3.12)
     check(12, 'hook: Deny goes back as "deny"', '"deny"' in o)
     ph.close_menu(pg)
 
