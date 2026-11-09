@@ -1,6 +1,8 @@
 # Changelog
 
 ## Next release
+- **Fixed: the app could run out of the free message board's daily limit** ("too many messages today") and then could not connect at all, even with both devices online. The free board allows a few hundred notes a day per internet connection, and the phone was knocking every 20 s while it waited. Now an offer is reused while it's good (90 s), "hello" goes at most every 4 min, a long wait knocks every 3 min, and the computer posts "I'm awake" once instead of three times. Waiting 75 s for a sleeping laptop now costs 2 notes instead of about 8.
+- **When the board is full anyway, the app says so** and what to do (mobile data, or a hotspot for the computer), instead of "This phone is offline".
 - **Wakes up when the app says, and faster.** The app now shows exactly when a sleeping laptop wakes ("wakes up in 14s") and it really connects then: the phone leaves its knock in the mailbox just before, so it connects the second it wakes. If a check-in is missed it says so ("taking longer than usual") instead of guessing.
 - **Smart wake-ups (new default):** with the lid closed on battery it checks in every 20 s for 30 min after you use it, every minute for the next 2 hours and in the hours you usually use it, and every 3 min at night. It learns your usual hours. Or pick Fast (20 s), 1 min, 3 min or Always on in Power settings. On the charger it never sleeps, as before.
 - **Leave the app while it wakes:** you get one "is awake ✓" notification when it's ready.

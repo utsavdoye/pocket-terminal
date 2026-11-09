@@ -28,6 +28,10 @@ function startBoard(port = 0) {
     const parts = url.pathname.split('/').filter(Boolean);
     const topic = parts[0];
     if (!topic || !/^[-_A-Za-z0-9]{1,64}$/.test(topic)) { res.writeHead(404); return res.end(); }
+    // Tests can make the board refuse posts like ntfy.sh does when the day's limit is used up.
+    if (req.method === 'POST' && process.env.MOCK_BOARD_FULL && require('fs').existsSync(process.env.MOCK_BOARD_FULL)) {
+      res.writeHead(429, { 'Content-Type': 'application/json' }); return res.end('{"code":42908,"http":429,"error":"limit reached: daily message quota reached"}');
+    }
     if (req.method === 'POST' && parts.length === 1) {
       let body = ''; req.on('data', (c) => { body += c; });
       req.on('end', () => {

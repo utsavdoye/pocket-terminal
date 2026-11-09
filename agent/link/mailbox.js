@@ -27,7 +27,7 @@ function startMailbox(ctx) {
 
   async function post(type, extra = {}) {
     const note = { id: msgId(), ts: Date.now(), from: 'mac', type, ...extra };
-    try { await board.publish(seal(keys, note)); } catch (e) { log(`could not post ${type}: ${e.message}`); }
+    try { await board.publish(seal(keys, note)); return true; } catch (e) { log(`could not post ${type}: ${e.message}`); return false; }
   }
 
   // The phone opened the app while this computer slept, and has moved on since (nothing connected
@@ -62,7 +62,9 @@ function startMailbox(ctx) {
       clearTimeout(phoneWaitingTimer);
       phoneWaitingTimer = setTimeout(() => power && power.setPhoneWanting(peers.size > 0), 2 * 60e3);
       log('phone said hello: staying awake for it' + (ctx.since ? ctx.since() : ''));
-      ctx.postStatus('online', { force: true });
+      // Not forced: the free board allows only a few hundred notes a day per connection. The phone
+      // learns it's up from the answer to its offer anyway; this only posts if it was asleep.
+      ctx.postStatus('online');
       if (age > 5e3) readySoon();
     } else if (m.type === 'offer' && age < FRESH.offer && typeof m.sdp === 'string') {
       if (process.env.POCKET_NO_DIRECT) return log('ignoring offer (POCKET_NO_DIRECT test switch)');

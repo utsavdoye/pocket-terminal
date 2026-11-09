@@ -69,6 +69,9 @@ export async function connect({ hello = true } = {}) {
   state.linkState = 'connecting'; paint();
   // Knock first, at once: if you switch apps a second later, the computer still hears it, and
   // tells your phone when it's up (it may be asleep).
+  if (Date.now() < (state.boardFullUntil || 0)) { state.linkState = 'boardfull'; paint(); scheduleRetry(); return; }
+  hello = hello && Date.now() - (state.helloAt || 0) > 4 * 60e3; // the offer itself also knocks
+  if (hello) state.helloAt = Date.now();
   const hi = hello ? post('hello').catch((e) => e) : null;
   if (hello && !state.knockAt) state.knockAt = Date.now(); // when we first knocked (to tell a missed check-in)
   state.pc = new RTCPeerConnection({ iceServers: ICE });
@@ -87,23 +90,40 @@ export async function connect({ hello = true } = {}) {
     if (state.pc !== mine) return; // a newer attempt replaced this one
     await post('offer', { oid: mine.oid, sdp: mine.localDescription.sdp });
     state.offerAt = Date.now();
-  } catch (e) { state.linkState = 'noboard'; if (navigator.onLine !== false) toast(e.message); paint(); scheduleRetry(true); return; }
+  } catch (e) {
+    if (/too many/i.test(e.message)) { // the board's daily limit for this internet connection
+      state.boardFullUntil = Date.now() + 10 * 60e3; state.linkState = 'boardfull'; paint(); scheduleRetry(); return;
+    }
+    state.linkState = 'noboard'; paint(); scheduleRetry(true); return;
+  }
   clearTimeout(state.answerTimer);
   state.answerTimer = setTimeout(() => { if (!state.dc || state.dc.readyState !== 'open') { state.linkState = 'waiting'; paint(); scheduleRetry(); } }, 15e3);
 }
 
 // No answer? The computer may be asleep or briefly offline. Keep knocking while the app is open,
-// so it connects by itself at the computer's next check-in (each knock is 2 tiny encrypted notes).
+// so it connects by itself at the computer's next check-in.
+//
+// Every knock is a note on a free public board, which allows a few hundred notes a day per
+// internet connection (phone and computer on the same Wi-Fi share it). So knocks are budgeted:
+// an offer stays good for 90 s and is reused until then, a "hello" goes at most every 4 min, and
+// after 10 min of waiting it knocks only every 3 min.
 function scheduleRetry(net = false) {
   clearTimeout(state.retryTimer);
   if (document.visibilityState !== 'visible') return;
   // net: this phone's own internet failed, so try again soon. Otherwise the computer is likely asleep.
   let ms = net ? [3e3, 6e3, 12e3, 20e3][Math.min(state.retryN++, 3)] : [45e3, 60e3, 90e3, 120e3][Math.min(state.retryN++, 3)];
+  if (state.boardFullUntil > Date.now()) ms = state.boardFullUntil - Date.now();
   // Asleep, and we know when it checks in next: knock again just before that (a fresh offer takes
   // ~4 s to prepare), so it's waiting in the mailbox the moment the computer looks. Then it can
   // connect within a couple of seconds of waking.
-  const nw = !net && mac.state === 'sleeping' && nextWake(mac.plan, Date.now() + 8e3);
-  if (nw) ms = Math.max(3e3, nw - Date.now() - 6e3);
+  const nw = !net && !(state.boardFullUntil > Date.now()) && mac.state === 'sleeping' && nextWake(mac.plan, Date.now() + 8e3);
+  if (nw) {
+    // The last offer is still good at that check-in (90 s): keep it, knock again only when it isn't.
+    const until = (state.offerAt || 0) + 80e3;
+    ms = Math.max(3e3, nw - Date.now() - 6e3);
+    if (nw < until) ms = Math.max(ms, nextWake(mac.plan, until) - Date.now() - 6e3);
+    if (state.knockAt && Date.now() - state.knockAt > 10 * 60e3) ms = Math.max(ms, 3 * 60e3); // a long wait: knock less often
+  }
   state.retryTimer = setTimeout(() => { if (!state.dc || state.dc.readyState !== 'open') { state.lastAttempt = 0; connect(); } }, ms);
 }
 

@@ -8,7 +8,8 @@ from datetime import datetime
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__))); import pairing_helper as ph
 from playwright.sync_api import sync_playwright
 S=__import__('tempfile').mkdtemp(); os.makedirs(S+'/home'); R=os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-svc=subprocess.Popen(['node','test/run-services.js','8896','8897',S+'/board.json'],cwd=R,stdout=subprocess.PIPE,text=True)
+FULL=S+'/board-full'
+svc=subprocess.Popen(['node','test/run-services.js','8896','8897',S+'/board.json'],cwd=R,stdout=subprocess.PIPE,text=True,env=dict(os.environ,MOCK_BOARD_FULL=FULL))
 ports=json.loads(svc.stdout.readline()); BOARD=f"http://127.0.0.1:{ports['board']}"; APP=f"http://localhost:{ports['app']}/app/"
 push=subprocess.Popen(['node','test/push-receiver.js'],cwd=R,stdout=subprocess.PIPE,text=True); SUB=json.loads(push.stdout.readline())
 pushed=[]; threading.Thread(target=lambda: [pushed.append(json.loads(l)) for l in push.stdout],daemon=True).start()
@@ -31,7 +32,8 @@ def check(n, label, v):
     if not v: ph.ci(f'check {n} failed: {label}')
 
 # The alarm clock: when the agent has frozen itself ("SLEEP") and its alarm time comes, wake it.
-sleeps=[]; wakes=[]; stop=False
+sleeps=[]; wakes=[]; stop=False; hold=False
+notes=lambda: len(json.load(open(S+'/board.json')))
 def clock():
     seen=0
     while not stop:
@@ -43,7 +45,7 @@ def clock():
             if l=='SLEEP': asleep=True
         n=lines.count('SLEEP')
         if n>seen: seen=n; sleeps.append(time.time())
-        if n>len(wakes) and alarm and time.time()>=alarm and len(sleeps)==n:
+        if not hold and n>len(wakes) and alarm and time.time()>=alarm and len(sleeps)==n:
             time.sleep(0.4); agent.send_signal(signal.SIGCONT); wakes.append(time.time())
         time.sleep(0.1)
 threading.Thread(target=clock,daemon=True).start()
@@ -75,6 +77,21 @@ try:
     conn=wait(lambda: awake(pg), 60); t_conn=time.time()
     late = t_conn-predicted if predicted else 99
     check(6, 'it connects when the app said (within 10 s after)', conn and -3 <= late <= 10 and f'{late:+.1f}s vs the countdown')
+
+    # The free board allows only a few hundred notes a day: while the app waits for a sleeping
+    # computer, knocks are budgeted (an offer is reused while it's good, hello at most every 4 min).
+    pg.close(); s0=len(sleeps); wait(lambda: len(sleeps)>s0, 60)
+    hold=True; time.sleep(1); c0=notes()
+    pg=ctx.new_page(); pg.on('pageerror', lambda e: errs.append(str(e))); pg.goto(APP); time.sleep(75)
+    used=notes()-c0
+    check('9b', 'waiting 75 s for a sleeping computer costs at most 3 board notes', used<=3 and f'{used} notes')
+    hold=False
+    check('9c', 'and it still connects at the next check-in', wait(lambda: awake(pg), 60))
+    # The board's daily limit is used up: say so plainly (not "offline"), and don't hammer it.
+    pg.close(); open(FULL,'w').close(); c0=notes()
+    pg=ctx.new_page(); pg.on('pageerror', lambda e: errs.append(str(e))); pg.goto(APP)
+    check('9d', 'a full board is explained, with what to do', wait(lambda: 'board is full' in pg.inner_text('#bannerTitle') and 'mobile data' in pg.inner_text('#bannerText'), 20))
+    os.remove(FULL); pg.close()
 
     # Leave the app while it's asleep: one "is awake" notification when it connects up.
     pg.close(); n=len(pushed); s0=len(sleeps)

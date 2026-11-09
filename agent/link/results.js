@@ -26,9 +26,10 @@ function startResults(ctx) {
     const b = statusBody(st);
     const key = JSON.stringify([b.plan && b.plan.slice(1), b.plan && b.plan[0].slice(1)]);
     const same = lastStatus.state === st && lastStatus.key === key && Date.now() - lastStatus.at < 60 * 60e3;
-    if (same && !force) return;
-    lastStatus = { state: st, at: Date.now(), key };
-    await post('status', b);
+    if (same && !force) return true;
+    const ok = await post('status', b);
+    if (ok) lastStatus = { state: st, at: Date.now(), key }; // failed (no network yet): try again next time
+    return ok;
   }
 
   // --- results: over the direct link if open, otherwise as an encrypted note ---

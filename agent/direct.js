@@ -56,7 +56,12 @@ function startDirect({ cfg, core, power, log, dir, x = {} }) {
       // A quiet check-in with the lid closed: say nothing; if the phone knocked, its hello wakes the
       // link up. Otherwise (lid opened): tell the phone at once that it's up (it may be showing
       // "asleep"). Wi-Fi can take a few seconds to come back after a wake, so try again shortly.
-      if (!viewer && kind !== 'checkin') for (const ms of [500, 4000, 12000]) setTimeout(() => postStatus('online', { force: true }).catch?.(() => {}), ms);
+      // One note, tried again only if Wi-Fi wasn't back yet (the free board has a daily limit).
+      if (!viewer && kind !== 'checkin') {
+        const tries = [1500, 5000, 12000];
+        const go = () => { const ms = tries.shift(); if (ms !== undefined) setTimeout(async () => { if (!(await postStatus('online', { force: true }))) go(); }, ms); };
+        go();
+      }
     },
     onSleep: async () => {
       await postStatus('sleeping');
