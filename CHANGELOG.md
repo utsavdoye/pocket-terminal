@@ -1,6 +1,6 @@
 # Changelog
 
-## Next release
+## 7.4.1 (2026-11-11)
 **Smoother on a phone: typing that doesn't wait, faster drawing, and something on screen the moment you open it.**
 
 ### New

@@ -1,6 +1,6 @@
 {
   "name": "pocket-terminal",
-  "version": "7.4.0",
+  "version": "7.4.1",
   "description": "Your computer's terminal on your phone, from anywhere, even with the lid closed. Answer AI coding agents, get notified, open localhost. Direct and end-to-end encrypted.",
   "bin": {
     "pocket-terminal": "cli.js"
