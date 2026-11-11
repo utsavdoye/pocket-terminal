@@ -1,5 +1,14 @@
 # Changelog
 
+## Next release
+**Connects on any network, for free.**
+
+- **Works on mobile data and strict Wi-Fi.** Many networks (Indian mobile data, offices, colleges) block a direct link between phone and computer, and the app fell back to the slow "Backup route" with no live terminal. Now, when the direct link doesn't open within a couple of seconds, the app carries on through Pocket Terminal's own board: the live terminal, files, local websites, everything. Every message is sealed with your pairing key, so the board can't read it. No relay service, no card, nothing to sign up for. On most home Wi-Fi it still goes direct.
+- **Faster to connect everywhere.** The phone and the computer used to wait up to 4 s each to collect their network addresses before answering. They now go as soon as the addresses that matter are known.
+- On Node 18 and 20 the computer now uses its own small WebSocket client (Node's own certificate checks).
+- Settings → About says whether the link is direct or through the relay, and Copy info includes it.
+- (Optional, for people who run their own board: it can also hand out logins for a TURN relay, Metered or Cloudflare. See board/README.md. Not needed.)
+
 ## 7.4.2 (2026-11-11)
 - **Your computer now uses Pocket Terminal's own message board too.** 7.4.1 turned it on in the phone app only; with this update the computer reads and posts there as well (ntfy.sh stays as the backup). This ends "The free message board is full for today", and pairing codes that never appeared on shared Wi-Fi. Update with `npx pocket-terminal@latest`.
 

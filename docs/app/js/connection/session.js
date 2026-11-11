@@ -10,7 +10,7 @@ import { setupUi } from '../ui/setup.js';
 import { paint } from '../ui/status.js';
 import { loadAi } from '../features/ai.js';
 import { onNoteText } from './notes.js';
-import { connect, watchLink } from './link.js';
+import { connect, watchLink, prefetchRelay } from './link.js';
 
 export function start(session) {
   const S = (state.S = session); state.keys = { key: S.key, topic: S.topic, notifyTopic: S.notifyTopic };
@@ -21,6 +21,7 @@ export function start(session) {
   if (!S.viewer) loadAi();
   state.board = new Board(boardsFor(S.boards), S.topic, onNoteText, () => paint());
   state.board.start('12h'); // read the last 12 h: Mac status, answers to old commands
+  prefetchRelay(); // the relay login, in parallel with the board
   setTimeout(() => connect(), 400);
   setInterval(paint, 1000);
   watchLink();

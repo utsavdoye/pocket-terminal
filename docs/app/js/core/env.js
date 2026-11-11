@@ -15,6 +15,8 @@ export const DEFAULT_BOARDS = OWN_BOARD ? [OWN_BOARD, NTFY] : [NTFY];
 // A pairing made before we had our own board lists only ntfy.sh: it gets ours too.
 export const boardsFor = (list) => (!Array.isArray(list) || !list.length || (list.length === 1 && list[0] === NTFY) ? DEFAULT_BOARDS : list);
 export const ICE = [{ urls: ['stun:stun.l.google.com:19302', 'stun:stun.cloudflare.com:3478'] }];
+// Our own board, if this pairing uses it (also where the relay login comes from).
+export const ownBoard = (list) => boardsFor(list).find((b) => b !== NTFY) || null;
 
 export const okBoards = (v) => { const b = (Array.isArray(v) ? v : String(v || '').split(',')).filter((u) => /^https:\/\//.test(u) || /^http:\/\/(127\.0\.0\.1|localhost)[:/]/.test(u)); return b.length ? b : null; };
 export function deviceName() {

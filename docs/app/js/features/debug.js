@@ -16,7 +16,7 @@ export function debugInfo() {
   return [
     `Pocket Terminal app ${APP_VERSION}`,
     `Computer: ${hi.v || 'not connected yet'}${hi.os ? ' on ' + hi.os : ''}, protocol ${hi.proto ?? '?'}`,
-    `Link: ${state.linkState}${state.rtt !== null ? `, ${state.rtt} ms` : ''}, retries ${state.retryN}, board ${state.board ? state.board.up.size + ' up' : 'none'}`,
+    `Link: ${state.linkState}${state.route ? ` (${state.route})` : ''}${state.rtt !== null ? `, ${state.rtt} ms` : ''}, relay login ${window.ptRelay ? 'yes' : 'no'}, retries ${state.retryN}, board ${state.board ? state.board.up.size + ' up' : 'none'}`,
     `Computer state: ${mac.state || 'unknown'}${mac.ts ? `, heard ${Math.round((Date.now() - mac.ts) / 1000)} s ago` : ''}`,
     `Computers paired: ${computers().length}`,
     `Phone: ${navigator.userAgent}`,

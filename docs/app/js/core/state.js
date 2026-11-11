@@ -9,7 +9,9 @@ export const state = {
   board: null, // the message board (this phone's private mailbox)
   term: null, fit: null, gpu: null, // the xterm terminal, its fit-to-screen addon, and the WebGL drawing (null: plain drawing)
   // the direct link
-  pc: null, dc: null, linkState: 'idle', lastAttempt: 0, offerAt: 0, answerTimer: null, openTimer: null,
+  // route: 'direct', 'relay' (a TURN relay) or 'board' (the board's pipe)
+  pipe: null, pipeTimer: null, // the link through the board's pipe, when a network blocks a direct one
+  pc: null, dc: null, route: null, linkState: 'idle', lastAttempt: 0, offerAt: 0, answerTimer: null, openTimer: null,
   lastPong: 0, pingSent: 0, rtt: null,
   ended: false, // a shared live view that has ended: stop reconnecting
   retryN: 0, retryTimer: null,

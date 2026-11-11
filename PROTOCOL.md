@@ -61,6 +61,10 @@ ntfy.sh keeps notes for 12 hours. Several boards can be listed: both sides post 
 
 Reading live notes: ntfy.sh is read as a stream (`GET /{topic}/json?since=…`). Any other board is tried over a WebSocket first (`GET /{topic}/ws?since=…`: the same JSON, one per message; the client sends `ping` every 30 s and gets `pong`), and read as a stream if it has no WebSocket. Our own board only has the WebSocket and `?poll=1`.
 
+**The pipe** (our own board only): when the direct link doesn't open within 2.5 s of the answer (or fails), the phone opens `wss://{board}/{topic}/pipe?id={pipe id}&side=phone` and posts a sealed `pipe` note `{pipe: id}`; the computer opens the same with `side=mac`. The board sends `{"pipe":"ready"}` to both when both are there, passes every other message to the other side, and sends `{"pipe":"closed"}` (then closes) when one side leaves. Each message is `seal({p: pipe id, s: 'phone'|'mac', n: 0,1,2…, d: the message as JSON text})`: a side drops anything not from the other side, for another pipe, or out of order. Over a pipe the phone asks for `z: 0` (no packed binary messages); everything else is the same as the direct link.
+
+**Relay login** (our own board only): `GET /{topic}/ice` returns `{"iceServers":[{urls, username, credential}], "ttl": seconds}` — a short-lived login for Cloudflare's TURN relay, the same for everyone using that mailbox. Port 53 addresses are left out. An empty list means the board has no relay set up. The phone adds these to its STUN servers; the computer uses the `turn:…?transport=udp` addresses. Either side can still connect directly; the relay is used when a direct link is blocked.
+
 Every note has the same envelope:
 
 | Field | Meaning |

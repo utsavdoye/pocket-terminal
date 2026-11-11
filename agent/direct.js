@@ -18,12 +18,14 @@
 //   notify.js    phone notifications and their answer buttons
 //   channel.js   the direct link to one phone (sending, output, which session it shows)
 //   messages.js  what a phone can ask for over that link
+//   pipe.js      the same link through our own board, for networks that block a direct one
 
 const { derive } = require('./lib/crypto');
 const { startMailbox } = require('./link/mailbox');
 const { startResults } = require('./link/results');
 const { startNotify } = require('./link/notify');
 const { startChannel, DEFAULT_ICE } = require('./link/channel');
+const { startPipe } = require('./link/pipe');
 
 // cfg.role: 'owner' (a paired phone: full access) or 'viewer' (a share link: watch one session, nothing else).
 // x: shared helpers from devices.js (push keys and subscriptions, share links).
@@ -38,7 +40,8 @@ function startDirect({ cfg, core, power, log, dir, x = {} }) {
   startMailbox(ctx); // board, post, saveState, readySoon, onNote
   startResults(ctx); // postStatus, deliver, applySettings
   startNotify(ctx); // notify, onAnswer
-  startChannel(ctx); // answerOffer
+  startChannel(ctx); // answerOffer, attachLink
+  startPipe(ctx); // joinPipe: the link through the board, when a network blocks a direct one
   const { viewer, peers, board, onNote, post, postStatus, saveState, notify } = ctx;
 
   // How long each step takes after a wake-up (to keep "wakes in 20 s" honest): logged, nothing private.

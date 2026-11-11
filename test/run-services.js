@@ -10,5 +10,6 @@ const { startStatic } = require('./static-server');
   // Tests read this file while it's being rewritten: write a temp file and rename it, so a reader
   // never sees it half-written (an empty read crashed a test on GitHub now and then).
   const fs = require('fs'), out = process.argv[4];
-  setInterval(() => { if (!out) return; fs.writeFileSync(out + '.tmp', JSON.stringify([...b.topics.values()].flat())); fs.renameSync(out + '.tmp', out); }, 1000);
+  setInterval(() => { if (!out) return; fs.writeFileSync(out + '.tmp', JSON.stringify([...b.topics.values()].flat())); fs.renameSync(out + '.tmp', out);
+    if (b.stats && b.stats.pipeMessages) { fs.writeFileSync(out + '.pipe.tmp', JSON.stringify(b.stats.pipeMessages)); fs.renameSync(out + '.pipe.tmp', out + '.pipe'); } }, 1000);
 })();

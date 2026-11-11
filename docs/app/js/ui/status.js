@@ -74,7 +74,7 @@ export function paint() {
       : ["This phone is offline", "Check its internet connection. It reconnects by itself.", false, [['Try again', () => { state.lastAttempt = 0; connect(); }]]];
   } else if (linkState === 'backup') {
     look = 'backup'; ring = 1; status = 'Backup route (slower)';
-    banner = ['This network blocks the direct link', "Commands still work, a few seconds slower. The live terminal needs the direct link.", true, [['Try again', () => { state.lastAttempt = 0; connect(); }]]];
+    banner = ['This network blocks the direct link', "Commands still work, a few seconds slower. Tap Try again; if it keeps happening, switch this phone between Wi-Fi and mobile data.", true, [['Try again', () => { state.lastAttempt = 0; connect(); }]]];
   } else if (mac.state === 'sleeping' && nci) {
     look = 'asleep'; ring = nci.waking ? 1 : 1 - Math.max(0, Math.min(1, (nci.at - Date.now()) / nci.every)); // the lamp line fills up towards the check-in
     const leave = pushReady() ? ' You can leave the app: your phone buzzes when it\'s ready.' : ' Turn on notifications in Settings to get a buzz when it\'s ready.';
@@ -116,6 +116,6 @@ export function paint() {
     $('batt').hidden = false; $('batt').textContent = `${p.onCharger ? '⚡' : ''}${p.percent}%`; $('batt').style.setProperty('--lvl', `${Math.max(8, Math.min(100, p.percent))}%`);
     $('batt').className = 'batt tick' + (p.onCharger ? ' charging' : p.percent < 20 ? ' low' : '');
   }
-  $('connInfo').textContent = linkState === 'direct' ? 'Direct and end-to-end encrypted' : linkState === 'backup' ? 'Backup route: encrypted notes through the message board' : 'Not connected right now';
+  $('connInfo').textContent = linkState === 'direct' ? (state.route === 'board' || state.route === 'relay' ? 'Through Pocket Terminal\'s relay (this network blocks a direct link), end-to-end encrypted' : 'Direct and end-to-end encrypted') : linkState === 'backup' ? 'Backup route: encrypted notes through the message board' : 'Not connected right now';
   paintPower(p, nci && nci.at);
 }

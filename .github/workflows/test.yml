@@ -76,5 +76,9 @@ jobs:
         run: python test/e2e_wake.py | tee out.txt && grep -q "ALL OK" out.txt
       - name: Several computers on one phone
         run: python test/e2e_computers.py | tee out.txt && grep -q "ALL OK" out.txt
+      - name: Through the board when the direct link is blocked
+        run: python test/e2e_pipe.py | tee out.txt && grep -q "ALL OK" out.txt
+      - name: Through the relay (mobile data, strict Wi-Fi)
+        run: sudo apt-get install -y -q coturn && python test/e2e_relay.py | tee out.txt && grep -q "ALL OK" out.txt
       - name: Installer scripts parse
         run: bash -n agent/install.sh && bash -n agent/install-linux.sh && bash -n agent/uninstall.sh && bash -n docs/install.sh

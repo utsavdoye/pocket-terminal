@@ -10,7 +10,7 @@ const { onMessage } = require('./messages');
 const VERSION = require('../package.json').version;
 const PROTO = 1; // bump when a message changes in a way older phones or computers can't follow (see PROTOCOL.md)
 
-const DEFAULT_ICE = ['stun:stun.l.google.com:19302', 'stun:stun.cloudflare.com:3478'];
+const { iceServers, STUN: DEFAULT_ICE } = require('../lib/ice');
 
 // Sets ctx.answerOffer. Needs ctx.post (mailbox.js).
 function startChannel(ctx) {
@@ -18,23 +18,33 @@ function startChannel(ctx) {
   const act = (ev) => { try { x.activity && x.activity(ev); } catch {} };
 
   // --- the direct link ---
-  function answerOffer(m) {
-    const pc = new ndc.PeerConnection('mac', { iceServers: cfg.iceServers || DEFAULT_ICE });
-    let answered = false, linked = false;
+  async function answerOffer(m) {
+    const t0 = Date.now();
+    const ice = await iceServers(cfg, keys.topic, log);
+    const relay = ice.some((x) => typeof x === 'object');
+    // POCKET_RELAY_ONLY=1: always through the relay (tests, and to check the relay on a network).
+    const pc = new ndc.PeerConnection('mac', { iceServers: ice, ...(relay && process.env.POCKET_RELAY_ONLY ? { iceTransportPolicy: 'relay' } : {}) });
+    let answered = false, linked = false, quick = null;
     const sendAnswer = () => {
-      if (answered) return; answered = true;
+      if (answered) return; answered = true; clearTimeout(quick);
       const d = pc.localDescription();
-      if (d) { ctx.post('answer', { oid: m.oid, sdp: d.sdp }); log(`answered offer ${m.oid}`); }
+      if (d) { ctx.post('answer', { oid: m.oid, sdp: d.sdp }); log(`answered offer ${m.oid} (${Date.now() - t0} ms${relay ? ', relay ready' : ''})`); }
     };
+    // Answer as soon as the addresses that matter are known: the relay's when we have one, else our
+    // internet address. Waiting for every last address could take 4 s or more.
+    pc.onLocalCandidate((c) => {
+      if (answered) return;
+      if (/ typ relay /.test(c) || (!relay && / typ srflx /.test(c))) { clearTimeout(quick); quick = setTimeout(sendAnswer, 120); }
+    });
     pc.onGatheringStateChange((s) => { if (s === 'complete') sendAnswer(); });
-    pc.onLocalDescription(() => setTimeout(sendAnswer, 4000)); // don't wait forever for slow STUN
+    pc.onLocalDescription(() => setTimeout(sendAnswer, relay ? 3000 : 2500)); // don't wait long for a slow address helper
     pc.onDataChannel((dc) => { linked = true; attach(pc, dc); });
     pc.onStateChange((s) => { if (s === 'failed' || s === 'closed') { try { pc.close(); } catch {} } });
     setTimeout(() => { if (!linked) { log('direct link did not open (phone may use the backup route)'); try { pc.close(); } catch {} } }, 45e3);
     try { pc.setRemoteDescription(m.sdp, 'offer'); } catch (e) { log('bad offer: ' + e.message); }
   }
 
-  function attach(pc, dc) {
+  function attach(pc, dc, how = 'directly') {
     // L: this link's state, shared with messages.js.
     const L = { dc, act, typed: 0, zOK: false, size: {}, phoneSize: null, gets: new Map(), puts: new Map() };
     const max = Math.max(16e3, Math.min(dc.maxMessageSize?.() || 65536, 200e3)) - 1024;
@@ -145,7 +155,7 @@ function startChannel(ctx) {
     const onOpen = () => {
       peers.set(send, info);
       if (!viewer) power && power.setPhoneWanting(true);
-      log(`${viewer ? 'viewer' : 'phone'} connected directly (${peers.size} open)`);
+      log(`${viewer ? 'viewer' : 'phone'} connected ${how} (${peers.size} open)`);
       act({ ev: 'connected' });
       if (ctx.since && ctx.since()) log('phone connected' + ctx.since());
       attachTimer = setTimeout(() => { bind(null); if (L.size.cols && !viewer) sess.resize(L.size.cols | 0, L.size.rows | 0); }, 1500);
@@ -168,6 +178,7 @@ function startChannel(ctx) {
   }
 
   ctx.answerOffer = answerOffer;
+  ctx.attachLink = attach; // pipe.js: the same link, through the board
 }
 
 module.exports = { startChannel, DEFAULT_ICE };

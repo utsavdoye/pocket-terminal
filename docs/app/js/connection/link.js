@@ -3,11 +3,12 @@
 
 import { randomId } from '../crypto.js';
 import { toast } from '../core/dom.js';
-import { DEMO, ICE } from '../core/env.js';
+import { DEMO, ICE, ownBoard } from '../core/env.js';
 import { state, mac } from '../core/state.js';
 import { noteSeen } from '../core/computers.js';
 import { nextWake } from '../core/schedule.js';
 import { post } from './notes.js';
+import { PipeChannel, pipeUrl } from './pipe.js';
 import { handleMsg } from './messages.js';
 import { paint, paintPing } from '../ui/status.js';
 import { openSheet } from '../ui/sheet.js';
@@ -53,11 +54,41 @@ function rebuild() {
 }
 
 // ---------- direct link ----------
-function gatherDone(p, ms) {
+// A relay (TURN) for networks that block a direct link: mobile data and strict Wi-Fi
+// put many people behind one shared address, and a direct link can't get through. The login comes
+// from our own board, lasts 12 hours, and is fetched once while the app opens (in parallel with
+// everything else). The relay only passes on traffic that is already end-to-end encrypted.
+let relay = null; // { servers, until }
+let relayAsk = null;
+export function prefetchRelay() {
+  if (relayAsk) return relayAsk;
+  const own = state.S && ownBoard(state.S.boards);
+  if (!own || (relay && relay.until > Date.now() + (relay.servers.length ? 3600e3 : 0))) return Promise.resolve();
+  const ctl = new AbortController(); const t = setTimeout(() => ctl.abort(), 2500);
+  relayAsk = fetch(`${own}/${state.S.topic}/ice`, { signal: ctl.signal }).then((r) => r.json())
+    .then((d) => { if (Array.isArray(d.iceServers)) relay = { servers: d.iceServers, until: Date.now() + (Number(d.ttl) || 0) * 1000 }; })
+    .catch(() => {}).finally(() => { clearTimeout(t); relayAsk = null; });
+  return relayAsk;
+}
+async function iceConfig() {
+  await Promise.race([prefetchRelay(), new Promise((r) => setTimeout(r, 2500))]);
+  return relay && relay.servers.length ? [...ICE, ...relay.servers] : ICE;
+}
+Object.defineProperty(window, 'ptRelay', { get: () => !!(relay && relay.servers.length) }); // for tests and Copy info
+
+// Post the offer as soon as the addresses that matter are known: the relay's when there is one,
+// otherwise this phone's internet address. Waiting for every last address took 4 s.
+function gatherDone(p, ms, withRelay) {
   return new Promise((res) => {
     if (p.iceGatheringState === 'complete') return res();
-    const t = setTimeout(res, ms);
-    p.addEventListener('icegatheringstatechange', () => { if (p.iceGatheringState === 'complete') { clearTimeout(t); res(); } });
+    let quick = null;
+    const done = () => { clearTimeout(t); clearTimeout(quick); res(); };
+    const t = setTimeout(done, ms);
+    p.addEventListener('icecandidate', (e) => {
+      const c = e.candidate && e.candidate.candidate;
+      if (c && (/ typ relay /.test(c) || (!withRelay && / typ srflx /.test(c)))) { clearTimeout(quick); quick = setTimeout(done, 150); }
+    });
+    p.addEventListener('icegatheringstatechange', () => { if (p.iceGatheringState === 'complete') done(); });
   });
 }
 export async function connect({ hello = true } = {}) {
@@ -74,16 +105,23 @@ export async function connect({ hello = true } = {}) {
   if (hello) state.helloAt = Date.now();
   const hi = hello ? post('hello').catch((e) => e) : null;
   if (hello && !state.knockAt) state.knockAt = Date.now(); // when we first knocked (to tell a missed check-in)
-  state.pc = new RTCPeerConnection({ iceServers: ICE });
+  const ice = await iceConfig();
+  if (state.dc && state.dc.readyState === 'open') return; // connected while we waited
+  const withRelay = ice.length > ICE.length;
+  // pt_relayOnly: always go through the relay (tests, and to check the relay works on a network).
+  // pt_noDirect: act as if this network blocks every direct link (tests, and to try the board's pipe).
+  let relayOnly = false, noDirect = false;
+  try { relayOnly = withRelay && localStorage.getItem('pt_relayOnly') === 'true'; noDirect = localStorage.getItem('pt_noDirect') === 'true'; } catch {}
+  state.pc = new RTCPeerConnection({ iceServers: noDirect ? [] : ice, iceTransportPolicy: relayOnly || noDirect ? 'relay' : 'all' });
   state.pc.oid = randomId(); // each attempt has its own id; only its own answer is accepted
   const ch = state.pc.createDataChannel('pt', { ordered: true });
   wire(ch);
   state.pc.onconnectionstatechange = () => {
-    if (state.pc && state.pc.connectionState === 'failed' && (!state.dc || state.dc.readyState !== 'open')) { state.linkState = 'backup'; paint(); }
+    if (state.pc && state.pc.connectionState === 'failed' && (!state.dc || state.dc.readyState !== 'open') && !tryPipe()) { state.linkState = 'backup'; paint(); }
     if (state.pc && state.pc.connectionState === 'disconnected' && state.dc && state.dc.readyState === 'open') checkLink(4000); // signal dropped or network changed
   };
   await state.pc.setLocalDescription(await state.pc.createOffer());
-  await gatherDone(state.pc, 4000);
+  await gatherDone(state.pc, withRelay ? 3000 : 2500, withRelay);
   const mine = state.pc;
   try {
     if (hi) { const e = await hi; if (e instanceof Error) throw e; }
@@ -127,18 +165,43 @@ function scheduleRetry(net = false) {
   state.retryTimer = setTimeout(() => { if (!state.dc || state.dc.readyState !== 'open') { state.lastAttempt = 0; connect(); } }, ms);
 }
 
+// The direct link didn't open (this network blocks it): carry on through the board's pipe. The
+// phone opens its side and leaves a sealed "pipe" note; the computer opens the other side.
+// Returns false when there's no pipe to try (a board without one: the slower backup route).
+export function tryPipe() {
+  if (DEMO || state.ended || (state.dc && state.dc.readyState === 'open')) return true;
+  if (state.pipe && state.pipe.readyState !== 'closed') return true; // already trying
+  const id = randomId() + randomId(), url = pipeUrl(id);
+  if (!url) return false;
+  const ch = (state.pipe = new PipeChannel(id, url));
+  wire(ch);
+  post('pipe', { pipe: id }).catch(() => ch.close());
+  return true;
+}
+
 function wire(ch) {
   ch.onopen = () => {
+    if (ch.pipe) { const pc = state.pc; state.pc = null; try { pc && pc.close(); } catch {} } // the direct try is over
+    else if (state.pipe) { try { state.pipe.close(); } catch {} state.pipe = null; } // direct opened after all
     setTimeout(() => showTour(), 1500);
-    state.dc = ch; state.linkState = 'direct'; state.knockAt = null; clearTimeout(state.answerTimer); clearTimeout(state.openTimer); clearTimeout(state.retryTimer); state.retryN = 0;
+    state.dc = ch; state.linkState = 'direct'; state.route = null; state.knockAt = null; clearTimeout(state.answerTimer); clearTimeout(state.openTimer); clearTimeout(state.retryTimer); state.retryN = 0;
     mac.state = 'online'; mac.ts = Date.now(); state.lastPong = Date.now(); if (state.S && !state.S.viewer) noteSeen(state.S.topic, mac.ts);
     lastRx = Date.now();
-    sendTerm({ t: 'attach', sid: state.SID, fresh: state.attachFresh, cols: state.term.cols, rows: state.term.rows, z: CAN_INFLATE ? 1 : 0 }); // first, before any resize
+    sendTerm({ t: 'attach', sid: state.SID, fresh: state.attachFresh, cols: state.term.cols, rows: state.term.rows, z: CAN_INFLATE && !ch.pipe ? 1 : 0 }); // first, before any resize (a pipe seals and packs every message itself)
     state.attachFresh = true;
     state.fit.fit(); sendTerm({ t: 'r', cols: state.term.cols, rows: state.term.rows });
     flushPending();
     if (state.openAgentsSoon) { state.openAgentsSoon = false; openSheet('sessions'); }
     paint();
+    // Which way it went: straight to the computer, through the relay, or through the board's pipe (Settings).
+    if (ch.pipe) { state.route = 'board'; paint(); return; }
+    const pc = state.pc;
+    setTimeout(() => pc && pc.getStats().then((st) => {
+      let pair = null; st.forEach((r) => { if (r.type === 'candidate-pair' && r.state === 'succeeded' && (r.nominated || r.selected)) pair = r; });
+      const local = pair && st.get(pair.localCandidateId), remote = pair && st.get(pair.remoteCandidateId);
+      state.route = local && remote ? (local.candidateType === 'relay' || remote.candidateType === 'relay' ? 'relay' : 'direct') : null;
+      paint();
+    }).catch(() => {}), 800);
   };
   ch.binaryType = 'arraybuffer';
   let inq = Promise.resolve(); // messages are handled strictly in order, even while one is being unpacked

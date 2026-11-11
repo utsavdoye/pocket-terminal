@@ -78,6 +78,7 @@ async function boards(cfg) {
     if (r.status === 200) ok(`Message board ${host} answers`);
     else if (r.status === 429) warn(`Message board ${host} says: too many messages today from this internet connection`, 'It resets at midnight UTC. Until then, put the phone on mobile data or the computer on another network.');
     else bad(`Message board ${host} is not reachable (${r.status || r.text})`, 'Check this computer\'s internet. If a firewall blocks ntfy.sh, phones can\'t find this computer.');
+    if (r.status === 200 && b !== 'https://ntfy.sh') ok('Networks that block a direct link (mobile data, strict Wi-Fi) go through this board');
   }
 }
 

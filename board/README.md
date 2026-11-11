@@ -24,6 +24,28 @@ node scripts/set-board.js https://pocket-terminal-board.NAME.workers.dev
 agent. Commit, push and release as usual. Phones and computers that update start using it by
 themselves; nobody has to pair again.
 
+## Networks that block a direct link
+
+Some networks block a direct link between phone and computer: Indian mobile data and many office
+and college networks put lots of people behind one shared address. When the direct link doesn't
+open within a couple of seconds, the phone and the computer each open a WebSocket to their mailbox
+here (`/{topic}/pipe`) and the board passes the terminal between them. Every message is sealed
+with the pairing key and numbered, so the board (and anyone watching it) can't read, change,
+replay or reorder anything. Nothing to set up: it's part of the board.
+
+What it uses on Cloudflare's free plan: one request per message received from the phone or the
+computer, counted 20 messages to 1 request, plus the time the mailbox is busy passing messages
+along. The free plan allows 100,000 requests and 13,000 GB-seconds a day, roughly 25 to 30 hours
+of busy relayed terminals a day across everyone. If a day's allowance runs out, those phones use
+the slower backup route until midnight UTC. With no card on the account, nothing is ever charged.
+
+### Optional: a TURN relay instead
+
+If you'd rather use a TURN relay service, the board can hand out its logins (`/{topic}/ice`):
+Metered Open Relay (free account, 20 GB a month: `npx wrangler secret put METERED_URL` with
+`https://APPNAME.metered.live/api/v1/turn/credentials?apiKey=APIKEY`) or Cloudflare Realtime
+(card needed: `TURN_KEY_ID` and `TURN_KEY_TOKEN`). Then deploy. Not needed for anything above.
+
 ## What it costs
 
 Cloudflare's free plan allows 100,000 requests a day. If a day's allowance ever runs out, the

@@ -23,19 +23,17 @@ const DEFAULT_BOARDS = OWN_BOARD ? [OWN_BOARD, NTFY] : [NTFY];
 const boardsFor = (list) => (!Array.isArray(list) || !list.length || (list.length === 1 && list[0] === NTFY) ? DEFAULT_BOARDS : list);
 const sameAsDefault = (list) => boardsFor(list).join(',') === DEFAULT_BOARDS.join(',');
 
-// A WebSocket that works on every Node we support: the built-in one (Node 22+), else the one
-// that comes with the direct-link library.
+// A WebSocket that works on every Node we support: the built-in one (Node 22+), else our own
+// small client (ws-client.js), which uses Node's https and so checks certificates as usual.
 function openSocket(url, on) {
-  if (typeof WebSocket === 'function' && process.env.POCKET_WS !== 'ndc') {
+  if (typeof WebSocket === 'function' && process.env.POCKET_WS !== 'mini') {
     const ws = new WebSocket(url);
-    ws.onopen = () => on.open(); ws.onmessage = (e) => on.message(String(e.data)); ws.onclose = () => on.close(); ws.onerror = () => { on.close(); try { ws.close(); } catch {} }; // a refused connection reports an error and may never report "closed"
-    return { send: (t) => { try { ws.readyState === 1 && ws.send(t); } catch {} }, close: () => { try { ws.close(); } catch {} } };
+    let ended = false; const close = () => { if (!ended) { ended = true; on.close(); } };
+    ws.onopen = () => on.open(); ws.onmessage = (e) => on.message(String(e.data)); ws.onclose = close;
+    ws.onerror = () => { close(); try { ws.close(); } catch {} }; // a refused connection reports an error and may never report "closed"
+    return { send: (t) => { try { ws.readyState === 1 && ws.send(t); } catch {} }, close: () => { try { ws.close(); } catch {} }, buffered: () => ws.bufferedAmount || 0 };
   }
-  const { WebSocket: W } = require('node-datachannel');
-  const ws = new W(); let done = false; const end = () => { if (!done) { done = true; on.close(); } };
-  ws.onOpen(() => on.open()); ws.onMessage((m) => on.message(String(m))); ws.onClosed(end); ws.onError(end);
-  ws.open(url);
-  return { send: (t) => { try { ws.sendMessage(t); } catch {} }, close: () => { try { ws.close(); } catch {} end(); } };
+  return require('./ws-client').connect(url, on);
 }
 
 class Board {
@@ -152,4 +150,4 @@ class Board {
   stop() { this.stopped = true; for (const c of this.streams.values()) c.abort(); this.streams.clear(); }
 }
 
-module.exports = { Board, MAX_NOTE, OWN_BOARD, DEFAULT_BOARDS, boardsFor, sameAsDefault };
+module.exports = { Board, MAX_NOTE, OWN_BOARD, DEFAULT_BOARDS, boardsFor, sameAsDefault, openSocket };

@@ -5,7 +5,7 @@
 import { seal, open, randomId } from '../crypto.js';
 import { MAX_NOTE } from '../board.js';
 import { state, mac } from '../core/state.js';
-import { connect } from './link.js';
+import { connect, tryPipe } from './link.js';
 import { paint } from '../ui/status.js';
 import { gotResult } from '../features/commands.js';
 import { setOs } from '../features/ai.js';
@@ -39,7 +39,10 @@ export async function onNoteText(text) {
   if (m.type === 'answer' && state.pc && m.oid === state.pc.oid && state.pc.signalingState === 'have-local-offer') {
     clearTimeout(state.answerTimer);
     try { await state.pc.setRemoteDescription({ type: 'answer', sdp: m.sdp }); } catch { return; }
-    clearTimeout(state.openTimer);
+    // A direct link opens within a second or two when the network allows it. Not open 2.5 s after
+    // the computer answered: this network blocks it, so carry on through the board's pipe.
+    clearTimeout(state.openTimer); clearTimeout(state.pipeTimer);
+    state.pipeTimer = setTimeout(() => { if (!state.dc || state.dc.readyState !== 'open') tryPipe(); }, 2500);
     state.openTimer = setTimeout(() => { if (!state.dc || state.dc.readyState !== 'open') { state.linkState = 'backup'; paint(); } }, 20e3);
   } else if (m.type === 'result') {
     gotResult(m.cid, m.code, m.out);
