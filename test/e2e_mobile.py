@@ -10,7 +10,7 @@ ports=json.loads(svc.stdout.readline()); BOARD=f"http://127.0.0.1:{ports['board'
 env=dict(os.environ,POCKET_HOME=S+'/home',POCKET_APP_URL=APP,SHELL='/bin/bash')
 ph.setup(R, env, 'TestMac', BOARD)
 agent=subprocess.Popen(['node','agent.js'],cwd=R+'/agent',env=dict(env,POWER_BRAIN='0'),stdout=open(S+'/agent.log','w'),stderr=subprocess.STDOUT)
-ROWS="[...document.querySelectorAll('.xterm-rows > div')].map(d=>d.textContent).join('\\n')"
+ROWS="window.ptText()"
 awake=lambda pg: 'awake' in (pg.get_attribute('#presence','class') or '')
 def wait(fn, t=20):
     t0=time.time()
@@ -72,6 +72,43 @@ try:
     check(9, 'clipboard blocked: a paste box opens', wait(lambda: pg2.is_visible('#pasteBox'), 4))
     pg2.fill('#pasteText','echo box-$((5+5))'); pg2.tap('#pasteSend'); pg2.click('#term'); pg2.keyboard.type('\n')
     check(10, 'paste box sends to the terminal', wait(lambda: 'box-10' in pg2.evaluate(ROWS), 6))
+    # 11. swipe the sheet down by its top bar to close it (a short drag springs back)
+    drag = """(d) => { const el=document.querySelector('.sheethead'), r=el.getBoundingClientRect(), x=r.left+r.width/2, y=r.top+20; const T=(yy)=>new Touch({identifier:1,target:el,clientX:x,clientY:yy});
+      el.dispatchEvent(new TouchEvent('touchstart',{touches:[T(y)],bubbles:true,cancelable:true}));
+      for (let i=1;i<=6;i++) el.dispatchEvent(new TouchEvent('touchmove',{touches:[T(y+d*i/6)],bubbles:true,cancelable:true}));
+      el.dispatchEvent(new TouchEvent('touchend',{touches:[],bubbles:true,cancelable:true})); }"""
+    shown = lambda: pg2.evaluate("document.getElementById('sheet').classList.contains('show')")
+    pg2.tap('#menuBtn'); wait(shown, 3); time.sleep(0.4)
+    pg2.evaluate(drag, 30); time.sleep(0.5); still = shown()
+    pg2.evaluate(drag, 260)
+    check(11, 'a short drag keeps the sheet; swiping it down closes it', still and wait(lambda: not shown(), 3))
+    # 12. typing ahead on a slow link: letters show at once, are confirmed by the echo, never for a password
+    print('drawing:', 'graphics chip (WebGL)' if pg2.evaluate("!!document.querySelector('#term canvas')") else 'plain')
+    pg2.evaluate("localStorage.setItem('pt_echo', JSON.stringify('always'))")
+    typ(pg2, 'clear\n'); time.sleep(1)
+    typ(pg2, 'e'); wait(lambda: pg2.evaluate("window.ptText()").rstrip().endswith('e'), 5); time.sleep(0.3)
+    agent.send_signal(signal.SIGSTOP)
+    pg2.keyboard.type('cho')
+    ahead = pg2.evaluate("window.ptAhead()"); vis = pg2.is_visible('.ahead')
+    agent.send_signal(signal.SIGCONT)
+    check(12, 'letters typed while the computer is slow show at once', ahead and ahead['text']=='cho' and vis)
+    check(13, 'and the computer\'s echo replaces them', wait(lambda: pg2.evaluate("window.ptAhead()") is None and 'echo' in pg2.evaluate(ROWS), 8) and not pg2.is_visible('.ahead'))
+    pg2.keyboard.type(' typed-$((6+6))\n'); wait(lambda: 'typed-12' in pg2.evaluate(ROWS), 6)
+    typ(pg2, 'read -s -p "Password: " pw; echo; echo got-${#pw}\n'); wait(lambda: 'Password:' in pg2.evaluate(ROWS), 6); time.sleep(0.5)
+    seen=[]
+    for ch in 'hunter2': pg2.keyboard.type(ch); seen.append(pg2.evaluate("window.ptAhead()"))
+    pg2.keyboard.type('\n')
+    check(14, 'a password is never shown ahead', not any(seen) and wait(lambda: 'got-7' in pg2.evaluate(ROWS), 6) and 'hunter2' not in pg2.evaluate(ROWS))
+    pg2.evaluate("localStorage.removeItem('pt_echo')")
+    # 15. open the app while the computer can't answer: the last screen shows at once, marked as old
+    typ(pg2, 'clear; echo keep-$((30+3))\n'); wait(lambda: 'keep-33' in pg2.evaluate(ROWS), 6); time.sleep(3.6)
+    agent.send_signal(signal.SIGSTOP)
+    pg2.close(); pg2=ctx2.new_page(); pg2.goto(APP); pg2.wait_for_selector('#app:not([hidden])')
+    check(15, 'opening the app shows the last screen at once, dimmed and marked', wait(lambda: pg2.is_visible('#staleTag') and 'keep-33' in pg2.evaluate(ROWS), 5) and 'stale' in pg2.get_attribute('#term','class'))
+    stored = pg2.evaluate("Object.keys(localStorage).filter(k=>k.startsWith('pt_screen:')).map(k=>localStorage.getItem(k)).join()")
+    check(16, 'it is kept encrypted on the phone', stored and 'keep-33' not in stored)
+    agent.send_signal(signal.SIGCONT)
+    check(17, 'the live screen replaces it when the link is up', wait(lambda: awake(pg2) and not pg2.is_visible('#staleTag'), 90) and 'stale' not in (pg2.get_attribute('#term','class') or ''))
     b.close()
 finally:
   try: agent.send_signal(signal.SIGCONT); agent.terminate()

@@ -7,7 +7,7 @@
   "scripts": {
     "start": "node agent.js",
     "pair": "node pair.js",
-    "test": "node test/schedule.test.js && node test/power.test.js && node test/windows.test.js && node test/linux.test.js && node test/webpush.test.js && node ../test/crypto-board.test.js && node ../test/sw-files.test.js",
+    "test": "node test/schedule.test.js && node test/power.test.js && node test/windows.test.js && node test/linux.test.js && node test/webpush.test.js && node test/doctor.test.js && node ../test/predict.test.js && node ../test/crypto-board.test.js && node ../test/sw-files.test.js",
     "postinstall": "node -e \"try{require('fs').chmodSync(require.resolve('node-pty/package.json').replace('package.json','prebuilds/'+process.platform+'-'+process.arch+'/spawn-helper'),0o755)}catch(e){}\""
   },
   "dependencies": {

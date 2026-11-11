@@ -194,11 +194,11 @@
       <div class="center"><button class="btn ghost small" id="clearDone">Clear finished</button></div>
     </div>
     <div class="pane" id="pane-snippets">
-      <p class="hint">Tap one to run it. They are also behind the ⚡ key on the key bar.</p>
+      <p class="hint">Tap one to run it. They are also behind the ⚡ key on the key bar. Add your own below, like <code>claude</code> to start your agent. ✎ changes one.</p>
       <div class="list" id="snips"></div>
       <form class="row2" id="sform" style="margin-top:12px">
         <input class="field-in name" id="sname" placeholder="Name" maxlength="40">
-        <input class="field-in" id="scmd" placeholder="command" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false">
+        <input class="field-in" id="scmd" placeholder="claude  (any command)" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false">
         <button class="btn">Save</button>
       </form>
     </div>
@@ -292,6 +292,8 @@
       <div class="field"><div>Text size</div><div class="seg"><button id="smaller" aria-label="Smaller text">A−</button><button id="bigger" aria-label="Bigger text">A+</button></div></div>
       <div class="field"><div>Bigger keys<small>Easier to hit on the key row</small></div><div class="seg" id="bigKeysSeg"><button data-v="false">Normal</button><button data-v="true">Big</button></div></div>
       <div class="field"><div>Vibration<small>A light tap when you press keys and buttons</small></div><div class="seg" id="hapticsSeg"><button data-v="true">On</button><button data-v="false">Off</button></div></div>
+      <div class="field"><div>Smooth drawing<small>Draws the terminal with the phone's graphics chip. Turn off if text looks wrong.</small></div><div class="seg" id="gpuSeg"><button data-v="true">On</button><button data-v="false">Off</button></div></div>
+      <div class="field"><div>Typing ahead<small>On a slow link, letters show at once (dimmed) and are checked when the computer answers. Never for passwords.</small></div><div class="seg" id="echoSeg"><button data-v="true">Auto</button><button data-v="false">Off</button></div></div>
       <div class="sub">Security</div>
       <div class="field"><div>Lock now<small>Asks for your PIN next time</small></div><button class="btn small ghost" id="lockNow">Lock</button></div>
       <div class="field"><div>Activity<small>What your phones did on this computer (never what you typed): run <code>npx pocket-terminal activity</code> there.</small></div><button class="btn small ghost" id="copyActivity">Copy</button></div>

@@ -13,7 +13,7 @@ ph.setup(R, env, 'TestMac', BOARD)
 def start_agent(extra={}):
     return subprocess.Popen(['node','agent.js'],cwd=R+'/agent',env=dict(env,POWER_SIM=R+'/agent/test/sim-mac.js',SIM_STATE=S+'/sim.json',**extra),stdout=open(S+'/agent.log','a'),stderr=subprocess.STDOUT)
 agent=start_agent(); time.sleep(1.5)
-rows="[...document.querySelectorAll('.xterm-rows > div')].map(d=>d.textContent).join('\\n').trim()"
+rows="window.ptText().trim()"
 def wait(pg, fn, t=30):
     t0=time.time()
     while time.time()-t0<t:

@@ -26,7 +26,7 @@ try:
         pg.goto(APP + '#demo'); pg.reload(); wait(pg, "document.querySelector('#status').textContent.includes('Live')", 8000)
         check(2, 'demo opens live without pairing', True)
         pg.click('#term'); pg.keyboard.type('git status\n'); pg.wait_for_timeout(400)
-        txt = pg.evaluate("document.querySelector('#term .xterm-rows').innerText")
+        txt = pg.evaluate("window.ptText()")
         check(3, 'pretend shell answers', 'On branch main' in txt)
         pg.click('#menuBtn'); pg.click('[data-tab=queue]'); pg.fill('#qcmd', 'uptime'); pg.click('#qform button')
         wait(pg, "document.querySelector('#jobs .job .tag').textContent === 'done'", 5000)

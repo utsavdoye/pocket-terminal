@@ -104,7 +104,7 @@ try:
     check(10, 'after waking it connects in a few seconds', m and float(m[0])<6 and m[0]+' s')
     pg=ctx.new_page(); pg.on('pageerror', lambda e: errs.append(str(e))); pg.goto(APP); wait(lambda: awake(pg), 60)
     pg.click('#term'); pg.keyboard.type('echo woke-$((40+2))\n')
-    check(7, 'the terminal works after all that', wait(lambda: 'woke-42' in pg.evaluate("[...document.querySelectorAll('.xterm-rows > div')].map(d=>d.textContent).join('\\n')"), 10))
+    check(7, 'the terminal works after all that', wait(lambda: 'woke-42' in pg.evaluate("window.ptText()"), 10))
     check(11, 'no page errors', not errs)
     if not ok: L=open(S+'/agent.log').read()[-3000:]; print(L); ph.ci(L,'agent log')
     print('ALL OK' if ok else 'FAILED')

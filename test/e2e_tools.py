@@ -23,7 +23,7 @@ pushed=[]; threading.Thread(target=lambda: [pushed.append(json.loads(l)) for l i
 env=dict(os.environ,POCKET_HOME=S+'/home',POCKET_APP_URL=APP,SHELL='/bin/bash')
 ph.setup(R, env, 'TestMac', BOARD)
 agent=subprocess.Popen(['node','agent.js'],cwd=R+'/agent',env=dict(env,POWER_BRAIN='0',HOME=S+'/u',POCKET_PUSH_TEST='1'),stdout=open(S+'/agent.log','w'),stderr=subprocess.STDOUT)
-ROWS="[...document.querySelectorAll('.xterm-rows > div')].map(d=>d.textContent).join('\\n')"
+ROWS="window.ptText()"
 awake=lambda pg: 'awake' in (pg.get_attribute('#presence','class') or '')
 def wait(fn, t=20):
     t0=time.time()
@@ -148,9 +148,10 @@ try:
     check('12p', 'your words reach the terminal', wait(lambda: 'said-use the blue button' in pg.evaluate(ROWS).replace('\u00a0',' '), 8))
 
     # 4f. When a program finishes: what changed, and the full change list.
-    chg_sid=ask_in_background('cd ~/repo && python3 -c "import time;time.sleep(22);open(\'tracked.txt\',\'a\').write(\'two\\n\')"\n')
+    chg_sid=ask_in_background('cd ~/repo && python3 -c "import time;time.sleep(22);open(\'tracked.txt\',\'a\').write(\'two\\n\');print(\'built-ok-\'+str(3+4))"\n')
     gotd=wait(lambda: [x for x in pushed if x.get('ok') and 'finished' in x['msg'].get('title','') and x['msg'].get('sid')==chg_sid], 45)
     check('12q', 'the "finished" notification says what changed', gotd and '1 file changed (+1 −0)' in gotd[-1]['msg']['body'])
+    check('12q2', 'and shows the last lines it printed (not the prompt)', gotd and 'built-ok-7' in gotd[-1]['msg']['body'] and '$' not in gotd[-1]['msg']['body'].split('\n')[-1])
     ph.nav(pg,'sessions'); time.sleep(1.2)
     check('12r', 'the dashboard shows it finished with its changes', wait(lambda: '1 file changed' in pg.inner_text('#sessList'), 8))
     pg.click(f'[data-diff="{chg_sid}"]')
@@ -164,7 +165,7 @@ try:
     pg.click('#fileList >> text=hello.txt')
     check('13a', 'tapping a file asks what to do, showing its path', wait(lambda: pg.is_visible('#fileAct') and pg.inner_text('#faPath').endswith('hello.txt'), 5))
     typed = pg.inner_text('#faPath'); pg.click('#faPut')
-    check('13b', 'put its path in the terminal (typed, not run)', wait(lambda: pg.is_hidden('#fileAct') and pg.is_hidden('#sheet .panel') or True, 2) and wait(lambda: typed in pg.inner_text('.xterm-rows').replace('\xa0', ' '), 8))
+    check('13b', 'put its path in the terminal (typed, not run)', wait(lambda: pg.is_hidden('#fileAct') and pg.is_hidden('#sheet .panel') or True, 2) and wait(lambda: typed in pg.evaluate('window.ptText()'), 8))
     pg.click('#term'); pg.keyboard.press('Control+U'); time.sleep(0.3)
     ph.nav(pg,'files'); wait(lambda: 'hello.txt' in pg.inner_text('#fileList'), 8)
     pg.click('#fileList >> text=hello.txt'); wait(lambda: pg.is_visible('#faGet'), 5); pg.click('#faGet')

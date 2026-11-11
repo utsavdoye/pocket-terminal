@@ -1,5 +1,18 @@
 # Changelog
 
+## Next release
+**Smoother on a phone: typing that doesn't wait, faster drawing, and something on screen the moment you open it.**
+
+### New
+- **Typing ahead on a slow link.** On weak mobile data each letter used to wait for the computer to send it back. Letters now show at once (dimmed) and are checked when the computer answers. It only turns on when the link is slow, it never shows a password (nothing is drawn until the computer has echoed a letter), and Settings → Typing ahead turns it off.
+- **Smoother drawing.** The terminal is drawn with the phone's graphics chip, so long agent output and scrolling stay smooth. If a phone can't do it, it quietly uses the old drawing. Settings → Smooth drawing turns it off.
+- **Something to look at right away.** Opening the app shows the screen from last time (dimmed, marked "From last time") while it connects, then swaps in the live one. It is kept on your phone only, encrypted with the pairing key.
+- **`npx pocket-terminal doctor`** checks the setup (version, agent running, phones paired, message board, direct link, notifications, wake-up alarms, recent problems in the log) and prints a report to paste into a bug report. No keys, phone names or folder names are in it.
+- **"Finished" notifications show the last lines** the program printed (never the prompt, and never a line that looks like a password, key or token).
+- **Swipe a sheet down** by its top bar to close it.
+- **Saved commands can be changed** (✎), and new phones start with Git status, Git pull, Run tests and Disk space.
+- When connecting takes longer than usual, the app says so and how long it can take; after a drop it says "Reconnecting…".
+
 ## 7.4.0 (2026-11-09)
 **Several computers, a laptop that wakes when the app says, and a cleaner app.**
 

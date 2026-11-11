@@ -14,7 +14,7 @@ pushed=[]; threading.Thread(target=lambda: [pushed.append(json.loads(l)) for l i
 env=dict(os.environ,POCKET_HOME=S+'/home',POCKET_APP_URL=APP,SHELL='/bin/bash')
 ph.setup(R, env, 'TestMac', BOARD)
 agent=subprocess.Popen(['node','agent.js'],cwd=R+'/agent',env=dict(env,POWER_BRAIN='0',HOME=S+'/u',POCKET_PUSH_TEST='1',POCKET_READY_AFTER_MS='4000'),stdout=open(S+'/agent.log','w'),stderr=subprocess.STDOUT)
-ROWS="[...document.querySelectorAll('.xterm-rows > div')].map(d=>d.textContent).join('\\n')"
+ROWS="window.ptText()"
 awake=lambda pg: 'awake' in (pg.get_attribute('#presence','class') or '')
 def wait(fn, t=20):
     t0=time.time()

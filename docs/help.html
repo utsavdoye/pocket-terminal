@@ -67,6 +67,7 @@ sudo pacman -S --needed base-devel python         # Arch</code></pre>
   <h3>It says "Waiting for …"</h3>
   <ul>
     <li>Check the computer is on and online. Asleep is fine; it wakes by itself and connects. The app shows when ("wakes up in 14s").</li>
+    <li>Run <code>npx pocket-terminal doctor</code> on the computer. It checks everything (is it running, can it reach the message board, does this network allow a direct link) and says what to fix.</li>
     <li>Check the program is running: <code>npx pocket-terminal logs</code> should show recent lines.</li>
     <li>Restart it: Mac <code>launchctl kickstart -k gui/$(id -u)/com.pocketterminal.agent</code> · Linux <code>systemctl --user restart pocket-terminal</code> · Windows: run the install line again.</li>
     <li>Removed this phone on the computer? In the app, open ⋯ → Settings → Unpair, and pair again.</li>

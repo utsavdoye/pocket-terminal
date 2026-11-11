@@ -13,7 +13,7 @@ for name in ['Laptop','Desktop']:
     env=dict(os.environ,POCKET_HOME=h+'/home',POCKET_APP_URL=APP,SHELL='/bin/bash'); envs[name]=env
     ph.setup(R, env, name, BOARD)
     agents.append(subprocess.Popen(['node','agent.js'],cwd=R+'/agent',env=dict(env,POWER_BRAIN='0',HOME=h+'/u'),stdout=open(h+'/agent.log','w'),stderr=subprocess.STDOUT))
-ROWS="[...document.querySelectorAll('.xterm-rows > div')].map(d=>d.textContent).join('\\n')"
+ROWS="window.ptText()"
 awake=lambda pg: 'awake' in (pg.get_attribute('#presence','class') or '')
 def wait(fn, t=20):
     t0=time.time()

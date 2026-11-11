@@ -61,6 +61,7 @@
 }
 
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+button, a, label, summary { touch-action: manipulation; } /* a tap acts at once: no wait for a possible double-tap */
 html, body { margin: 0; height: 100%; background: var(--bg); color: var(--text); font: 15px/1.45 var(--sans); overflow: hidden; overscroll-behavior: none; -webkit-font-smoothing: antialiased; }
 body { position: fixed; inset: 0; transition: background-color .3s; }
 ::selection { background: var(--lamp-glow); }
@@ -162,6 +163,14 @@ select.field-in { appearance: none; -webkit-appearance: none; }
 /* the terminal panel and its lamp line */
 #term { flex: 1; min-height: 0; overflow: hidden; margin: 0 8px; padding: 14px 6px 0 12px; position: relative; background: var(--panel); border-radius: 16px; box-shadow: inset 0 0 0 1px var(--line), var(--shadow-1); touch-action: none; transition: background-color .3s; }
 #term .xterm-viewport { background: transparent !important; }
+/* the screen from last time, shown while the link comes up */
+#term.stale .xterm-screen { opacity: .55; transition: opacity .25s; }
+.stale-tag { position: absolute; right: 10px; top: 10px; z-index: 4; padding: 3px 9px; border-radius: 999px; font: 500 11.5px var(--sans); color: var(--muted, var(--faint)); background: var(--raised); box-shadow: inset 0 0 0 1px var(--line); pointer-events: none; animation: fadein .2s ease both; }
+/* letters typed ahead of a slow link, until the computer's echo arrives */
+.ahead { position: absolute; z-index: 5; display: flex; white-space: pre; pointer-events: none; }
+.ahead[hidden] { display: none; }
+.ahead span { display: inline-block; text-align: center; opacity: .6; }
+.ahead i { display: inline-block; opacity: .75; }
 .lamp { position: absolute; left: 0; right: 0; top: 0; height: 2px; background: var(--line); z-index: 3; }
 .lamp i { position: absolute; left: 0; top: 0; bottom: 0; width: 100%; transform-origin: left; transform: scaleX(0); background: var(--lamp); transition: transform .9s linear; }
 .lamp::after { content: ''; position: absolute; left: 0; right: 0; top: 2px; height: 36px; background: linear-gradient(var(--lamp-glow), transparent); opacity: 0; transition: opacity .6s; pointer-events: none; }

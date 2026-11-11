@@ -7,7 +7,7 @@ export const state = {
   S: null, // the open session: key, topics, boards, computer name (viewer: true for a shared live view)
   keys: null, // { key, topic, notifyTopic } for sealing and opening notes
   board: null, // the message board (this phone's private mailbox)
-  term: null, fit: null, // the xterm terminal and its fit-to-screen addon
+  term: null, fit: null, gpu: null, // the xterm terminal, its fit-to-screen addon, and the WebGL drawing (null: plain drawing)
   // the direct link
   pc: null, dc: null, linkState: 'idle', lastAttempt: 0, offerAt: 0, answerTimer: null, openTimer: null,
   lastPong: 0, pingSent: 0, rtt: null,

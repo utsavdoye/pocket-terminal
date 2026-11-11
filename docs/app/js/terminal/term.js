@@ -8,6 +8,8 @@ import { sendTerm } from '../connection/link.js';
 import { viewerSize } from '../features/viewer.js';
 import { input } from './input.js';
 import { KEYS, applyMods } from './keyrow.js';
+import { setupPredict } from './predict.js';
+import { showLastScreen, keepLastScreen } from './last-screen.js';
 
 // ---------- terminal ----------
 const TERM_THEMES = {
@@ -26,6 +28,10 @@ export function setupTerminal() {
     theme: termTheme() }));
   document.addEventListener('pt-theme', () => { term.options.theme = termTheme(); });
   state.fit = new FitAddon.FitAddon(); term.loadAddon(state.fit); term.open($('term')); setupTouchScroll();
+  useGpu(term);
+  // For tests and bug reports: the text on screen, whichever way it is drawn.
+  window.ptText = () => { const b = term.buffer.active, out = []; for (let y = b.viewportY; y < b.viewportY + term.rows; y++) { const l = b.getLine(y); out.push(l ? l.translateToString(true) : ''); } return out.join('\n'); };
+  if (!state.S.viewer) { setupPredict(term); showLastScreen(term); keepLastScreen(term); }
   if (state.S.viewer) { term.options.disableStdin = true; term.options.cursorBlink = false; state.fit = { fit: () => viewerSize() }; }
   term.onData((d) => input(applyMods(d)));
   // Holding delete on a phone keyboard: some keyboards send only "delete" events (no key press)
@@ -60,13 +66,49 @@ export function setupTerminal() {
   document.addEventListener('focusout', () => setTimeout(() => { if (!document.activeElement || document.activeElement === document.body) { window.scrollTo(0, 0); layout(); } }, 50));
 }
 
+// The size of one character cell on screen, in CSS pixels.
+export function cellSize(term = state.term) {
+  try { const c = term._core._renderService.dimensions.css.cell; if (c.width && c.height) return { w: c.width, h: c.height }; } catch {}
+  const sc = $('term').querySelector('.xterm-screen');
+  return { w: sc && term.cols ? sc.clientWidth / term.cols : term.options.fontSize * 0.6, h: sc && term.rows ? sc.clientHeight / term.rows : term.options.fontSize * 1.2 };
+}
+
+// Draw the terminal with the phone's graphics chip (WebGL) instead of thousands of page
+// elements: long agent output and scrolling stay smooth. It loads after the terminal is up, and
+// if the phone can't do it (or takes the graphics away while the app is in the background) the
+// terminal carries on with the plain drawing. Settings → Smooth drawing turns it off.
+function useGpu(term) {
+  if (store.get('gpu') === false || !window.WebGL2RenderingContext) return;
+  const s = document.createElement('script'); s.src = 'vendor/addon-webgl.js'; s.async = true;
+  s.onload = () => {
+    try {
+      const gl = new WebglAddon.WebglAddon();
+      gl.onContextLoss(() => { try { gl.dispose(); } catch {} state.gpu = null; });
+      term.loadAddon(gl); state.gpu = gl;
+      // Safety net: if its drawing surface didn't come out at the screen's real sharpness (seen
+      // in browser tools that only pretend to be a sharp phone screen), the text would be blank
+      // or blurry. Go back to the plain drawing instead.
+      const sane = () => {
+        if (!state.gpu) return;
+        try {
+          const c = term.element.querySelector('.xterm-screen canvas:not(.xterm-link-layer)'), want = term._core._renderService.dimensions.device.canvas.width;
+          if (c && want && c.width < want * 0.9) { state.gpu.dispose(); state.gpu = null; }
+        } catch {}
+      };
+      setTimeout(sane, 400); term.onResize(() => setTimeout(sane, 400));
+      if (document.fonts) document.fonts.ready.then(() => { try { state.gpu && state.gpu.clearTextureAtlas(); } catch {} }); // redraw letters in the terminal font once it has loaded
+    } catch { state.gpu = null; }
+  };
+  document.head.appendChild(s);
+}
+
 // Swipe up/down on the terminal scrolls only the terminal (never the page). In full-screen
 // programs (nano, less, top) a swipe sends arrow keys instead. Swipe left/right: the next or
 // previous terminal (agents.js listens for 'pt-swipe').
 function setupTouchScroll() {
   const term = state.term;
   const el = $('term'); let ty = null, acc = 0, x0 = 0, y0 = 0, axis = null, dx = 0;
-  const lineH = () => { const r = el.querySelector('.xterm-rows > div'); return (r && r.offsetHeight) || term.options.fontSize * 1.2; };
+  const lineH = () => cellSize(term).h;
   el.addEventListener('touchstart', (e) => {
     ty = e.touches.length === 1 ? e.touches[0].clientY : null; acc = 0; axis = null; dx = 0;
     if (ty !== null) { x0 = e.touches[0].clientX; y0 = ty; }

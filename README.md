@@ -128,6 +128,7 @@ The phone app handles your key, so the most careful setup hosts your own copy: f
 | `npx pocket-terminal remove 2` | Lock a phone out (number, name or `all`) |
 | `npx pocket-terminal activity` | What your phones did here: connected, files, answers (never what you typed) |
 | `npx pocket-terminal logs` | Follow the agent's log |
+| `npx pocket-terminal doctor` | Something not working? Checks the setup and prints a report for a bug report (no keys or names in it) |
 | `npx pocket-terminal uninstall` | Remove it (`--purge` also deletes the pairing key) |
 
 ## How it works

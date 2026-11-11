@@ -42,13 +42,14 @@ export function until(t) {
   const m = Math.floor(s / 60); return m ? `${m}:${String(s % 60).padStart(2, '0')}` : `${s}s`;
 }
 
-let wasLive = false;
+let wasLive = false, everLive = false, connectingSince = 0;
 export function paint() {
   if (!state.term) return;
   const { linkState, S } = state;
   const live = linkState === 'direct';
   if (live && !wasLive) { const a = $('app'); a.classList.remove('ignite'); void a.offsetWidth; a.classList.add('ignite'); setTimeout(() => a.classList.remove('ignite'), 1300); }
-  wasLive = live;
+  wasLive = live; if (live) everLive = true;
+  connectingSince = linkState === 'connecting' ? connectingSince || Date.now() : 0;
   const name = mac.name || 'your computer';
   const p = state.livePower || mac.power;
   const nci = nextCheckIn();
@@ -57,7 +58,11 @@ export function paint() {
   const queuedText = queued ? ` ${queued} command${queued > 1 ? 's' : ''} will run then.` : '';
   if (linkState === 'ended') { status = 'Live view ended'; }
   else if (linkState === 'direct') { look = 'awake'; ring = 1; status = S.viewer ? 'Live · view only' : DEMO ? 'Live · demo' : 'Live · encrypted'; }
-  else if (linkState === 'connecting' && !(mac.state === 'sleeping' && nci)) { look = 'connecting'; ring = 0.25; status = 'Connecting…'; }
+  else if (linkState === 'connecting' && !(mac.state === 'sleeping' && nci)) {
+    look = 'connecting'; ring = 0.25; status = everLive ? 'Reconnecting…' : 'Connecting…';
+    // Slower than usual (a weak signal): say what is happening and how long it can take.
+    if (Date.now() - connectingSince > 7e3) banner = [everLive ? `Reconnecting to ${name}` : `Still connecting to ${name}`, 'This usually takes 3 to 5 seconds. On a weak signal it can take up to 20. It keeps trying by itself' + (S.viewer ? '.' : ', and anything you type is sent as soon as it’s back.'), false, []];
+  }
   else if (linkState === 'boardfull') {
     look = 'off'; status = 'Message board full today';
     banner = ['The free message board is full for today', `Your phone finds ${name} through a free public board, and this internet connection used up today's messages (it resets at ${new Date(Date.UTC(new Date().getUTCFullYear(), new Date().getUTCMonth(), new Date().getUTCDate() + 1)).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}). To connect now, put this phone on mobile data, or ${name} on a different network (like your phone's hotspot).`, false, [['Try again', () => { state.boardFullUntil = 0; state.lastAttempt = 0; connect(); }]]];

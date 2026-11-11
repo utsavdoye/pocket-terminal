@@ -35,7 +35,7 @@ try:
     agent.send_signal(signal.SIGCONT); t0=time.time()  # the wake alarm fires
     check(3, 'reconnects by itself after the Mac wakes (no taps)', wait(lambda: awake(pg), 150) and f'{time.time()-t0:.0f}s after waking')
     pg.click('#term'); pg.keyboard.type('echo auto-$((40+2))\n')
-    check(4, 'terminal works after the auto-reconnect', wait(lambda: 'auto-42' in pg.evaluate("[...document.querySelectorAll('.xterm-rows > div')].map(d=>d.textContent).join('\\\\n')").split('echo')[-1], 10))
+    check(4, 'terminal works after the auto-reconnect', wait(lambda: 'auto-42' in pg.evaluate("window.ptText()").split('echo')[-1], 10))
     b.close()
 finally:
   try: agent.send_signal(signal.SIGCONT); agent.terminate()

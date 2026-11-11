@@ -18,6 +18,16 @@ const ASKS = [
 ];
 const asksForInput = (tail) => ASKS.some((r) => r.test(tail));
 const lastLine = (tail) => tail.split('\n').map((l) => l.trim()).filter(Boolean).slice(-1)[0] || '';
+// The last few lines a program printed, for its "finished" notification (which can show on a
+// locked phone): without the shell prompt that follows it, and without anything that looks
+// like a password, key or token.
+const PROMPT = /^\S*[$%#>❯➜»]\s*$|^[\w.-]+@[\w.-]+.*[$%#>]\s*$|^(?:PS )?[A-Z]:\\.*>\s*$|^[➜❯]\s/;
+const SECRET = /(?:pass(?:word|phrase)?|secret|token|api[_-]?key|bearer|private[_ -]?key)\b[^\n]{0,20}[:=]|-----BEGIN|\b(?:sk|pk|ghp|gho|xox[abp])[-_][A-Za-z0-9_-]{12,}/i;
+function lastLines(tail, n = 3) {
+  const ls = String(tail || '').split('\n').map((l) => l.trim()).filter(Boolean);
+  while (ls.length && PROMPT.test(ls[ls.length - 1])) ls.pop();
+  return ls.slice(-n).filter((l) => !SECRET.test(l)).map((l) => (l.length > 90 ? l.slice(0, 89) + '…' : l));
+}
 // The line that asks (has a "?", [y/N], "password:"…), else the last line.
 const question = (tail) => { const ls = tail.split('\n').map((l) => l.trim()).filter(Boolean); return [...ls].reverse().find((l) => /\?|\[y\/n\]|\(y\/n\)|password|passphrase|press (enter|return|any key)/i.test(l)) || ls.slice(-1)[0] || ''; };
 const isMenu = (tail) => /(?:^|\n)\s*(?:❯|›|>)?\s*1\.\s+\S[\s\S]*\n\s*2\.\s+\S/.test(tail);
@@ -49,4 +59,4 @@ function choicesFor(text, menu) {
   return [];
 }
 
-module.exports = { plain, asksForInput, lastLine, question, isMenu, DEFAULT_AUTO, autoDecision, choicesFor };
+module.exports = { plain, asksForInput, lastLine, lastLines, question, isMenu, DEFAULT_AUTO, autoDecision, choicesFor };

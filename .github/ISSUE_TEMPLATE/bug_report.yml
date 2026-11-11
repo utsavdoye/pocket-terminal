@@ -36,6 +36,6 @@ body:
   - type: textarea
     id: log
     attributes:
-      label: Last lines of the log
-      description: "Output of: tail -30 ~/.pocket-terminal/agent.log (it never contains your commands)"
+      label: Doctor report
+      description: "Run on the computer: npx pocket-terminal doctor   and paste the part between the ``` lines (no keys, phone names or folder names are in it)"
       render: text

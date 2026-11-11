@@ -56,7 +56,7 @@ export function switchTo(topic) {
 // Forget one computer on this phone. Returns the one now in use (or null if none is left).
 export async function removeComputer(topic) {
   const list = stash(computers()).filter((c) => c.topic !== topic);
-  await forgetSession(topic); save(list);
+  await forgetSession(topic); save(list); store.del('screen:' + topic); // its saved last screen goes too
   if (same(active(), { topic })) {
     if (list.length) bring(list[list.length - 1]);
     else { store.del('vault'); for (const k of OWN) store.del(k); }

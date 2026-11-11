@@ -11,7 +11,7 @@ env=dict(os.environ,POCKET_HOME=S+'/home',POCKET_APP_URL=APP)
 ph.setup(R, env, 'TestMac', BOARD)
 
 agent=subprocess.Popen(['node','agent.js'],cwd=R+'/agent',env=dict(env,POWER_SIM=R+'/agent/test/sim-mac.js',SIM_STATE=S+'/sim.json'),stdout=open(S+'/agent.log','a'),stderr=subprocess.STDOUT)
-rows="[...document.querySelectorAll('.xterm-rows > div')].map(d=>d.textContent).join('\\n')"
+rows="window.ptText()"
 def wait(fn, t=20):
     t0=time.time()
     while time.time()-t0<t:
@@ -46,6 +46,7 @@ try:
     pg.click('#askBtn'); pg.fill('#askIn','find big files')
     check(3, 'built-in match for "find big files"', wait(lambda: pg.input_value('#askLib .sug .cmdedit').startswith('du -ah'), 5))
     pg.fill('#askIn','git sta'); check(4, 'half-remembered "git sta"', wait(lambda: 'git' in pg.input_value('#askLib .sug .cmdedit') and pg.input_value('#askLib .sug .cmdedit'), 5))
+    pg.fill('#askIn','make a folder'); wait(lambda: '<folder>' in pg.input_value('#askLib .sug .cmdedit'), 5) # a match with a blank to fill in
     pg.click('#askLib .sug [data-act=run]'); check(5, 'placeholder must be filled', wait(lambda: 'Fill in' in pg.inner_text('#toast') and pg.inner_text('#toast'), 3))
     pg.fill('#askIn','say hi with a number'); pg.click('#askGo')
     check(6, 'no key yet → sent to Settings', wait(lambda: not pg.is_hidden('#aiForm'), 3))

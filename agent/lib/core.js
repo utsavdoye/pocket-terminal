@@ -11,7 +11,7 @@ const path = require('path');
 const { EventEmitter } = require('events');
 const { spawn, execFile } = require('child_process');
 const pty = require('node-pty');
-const { plain, asksForInput, lastLine, question, isMenu, DEFAULT_AUTO, autoDecision, choicesFor } = require('./rules');
+const { plain, asksForInput, lastLine, lastLines, question, isMenu, DEFAULT_AUTO, autoDecision, choicesFor } = require('./rules');
 const { gitChanges, gitDiff } = require('./git');
 const { outsideAgents } = require('./outside');
 
@@ -114,7 +114,8 @@ function createCore({ log, power, dir }) {
       if (was && !p && Date.now() - since > 20e3) {
         s.done = { program: was, at: Date.now(), seconds: Math.round((Date.now() - since) / 1000), changes: null };
         const d = s.done;
-        changesIn(s, (ch) => { d.changes = ch; emit(s, 'done', { program: was, seconds: d.seconds, changes: ch }); });
+        const last = lastLines(s.tail); // what it printed at the end, for the "finished" notification
+        changesIn(s, (ch) => { d.changes = ch; emit(s, 'done', { program: was, seconds: d.seconds, changes: ch, last }); });
       }
     }
     busyChanged();

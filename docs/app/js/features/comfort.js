@@ -1,5 +1,5 @@
 // Look-and-feel settings that are about your hands, not the computer: bigger keys and
-// vibration (on by default). Text size lives with the terminal (term.js); turning the phone
+// vibration (on by default), drawing with the graphics chip, and typing ahead on a slow link. Text size lives with the terminal (term.js); turning the phone
 // sideways just works (the terminal refits).
 
 import { $ } from '../core/dom.js';
@@ -21,4 +21,6 @@ export function setupComfort(relayout) {
   };
   seg('bigKeysSeg', 'bigKeys', false, (on) => { document.body.classList.toggle('bigkeys', on); relayout(); });
   seg('hapticsSeg', 'haptics', true, (on) => { if (on) location.reload(); else applyComfort(); });
+  seg('gpuSeg', 'gpu', true, () => location.reload()); // the terminal picks its drawing when it starts
+  seg('echoSeg', 'echo', true, () => {});
 }

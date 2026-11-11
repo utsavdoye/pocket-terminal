@@ -9,6 +9,7 @@
 //   npx pocket-terminal claude on  Claude Code's permission questions reach your phone when you're away
 //   npx pocket-terminal activity   what your phones did here (connected, files, answers…)
 //   npx pocket-terminal logs       what the agent is doing
+//   npx pocket-terminal doctor     check the setup; prints a report for a bug report
 //   npx pocket-terminal uninstall  remove it (add --purge to delete the pairing key too)
 //
 // npx keeps its copy in a cache that gets cleaned up, so the agent is copied to
@@ -139,6 +140,7 @@ switch (cmd) {
     process.exit(WIN ? run('powershell.exe', ['-NoProfile', '-Command', `Get-Content -Wait -Tail 40 '${log}'`]) : run('tail', ['-n', '40', '-f', log]));
     break;
   }
+  case 'doctor': process.exit(run(process.execPath, [path.join(__dirname, 'agent', 'doctor.js')])); break; // works before (and without) an install
   case 'uninstall': need(); process.exit(WIN
     ? run('powershell.exe', ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', path.join(AGENT, 'uninstall.ps1'), ...(rest.includes('--purge') ? ['-Purge'] : [])])
     : run('bash', [path.join(AGENT, 'uninstall.sh'), ...rest]));
@@ -155,5 +157,6 @@ switch (cmd) {
   npx pocket-terminal remove N   lock a phone out (number, name or "all")
   npx pocket-terminal activity   what your phones did here
   npx pocket-terminal logs       what it's doing
+  npx pocket-terminal doctor     something not working? check the setup
   npx pocket-terminal uninstall  remove it (--purge also deletes the pairing key)`);
 }
