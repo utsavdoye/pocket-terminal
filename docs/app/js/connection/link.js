@@ -112,7 +112,9 @@ export async function connect({ hello = true } = {}) {
   // pt_noDirect: act as if this network blocks every direct link (tests, and to try the board's pipe).
   let relayOnly = false, noDirect = false;
   try { relayOnly = withRelay && localStorage.getItem('pt_relayOnly') === 'true'; noDirect = localStorage.getItem('pt_noDirect') === 'true'; } catch {}
-  state.pc = new RTCPeerConnection({ iceServers: noDirect ? [] : ice, iceTransportPolicy: relayOnly || noDirect ? 'relay' : 'all' });
+  // A browser without direct links (WebRTC turned off, some locked-down phones): straight to the pipe.
+  try { state.pc = new RTCPeerConnection({ iceServers: noDirect ? [] : ice, iceTransportPolicy: relayOnly || noDirect ? 'relay' : 'all' }); }
+  catch { state.pc = null; if (hi) await hi; if (!tryPipe()) { state.linkState = 'backup'; paint(); } return; }
   state.pc.oid = randomId(); // each attempt has its own id; only its own answer is accepted
   const ch = state.pc.createDataChannel('pt', { ordered: true });
   wire(ch);

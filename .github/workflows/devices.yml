@@ -1,0 +1,50 @@
+name: Devices
+
+# The whole phone-to-computer flow on real Mac and Windows computers, with the phone as an
+# iPhone (Safari's engine, WebKit) and as an Android phone (Chrome): pair, connect directly, then
+# the same with every direct link blocked (as on Indian mobile data), through our own board.
+# Also runs by hand: Actions tab → Devices → Run workflow.
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  devices:
+    name: ${{ matrix.computer }} computer + ${{ matrix.phone }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 25
+    # GitHub's free macOS machines are sometimes too busy to start a job at all; that says
+    # nothing about the code, so it shouldn't turn the run red.
+    continue-on-error: ${{ matrix.os == 'macos-latest' }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { os: macos-latest, computer: Mac, phone: iPhone (Safari engine), browser: webkit }
+          - { os: macos-latest, computer: Mac, phone: Android (Chrome), browser: chromium }
+          - { os: windows-latest, computer: Windows, phone: Android (Chrome), browser: chromium }
+          - { os: windows-latest, computer: Windows, phone: iPhone (Safari engine), browser: webkit }
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: agent/package-lock.json
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.12'
+      - run: npm ci --no-fund --no-audit
+        working-directory: agent
+      - run: pip install playwright==1.47.0 && python -m playwright install ${{ matrix.browser }}
+      - name: Pair, connect, then the same with direct links blocked
+        shell: bash
+        env:
+          PT_BROWSER: ${{ matrix.browser }}
+          PYTHONIOENCODING: utf-8
+        run: python test/e2e_pipe.py | tee out.txt && grep -q "ALL OK" out.txt
