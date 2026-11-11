@@ -1,6 +1,6 @@
 # Changelog
 
-## Next release
+## 7.4.2 (2026-11-11)
 - **Your computer now uses Pocket Terminal's own message board too.** 7.4.1 turned it on in the phone app only; with this update the computer reads and posts there as well (ntfy.sh stays as the backup). This ends "The free message board is full for today", and pairing codes that never appeared on shared Wi-Fi. Update with `npx pocket-terminal@latest`.
 
 ## 7.4.1 (2026-11-11)
