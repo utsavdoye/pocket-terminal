@@ -9,7 +9,7 @@ export const DEMO = location.hash === '#demo';
 export const VIEW = /(^#|&)watch=/.test(location.hash);
 // The boards. Ours first (no daily limit per internet connection), the free ntfy.sh as the backup.
 // OWN_BOARD is '' until the board is deployed (scripts/set-board.js writes it here and in the agent).
-export const OWN_BOARD = '';
+export const OWN_BOARD = 'https://pocket-terminal-board.utsavdoye.workers.dev';
 const NTFY = 'https://ntfy.sh';
 export const DEFAULT_BOARDS = OWN_BOARD ? [OWN_BOARD, NTFY] : [NTFY];
 // A pairing made before we had our own board lists only ntfy.sh: it gets ours too.

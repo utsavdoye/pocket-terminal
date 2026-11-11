@@ -17,7 +17,7 @@ const MAX_NOTE = 3800; // ntfy turns bigger notes into attachments; stay under 4
 // The boards to use. Ours first (no daily limit per internet connection), the free ntfy.sh as
 // the backup. A pairing made before we had our own board lists only ntfy.sh: it gets ours too.
 // OWN_BOARD is '' until the board is deployed (scripts/set-board.js writes it here and in the app).
-const OWN_BOARD = '';
+const OWN_BOARD = 'https://pocket-terminal-board.utsavdoye.workers.dev';
 const NTFY = 'https://ntfy.sh';
 const DEFAULT_BOARDS = OWN_BOARD ? [OWN_BOARD, NTFY] : [NTFY];
 const boardsFor = (list) => (!Array.isArray(list) || !list.length || (list.length === 1 && list[0] === NTFY) ? DEFAULT_BOARDS : list);
