@@ -42,7 +42,7 @@ try:
   with sync_playwright() as p:
     b=p.webkit.launch() if BROWSER=='webkit' else p.chromium.launch(args=['--disable-features=WebRtcHideLocalIpsWithMdns'])
     ctx=b.new_context(**p.devices['iPhone 13' if BROWSER=='webkit' else 'Pixel 7']); pg=ctx.new_page()
-    print(f'phone: {BROWSER} ({"iPhone 13" if BROWSER=="webkit" else "Pixel 7"}), computer: {sys.platform}'); errs=[]; pg.on('pageerror', lambda e: errs.append(str(e)))
+    print(f'phone: {BROWSER} ({"iPhone 13" if BROWSER=="webkit" else "Pixel 7"}), computer: {sys.platform}'); errs=[]; pg.on('pageerror', lambda e: errs.append(f'{e} | {getattr(e, "stack", "")}'[:600]))
     ph.pair(pg, R, env)
     check(0, 'paired and connected', wait(lambda: awake(pg), 40) and info(pg))
     # The network now blocks every direct link.
@@ -78,7 +78,8 @@ try:
     log=open(S+'/agent.log').read()
     check(10, 'the computer logged the board link', 'connected through the board' in log)
     check(11, 'no page errors', not errs)
-    if not ok: print(log[-2500:])
+    if errs: ph.ci('\n'.join(errs)[:3000], 'page errors')
+    if not ok: print(log[-2500:]); ph.ci(log[-3000:], 'agent log')
     print('ALL OK' if ok else 'FAILED')
     b.close()
 finally:

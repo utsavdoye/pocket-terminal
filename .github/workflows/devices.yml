@@ -4,6 +4,9 @@ name: Devices
 # iPhone (Safari's engine, WebKit) and as an Android phone (Chrome): pair, connect directly, then
 # the same with every direct link blocked (as on Indian mobile data), through our own board.
 # Also runs by hand: Actions tab → Devices → Run workflow.
+# (No Windows + Safari-engine run: Safari's engine on Windows is an unofficial build that no iPhone
+# or Mac uses. An iPhone with a Windows laptop is covered by Safari's engine on the Mac plus the
+# Windows computer with a phone.)
 
 on:
   push:
@@ -28,7 +31,6 @@ jobs:
           - { os: macos-latest, computer: Mac, phone: iPhone (Safari engine), browser: webkit }
           - { os: macos-latest, computer: Mac, phone: Android (Chrome), browser: chromium }
           - { os: windows-latest, computer: Windows, phone: Android (Chrome), browser: chromium }
-          - { os: windows-latest, computer: Windows, phone: iPhone (Safari engine), browser: webkit }
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
