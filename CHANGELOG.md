@@ -1,6 +1,6 @@
 # Changelog
 
-## Next release
+## 7.5.0 (2026-11-11)
 **Connects on any network, for free.**
 
 - **Works on mobile data and strict Wi-Fi.** Many networks (Indian mobile data, offices, colleges) block a direct link between phone and computer, and the app fell back to the slow "Backup route" with no live terminal. Now, when the direct link doesn't open within a couple of seconds, the app carries on through Pocket Terminal's own board: the live terminal, files, local websites, everything. Every message is sealed with your pairing key, so the board can't read it. No relay service, no card, nothing to sign up for. On most home Wi-Fi it still goes direct.

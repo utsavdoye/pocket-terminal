@@ -1,6 +1,6 @@
 {
   "name": "pocket-terminal-agent",
-  "version": "7.4.2",
+  "version": "7.5.0",
   "private": true,
   "description": "Runs on your Mac, Windows or Linux computer. Lets your phone use its terminal directly (P2P), even with the lid closed.",
   "main": "agent.js",
