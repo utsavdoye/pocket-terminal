@@ -5,7 +5,7 @@
 const fs = require('fs');
 const path = require('path');
 const { seal, open, msgId } = require('../lib/crypto');
-const { Board } = require('../lib/board');
+const { Board, boardsFor } = require('../lib/board');
 
 const FRESH = { hello: 10 * 60e3, offer: 90e3, settings: 24 * 3600e3 };
 
@@ -15,7 +15,7 @@ function startMailbox(ctx) {
   const STATE = path.join(dir, cfg.stateFile || 'direct-state.json');
   let state = {}; try { state = JSON.parse(fs.readFileSync(STATE, 'utf8')); } catch {}
   const seen = new Set(state.seen || []);
-  const board = new Board(cfg.boards || ['https://ntfy.sh'], keys.topic, { log, since: state.since || {} });
+  const board = new Board(boardsFor(cfg.boards), keys.topic, { log, since: state.since || {} });
   const maxCmdAge = (cfg.maxCommandAgeMinutes || 60) * 60e3;
   let phoneWaitingTimer = null, readyTimer = null, lastReady = 0;
   const READY_AFTER = Number(process.env.POCKET_READY_AFTER_MS) || 15e3; // tests make it shorter

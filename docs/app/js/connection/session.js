@@ -4,6 +4,7 @@
 import { Board } from '../board.js';
 import { $, show } from '../core/dom.js';
 import { state, mac } from '../core/state.js';
+import { boardsFor } from '../core/env.js';
 import { setupTerminal } from '../terminal/term.js';
 import { setupUi } from '../ui/setup.js';
 import { paint } from '../ui/status.js';
@@ -18,7 +19,7 @@ export function start(session) {
   $('notifyTopic').textContent = S.notifyTopic;
   setupTerminal(); setupUi();
   if (!S.viewer) loadAi();
-  state.board = new Board(S.boards, S.topic, onNoteText, () => paint());
+  state.board = new Board(boardsFor(S.boards), S.topic, onNoteText, () => paint());
   state.board.start('12h'); // read the last 12 h: Mac status, answers to old commands
   setTimeout(() => connect(), 400);
   setInterval(paint, 1000);

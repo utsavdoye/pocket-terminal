@@ -6,13 +6,13 @@ import { Board } from '../board.js';
 import { $ } from '../core/dom.js';
 import { store } from '../core/store.js';
 import { computers, addComputer, keepSession } from '../core/computers.js';
-import { DEFAULT_BOARDS, okBoards, deviceName, isIOS, standalone } from '../core/env.js';
+import { okBoards, deviceName, isIOS, standalone, boardsFor } from '../core/env.js';
 import { start } from '../connection/session.js';
 import { state } from '../core/state.js';
 import { pinPad } from './lock.js';
 
 let pendingPair = null;
-export const joinFrom = (h) => ({ invite: h.get('join'), name: (h.get('name') || 'your computer').slice(0, 40), boards: okBoards(h.get('boards')) || DEFAULT_BOARDS });
+export const joinFrom = (h) => ({ invite: h.get('join'), name: (h.get('name') || 'your computer').slice(0, 40), boards: okBoards(h.get('boards')) || ['https://ntfy.sh'] }); // the default: boardsFor() adds our own board when it's used
 
 // ---------- one-time pairing: the computer must approve this phone ----------
 export async function joinFlow(j, here = false) {
@@ -45,7 +45,7 @@ export async function joinFlow(j, here = false) {
   $('pairHint').textContent = 'Sending this phone\'s code to your computer…';
   let done = false, slow, timeout;
   const end = () => { done = true; b.stop(); clearTimeout(slow); clearTimeout(timeout); };
-  const b = new Board(j.boards, ik.topic, async (text) => {
+  const b = new Board(boardsFor(j.boards), ik.topic, async (text) => {
     const m = await open(ik, text);
     if (done || !m || m.from !== 'mac' || m.for !== nonce) return;
     if (m.type === 'denied') { end(); return fail((m.why || 'Your computer said no.') + ' Nothing was paired.'); }

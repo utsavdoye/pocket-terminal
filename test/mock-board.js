@@ -58,6 +58,8 @@ function startBoard(port = 0) {
     }
     res.writeHead(404); res.end();
   });
+  // This stand-in has no WebSocket (like a board that only streams): say so, as a web server would.
+  server.on('upgrade', (req, sock) => sock.end('HTTP/1.1 404 Not Found\r\nConnection: close\r\nContent-Length: 0\r\n\r\n'));
   return new Promise((resolve) => server.listen(port, '127.0.0.1', () => resolve({ server, port: server.address().port, topics, stats })));
 }
 

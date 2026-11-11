@@ -18,13 +18,12 @@ const path = require('path');
 const readline = require('readline');
 const qrcode = require('qrcode-terminal');
 const { newSecret, derive, seal, open, msgId } = require('./lib/crypto');
-const { Board } = require('./lib/board');
+const { Board, DEFAULT_BOARDS, boardsFor, sameAsDefault } = require('./lib/board');
 const { codeFor, wrapFor } = require('./lib/pairing');
 
 const DIR = process.env.POCKET_HOME || path.join(os.homedir(), '.pocket-terminal');
 const FILE = path.join(DIR, 'direct.json');
 const DEFAULT_APP = 'https://pocket-terminal.utsavdoye.com/app/';
-const DEFAULT_BOARDS = ['https://ntfy.sh'];
 const INVITE_MINUTES = 10;
 // Hints say how YOU started it: through npx, or from the agent folder.
 const VIA_NPX = !!process.env.POCKET_VIA_NPX;
@@ -41,8 +40,9 @@ cfg.name = arg('--name') || cfg.name || os.hostname().replace(/\.local$/, '');
 // The official app moved from utsavdoye20122005.github.io/pocket-terminal to pocket-terminal.utsavdoye.com/app.
 if (/^https:\/\/(utsavdoye(20122005)?\.github\.io\/pocket-terminal|terminal\.utsavdoye\.com\/app)\/?$/i.test(cfg.appUrl || '')) cfg.appUrl = DEFAULT_APP;
 cfg.appUrl = arg('--app-url') || process.env.POCKET_APP_URL || cfg.appUrl || DEFAULT_APP;
-cfg.boards = cfg.boards || DEFAULT_BOARDS;
-const extra = arg('--board'); if (extra && !cfg.boards.includes(extra)) cfg.boards.push(extra.replace(/\/+$/, ''));
+// cfg.boards stays as it was saved (nothing saved, or only ntfy.sh: the default boards are used).
+const extra = arg('--board'); if (extra) { cfg.boards = cfg.boards || ['https://ntfy.sh']; if (!cfg.boards.includes(extra)) cfg.boards.push(extra.replace(/\/+$/, '')); }
+const boards = boardsFor(cfg.boards);
 cfg.notify = cfg.notify !== false;
 cfg.devices = Array.isArray(cfg.devices) ? cfg.devices : [];
 if (cfg.secret) { delete cfg.secret; console.log('The old reusable QR code no longer works. Phones paired with it must pair again.\n'); }
@@ -70,7 +70,7 @@ if (flag('--remove')) {
 const invite = newSecret();
 const ik = derive(invite);
 const params = new URLSearchParams({ join: invite, name: cfg.name });
-if (cfg.boards.join(',') !== DEFAULT_BOARDS.join(',')) params.set('boards', cfg.boards.join(','));
+if (!sameAsDefault(cfg.boards)) params.set('boards', boards.join(','));
 const link = cfg.appUrl.replace(/#.*$/, '') + '#' + params.toString();
 const started = Date.now();
 
@@ -84,7 +84,7 @@ else {
 }
 console.log('Waiting for your phone…');
 
-const board = new Board(cfg.boards, ik.topic, { log: () => {} });
+const board = new Board(boards, ik.topic, { log: () => {} });
 const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
 const joins = new Map(); // nonce -> join
 let asking = false, finished = false;
@@ -126,7 +126,7 @@ board.stream(async (text) => {
     const dev = { id: msgId(), name, secret: newSecret(), added: new Date().toISOString() };
     cfg.devices.push(dev); save();
     require('./lib/activity').record(DIR, { phone: name, ev: 'paired' });
-    await post({ type: 'welcome', for: m.nonce, wrap: wrapFor(m.pub, m.nonce, { secret: dev.secret, name: cfg.name, boards: cfg.boards, device: name }) });
+    await post({ type: 'welcome', for: m.nonce, wrap: wrapFor(m.pub, m.nonce, { secret: dev.secret, name: cfg.name, boards: sameAsDefault(cfg.boards) ? ['https://ntfy.sh'] : boards, device: name }) });
     console.log(`\n✅ Paired "${name}". It can connect now.`);
     console.log(`Notifications (optional): in the ntfy app, subscribe to  ${derive(dev.secret).notifyTopic}`);
     console.log(`Lock this phone out later with:  ${REMOVE} "${name}"`);

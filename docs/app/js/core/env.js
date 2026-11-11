@@ -7,7 +7,13 @@ export const APP_VERSION = '7.4.0';
 export const DEMO = location.hash === '#demo';
 // View-only mode (#watch=…): someone shared a live view of their terminal with you.
 export const VIEW = /(^#|&)watch=/.test(location.hash);
-export const DEFAULT_BOARDS = ['https://ntfy.sh'];
+// The boards. Ours first (no daily limit per internet connection), the free ntfy.sh as the backup.
+// OWN_BOARD is '' until the board is deployed (scripts/set-board.js writes it here and in the agent).
+export const OWN_BOARD = '';
+const NTFY = 'https://ntfy.sh';
+export const DEFAULT_BOARDS = OWN_BOARD ? [OWN_BOARD, NTFY] : [NTFY];
+// A pairing made before we had our own board lists only ntfy.sh: it gets ours too.
+export const boardsFor = (list) => (!Array.isArray(list) || !list.length || (list.length === 1 && list[0] === NTFY) ? DEFAULT_BOARDS : list);
 export const ICE = [{ urls: ['stun:stun.l.google.com:19302', 'stun:stun.cloudflare.com:3478'] }];
 
 export const okBoards = (v) => { const b = (Array.isArray(v) ? v : String(v || '').split(',')).filter((u) => /^https:\/\//.test(u) || /^http:\/\/(127\.0\.0\.1|localhost)[:/]/.test(u)); return b.length ? b : null; };

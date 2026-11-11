@@ -140,8 +140,8 @@ The phone app handles your key, so the most careful setup hosts your own copy: f
 1. **Pairing, once per phone.** The computer shows a one-time QR code. After you approve the matching
    6-digit code, it gives that phone its own key, wrapped with a fresh ECDH exchange, so a photo of the
    QR code is useless. The code then expires.
-2. **Finding each other.** Both sides use a free public message board ([ntfy.sh](https://ntfy.sh)) as a
-   mailbox. The mailbox name and every note are encrypted with your key.
+2. **Finding each other.** Both sides use a message board as a mailbox: Pocket Terminal's own small one
+   ([`board/`](board/), on Cloudflare) with the free public [ntfy.sh](https://ntfy.sh) as the backup. The mailbox name and every note are encrypted with your key.
 3. **Direct link.** The two devices exchange connection details and open a direct WebRTC link, the
    same technique video calls use. Your terminal flows straight between them.
 
@@ -213,7 +213,7 @@ Run `npx pocket-terminal list`, then `npx pocket-terminal remove <number>`. That
 
 ## Advanced
 
-- **Your own message board:** run [ntfy](https://docs.ntfy.sh/install/), then `node pair.js --board https://ntfy.example.com` in `~/.pocket-terminal/app/agent` and re-pair. List several boards for redundancy.
+- **Your own message board:** deploy [`board/`](board/) to your own Cloudflare account, or run [ntfy](https://docs.ntfy.sh/install/), then `node pair.js --board https://ntfy.example.com` in `~/.pocket-terminal/app/agent` and re-pair. List several boards for redundancy.
 - **TURN server** for networks that block all direct links: add it to `"iceServers"` in `~/.pocket-terminal/direct.json`.
 - **Different shell on Windows:** set `POCKET_SHELL` to `pwsh.exe` or `cmd.exe`.
 - **Relay mode** with an always-on server in the middle: see [`relay/`](relay/).

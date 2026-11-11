@@ -6,6 +6,7 @@ const os = require('os');
 const crypto = require('crypto');
 const webpush = require('../lib/webpush');
 const { choicesFor } = require('../lib/core');
+const { boardsFor } = require('../lib/board');
 
 // Sets ctx.notify and ctx.onAnswer. Needs ctx.board (mailbox.js).
 function startNotify(ctx) {
@@ -24,7 +25,7 @@ function startNotify(ctx) {
     for (const [id, a] of asks) if (a.exp < Date.now() || a.key === ev.key) asks.delete(id); // one live question per terminal
     const id = crypto.randomBytes(9).toString('base64url'), k = crypto.randomBytes(32);
     asks.set(id, { key: ev.key, k, choices, exp: Date.now() + ASK_TTL });
-    return { id, k: k.toString('base64url'), b: (cfg.boards || ['https://ntfy.sh'])[0], tp: keys.topic, acts: choices.map((c) => ({ action: c.a, title: c.title })) };
+    return { id, k: k.toString('base64url'), b: boardsFor(cfg.boards)[0], tp: keys.topic, acts: choices.map((c) => ({ action: c.a, title: c.title })) };
   }
   function onAnswer(text) {
     const [, id, blob] = text.split('.');

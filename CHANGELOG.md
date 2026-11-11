@@ -4,6 +4,8 @@
 **Smoother on a phone: typing that doesn't wait, faster drawing, and something on screen the moment you open it.**
 
 ### New
+- **Pocket Terminal's own message board** (the `board/` folder, on Cloudflare Workers). The free ntfy.sh allows only a few hundred messages a day per internet connection, shared by everyone on the same college, office or mobile network, so the app could say "board full" or fail to pair. The app and the agent now use our own board first (its limit is per mailbox, not per network) and keep ntfy.sh as the backup. Existing pairings pick it up after updating; nobody pairs again.
+- A board that is down is tried again after 3 s, then 6, 12… up to a minute, not every 3 s forever.
 - **Typing ahead on a slow link.** On weak mobile data each letter used to wait for the computer to send it back. Letters now show at once (dimmed) and are checked when the computer answers. It only turns on when the link is slow, it never shows a password (nothing is drawn until the computer has echoed a letter), and Settings → Typing ahead turns it off.
 - **Smoother drawing.** The terminal is drawn with the phone's graphics chip, so long agent output and scrolling stay smooth. If a phone can't do it, it quietly uses the old drawing. Settings → Smooth drawing turns it off.
 - **Something to look at right away.** Opening the app shows the screen from last time (dimmed, marked "From last time") while it connects, then swaps in the live one. It is kept on your phone only, encrypted with the pairing key.

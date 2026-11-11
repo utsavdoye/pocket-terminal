@@ -49,7 +49,7 @@
 
   <h2>Third parties your devices talk to</h2>
   <ul>
-    <li><b>A public message board</b> (<a href="https://ntfy.sh">ntfy.sh</a> by default) passes encrypted notes so your devices can find each other. It sees scrambled text, its size and timing, and your IP address. It can't read the notes.</li>
+    <li><b>A message board</b> passes encrypted notes so your devices can find each other: Pocket Terminal's own (a small open-source service on Cloudflare, in the <code>board/</code> folder of the code) and the public <a href="https://ntfy.sh">ntfy.sh</a> as a backup. A board sees scrambled text, its size and timing, and your IP address. It can't read the notes. Ours keeps a note for 12 hours and keeps no log of who posted it.</li>
     <li><b>STUN servers</b> (Google, Cloudflare) see your public IP address while the direct link is set up, as in any video call.</li>
     <li><b>Phone notifications</b> are delivered by Apple, Google or Mozilla. Each one is encrypted for your phone; they see that a notification was sent, not what it says.</li>
     <li><b>The AI helper</b> is off unless you add your own key. Then only what you type in Ask (and, for "Fix with AI", that command and the end of its output) goes to the provider you chose, under their privacy policy.</li>

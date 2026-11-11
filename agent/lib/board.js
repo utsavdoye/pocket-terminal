@@ -6,8 +6,37 @@
 //   POST {board}/{topic}                       post a note (kept 12 h on ntfy.sh)
 //   GET  {board}/{topic}/json?since=ID|10m     stream of notes, one JSON per line
 //   GET  {board}/{topic}/json?poll=1&since=…   same, but returns right away
+//   GET  {board}/{topic}/ws?since=…            the same notes over a WebSocket
+//
+// Pocket Terminal's own board (board/ in this repo) speaks the same language, but live notes
+// come only over the WebSocket there. So: ntfy.sh is read as a stream (as always); any other
+// board is tried over a WebSocket first, and read as a stream if it has none.
 
 const MAX_NOTE = 3800; // ntfy turns bigger notes into attachments; stay under 4096
+
+// The boards to use. Ours first (no daily limit per internet connection), the free ntfy.sh as
+// the backup. A pairing made before we had our own board lists only ntfy.sh: it gets ours too.
+// OWN_BOARD is '' until the board is deployed (scripts/set-board.js writes it here and in the app).
+const OWN_BOARD = '';
+const NTFY = 'https://ntfy.sh';
+const DEFAULT_BOARDS = OWN_BOARD ? [OWN_BOARD, NTFY] : [NTFY];
+const boardsFor = (list) => (!Array.isArray(list) || !list.length || (list.length === 1 && list[0] === NTFY) ? DEFAULT_BOARDS : list);
+const sameAsDefault = (list) => boardsFor(list).join(',') === DEFAULT_BOARDS.join(',');
+
+// A WebSocket that works on every Node we support: the built-in one (Node 22+), else the one
+// that comes with the direct-link library.
+function openSocket(url, on) {
+  if (typeof WebSocket === 'function' && process.env.POCKET_WS !== 'ndc') {
+    const ws = new WebSocket(url);
+    ws.onopen = () => on.open(); ws.onmessage = (e) => on.message(String(e.data)); ws.onclose = () => on.close(); ws.onerror = () => { on.close(); try { ws.close(); } catch {} }; // a refused connection reports an error and may never report "closed"
+    return { send: (t) => { try { ws.readyState === 1 && ws.send(t); } catch {} }, close: () => { try { ws.close(); } catch {} } };
+  }
+  const { WebSocket: W } = require('node-datachannel');
+  const ws = new W(); let done = false; const end = () => { if (!done) { done = true; on.close(); } };
+  ws.onOpen(() => on.open()); ws.onMessage((m) => on.message(String(m))); ws.onClosed(end); ws.onError(end);
+  ws.open(url);
+  return { send: (t) => { try { ws.sendMessage(t); } catch {} }, close: () => { try { ws.close(); } catch {} end(); } };
+}
 
 class Board {
   constructor(urls, topic, { log = () => {}, since = {} } = {}) {
@@ -17,6 +46,8 @@ class Board {
     this.since = { ...since };   // last note id seen, per board
     this.streams = new Map();
     this.stopped = false;
+    this.noWs = new Set(urls.filter((u) => u.replace(/\/+$/, '') === NTFY).map((u) => u.replace(/\/+$/, ''))); // boards read as a stream
+    this.fails = new Map(); // board -> failed tries in a row (the wait before the next try grows)
   }
 
   async publish(text, topic = this.topic, headers = {}) {
@@ -45,9 +76,19 @@ class Board {
     for (const u of this.urls) this._streamOne(u, onNote, onOpen);
   }
 
+  // Try again after a failure: 3 s, then 6, 12… up to a minute, so a board that is down (or out
+  // of its daily allowance) isn't hammered.
+  _again(u, ctl, onNote, onOpen) {
+    if (this.stopped || this.streams.get(u) !== ctl) return;
+    const n = (this.fails.get(u) || 0) + 1; this.fails.set(u, n);
+    setTimeout(() => { if (!this.stopped && this.streams.get(u) === ctl) this._streamOne(u, onNote, onOpen); }, Math.min(60e3, 3000 * 2 ** (n - 1)));
+  }
+
   async _streamOne(u, onNote, onOpen) {
     const old = this.streams.get(u); if (old) old.abort();
+    if (!this.noWs.has(u)) return this._socket(u, onNote, onOpen);
     const ctl = new AbortController(); this.streams.set(u, ctl);
+    let live = false;
     try {
       const since = this.since[u] || '10m';
       const r = await fetch(`${u}/${this.topic}/json?since=${encodeURIComponent(since)}`, { signal: ctl.signal });
@@ -64,14 +105,39 @@ class Board {
         let i; while ((i = buf.indexOf('\n')) >= 0) {
           const line = buf.slice(0, i); buf = buf.slice(i + 1);
           const ev = this._line(u, line, onNote);
-          if (ev && ev.event === 'open') onOpen(u);
+          if (ev && ev.event === 'open') { live = true; this.fails.set(u, 0); onOpen(u); }
         }
       }
     } catch (e) {
       if (ctl.signal.aborted && ctl.signal.reason !== 'stalled') return;
       this.log(`board stream ${u}: ${ctl.signal.reason === 'stalled' ? 'went quiet, reconnecting' : e.message}`);
     }
-    if (!this.stopped && this.streams.get(u) === ctl) setTimeout(() => this._streamOne(u, onNote, onOpen), 3000);
+    if (!live && u !== NTFY) this.noWs.delete(u); // no stream here either: the next try is the WebSocket again
+    this._again(u, ctl, onNote, onOpen);
+  }
+
+  // The same, over a WebSocket. We send "ping" every 30 s and expect "pong": 75 s of silence
+  // means the connection died quietly. A board that never opens one is read as a stream instead.
+  _socket(u, onNote, onOpen) {
+    let opened = false, closed = false, quiet = null, ping = null, sock = null;
+    const ctl = { abort: () => { closed = true; clearTimeout(quiet); clearInterval(ping); sock && sock.close(); } };
+    this.streams.set(u, ctl);
+    const arm = () => { clearTimeout(quiet); quiet = setTimeout(() => sock && sock.close(), 75e3); };
+    const since = this.since[u] || '10m';
+    try {
+      sock = openSocket(`${u.replace(/^http/, 'ws')}/${this.topic}/ws?since=${encodeURIComponent(since)}`, {
+        open: () => { opened = true; arm(); ping = setInterval(() => sock.send('ping'), 30e3); },
+        message: (t) => { arm(); if (t === 'pong') return; const ev = this._line(u, t, onNote); if (ev && ev.event === 'open') { this.fails.set(u, 0); onOpen(u); } },
+        close: () => {
+          clearTimeout(quiet); clearInterval(ping);
+          if (closed) return; closed = true;
+          if (!opened) this.noWs.add(u); // no WebSocket here (or the board is down): the next try reads it as a stream
+          if (!opened && !(this.fails.get(u) > 0)) { if (!this.stopped && this.streams.get(u) === ctl) this._streamOne(u, onNote, onOpen); return; }
+          this._again(u, ctl, onNote, onOpen);
+        },
+      });
+      setTimeout(() => { if (!opened && !closed) sock.close(); }, 8e3);
+    } catch (e) { this.log(`board ${u}: ${e.message}`); this.noWs.add(u); this._again(u, ctl, onNote, onOpen); }
   }
 
   _line(u, line, onNote) {
@@ -86,4 +152,4 @@ class Board {
   stop() { this.stopped = true; for (const c of this.streams.values()) c.abort(); this.streams.clear(); }
 }
 
-module.exports = { Board, MAX_NOTE };
+module.exports = { Board, MAX_NOTE, OWN_BOARD, DEFAULT_BOARDS, boardsFor, sameAsDefault };

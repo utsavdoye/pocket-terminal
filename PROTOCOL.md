@@ -57,7 +57,9 @@ AAD       = "pt1:" + topic
 ```
 
 A note must be at most **3800 characters** (`MAX_NOTE`; ntfy turns bigger notes into attachments).
-ntfy.sh keeps notes for 12 hours. Several boards can be listed: both sides post to all and read from all.
+ntfy.sh keeps notes for 12 hours. Several boards can be listed: both sides post to all and read from all. The default list is Pocket Terminal's own board (`board/` in this repo, when `OWN_BOARD` is set) and then `https://ntfy.sh`. A pairing that lists only ntfy.sh is treated as "the default", so it gets our board too.
+
+Reading live notes: ntfy.sh is read as a stream (`GET /{topic}/json?since=…`). Any other board is tried over a WebSocket first (`GET /{topic}/ws?since=…`: the same JSON, one per message; the client sends `ping` every 30 s and gets `pong`), and read as a stream if it has no WebSocket. Our own board only has the WebSocket and `?poll=1`.
 
 Every note has the same envelope:
 

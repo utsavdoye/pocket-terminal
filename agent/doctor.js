@@ -72,7 +72,7 @@ function phones(cfg) {
 
 async function boards(cfg) {
   if (!NET) return;
-  for (const b of (cfg && cfg.boards) || ['https://ntfy.sh']) {
+  for (const b of require('./lib/board').boardsFor(cfg && cfg.boards)) {
     const host = String(b).split('/').slice(0, 3).join('/');
     const r = await get(String(b).replace(/\/+$/, '') + '/v1/health');
     if (r.status === 200) ok(`Message board ${host} answers`);

@@ -14,7 +14,7 @@ Fixes are released as soon as possible and credited in the [changelog](CHANGELOG
 | If an attacker… | …they can | …they can't |
 |---|---|---|
 | reads this public repo | learn how everything works | do anything to you: security never depends on the code being secret |
-| watches the message board (ntfy.sh) | see that encrypted notes exist, their size and timing | read, change, forge or replay a note |
+| watches or runs the message board (ours on Cloudflare, or ntfy.sh) | see that encrypted notes exist, their size and timing | read, change, forge or replay a note |
 | sits on your Wi-Fi or ISP | see encrypted traffic | read it, or get between your phone and computer |
 | photographs your pairing QR | try to pair *while it's still valid* | pair without you typing `y` next to a matching code; read the phone's key |
 | sends you a pairing link | ask you to pair with *their* computer | replace your pairing silently: the app warns that it's already paired |

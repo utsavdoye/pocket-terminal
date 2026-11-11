@@ -1,0 +1,16 @@
+# Pocket Terminal's message board. Deploy:  cd board && npx wrangler deploy
+name = "pocket-terminal-board"
+main = "src/index.js"
+compatibility_date = "2025-10-01"
+
+[[durable_objects.bindings]]
+name = "BOARD"
+class_name = "Mailbox"
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["Mailbox"]
+
+# No request logs: the board should know as little as possible.
+[observability]
+enabled = false

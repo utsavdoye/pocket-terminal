@@ -12,6 +12,7 @@ const crypto = require('crypto');
 const { startDirect } = require('./direct');
 const webpush = require('./lib/webpush');
 const { newSecret } = require('./lib/crypto');
+const { boardsFor, sameAsDefault } = require('./lib/board');
 const activity = require('./lib/activity');
 
 const DEFAULT_APP = 'https://pocket-terminal.utsavdoye.com/app/';
@@ -74,7 +75,7 @@ function startDevices({ core, power, log, dir }) {
       const sh = { id: crypto.randomBytes(6).toString('hex'), secret: newSecret(), deviceId, key, canAnswer: !!canAnswer, expires: Date.now() + minutes * 60e3 };
       writeJson(SHARES, [...sharesAll(), sh]); startWatch(sh);
       const params = new URLSearchParams({ watch: sh.secret, name: cfg.name || os.hostname() });
-      if ((cfg.boards || []).join(',') !== 'https://ntfy.sh') params.set('boards', (cfg.boards || []).join(','));
+      if (!sameAsDefault(cfg.boards)) params.set('boards', boardsFor(cfg.boards).join(','));
       log(`live view link made (${minutes} min${canAnswer ? ', can answer' : ''})`);
       const app = !cfg.appUrl || /^https:\/\/(utsavdoye(20122005)?\.github\.io\/pocket-terminal|terminal\.utsavdoye\.com\/app)\/?$/i.test(cfg.appUrl) ? DEFAULT_APP : cfg.appUrl; // the official app moved
       return { id: sh.id, link: app.replace(/#.*$/, '') + '#' + params, expires: sh.expires };
