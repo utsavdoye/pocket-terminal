@@ -1,6 +1,6 @@
 # Changelog
 
-## Next release
+## 7.5.2 (2026-11-12)
 - **"Your computer is awake" could be skipped.** If you opened the app less than 5 seconds before the sleeping computer's next check-in and then left, it never told you it was up. It now goes by whether you knocked while it slept.
 - **Safari (iPhone):** saving the last screen as the app closed could fail with an error. Packing and unpacking now happen straight from memory.
 - Tests on GitHub: the test browser download is tried 3 times, and one test no longer trips over a list that redraws itself.

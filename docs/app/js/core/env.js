@@ -1,7 +1,7 @@
 // Facts about where the app runs, worked out once at start: the version, demo or view-only
 // mode, the default message board, and what kind of phone or browser this is.
 
-export const APP_VERSION = '7.5.1';
+export const APP_VERSION = '7.5.2';
 // Demo mode (#demo): the whole app with sample data and a pretend shell. Connects to nothing,
 // and never touches this phone's real pairing, history or keys.
 export const DEMO = location.hash === '#demo';
