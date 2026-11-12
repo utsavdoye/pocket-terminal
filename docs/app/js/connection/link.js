@@ -19,7 +19,7 @@ let lastRx = 0, rxZ = 0;
 Object.defineProperty(window, 'ptPacked', { get: () => rxZ }); // for tests: how many messages came packed
 // Big messages from the computer come deflated (much less data on a weak signal).
 const CAN_INFLATE = (() => { try { new DecompressionStream('deflate-raw'); return true; } catch { return false; } })();
-const inflate = (buf) => new Response(new Blob([buf]).stream().pipeThrough(new DecompressionStream('deflate-raw'))).text();
+const inflate = (buf) => new Response(new ReadableStream({ start(c) { c.enqueue(new Uint8Array(buf)); c.close(); } }).pipeThrough(new DecompressionStream('deflate-raw'))).text(); // from memory, not a Blob (Safari)
 setInterval(() => { if (state.dc && state.dc.readyState === 'open' && document.visibilityState === 'visible') { state.pingSent = performance.now(); sendTerm({ t: 'ping' }); } else { state.rtt = null; paintPing(); } }, 5000);
 
 // Called once the app opens: react to the app coming back on screen and to network changes.

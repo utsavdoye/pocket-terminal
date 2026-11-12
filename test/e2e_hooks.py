@@ -58,7 +58,7 @@ try:
     wide=subprocess.Popen(['node','run.js','node',R+'/test/resize-app.js'],cwd=R+'/agent',env=env,stdin=subprocess.PIPE,stdout=subprocess.PIPE,stderr=subprocess.PIPE,text=True)
     time.sleep(2); pg.goto(APP); wait(lambda: awake(pg), 40); ph.nav(pg,'sessions')
     wait(lambda: pg.is_visible('#sessList .agent:has-text("Node") [data-sw]') or len(pg.query_selector_all('#sessList [data-sw]'))>1, 10)
-    btns=pg.query_selector_all('#sessList [data-sw]'); [b for b in btns if 'on screen' not in b.inner_text()][0].click(); time.sleep(2)
+    pg.locator('#sessList [data-sw]').filter(has_not_text='on screen').first.click(); time.sleep(2)  # found at click time: the list redraws itself every few seconds
     rows=pg.evaluate(ROWS)
     check('6b', 'a wide full-screen app opens clean on the phone (redrawn at its width)', 'REDRAWN-' in rows and 'START-' not in rows)
     wide.kill()

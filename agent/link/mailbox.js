@@ -54,6 +54,9 @@ function startMailbox(ctx) {
     if (process.env.POCKET_DEBUG_NOTES) log(`note ${m.type} ${Math.round((Date.now() - Number(m.ts)) / 1000)}s old`);
     const age = Date.now() - Number(m.ts);
     if (!(age > -2 * 60e3)) return; // clocks wildly off: ignore
+    // Left while this computer slept (or a while ago): the phone may have given up waiting, so tell
+    // it when we're up. Judged by when we woke, not a fixed age: a knock 4.9 s before waking counts.
+    const whileAsleep = age > 5e3 || (ctx.wokeAt && Number(m.ts) < ctx.wokeAt);
     if (viewer && m.type !== 'hello' && m.type !== 'offer' && m.type !== 'pipe') return; // a viewer can only connect and watch
     if (m.type === 'hello' && age < FRESH.hello) {
       if (viewer) { ctx.postStatus('online', { force: true }); return; }
@@ -65,11 +68,11 @@ function startMailbox(ctx) {
       // Not forced: the free board allows only a few hundred notes a day per connection. The phone
       // learns it's up from the answer to its offer anyway; this only posts if it was asleep.
       ctx.postStatus('online');
-      if (age > 5e3) readySoon();
+      if (whileAsleep) readySoon();
     } else if (m.type === 'offer' && age < FRESH.offer && typeof m.sdp === 'string') {
       if (process.env.POCKET_NO_DIRECT) return log('ignoring offer (POCKET_NO_DIRECT test switch)');
       Promise.resolve(ctx.answerOffer(m)).catch((e) => log('could not answer an offer: ' + e.message));
-      if (age > 5e3) readySoon(); // it was posted while this computer slept
+      if (whileAsleep) readySoon(); // it was posted while this computer slept
     } else if (m.type === 'pipe' && age < FRESH.offer && typeof m.pipe === 'string') {
       ctx.joinPipe(m.pipe); // the direct link was blocked: the phone waits on the board's pipe
     } else if (m.type === 'cmd' && age < maxCmdAge) {

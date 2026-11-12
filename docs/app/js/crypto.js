@@ -26,9 +26,11 @@ export async function derive(secret) {
   };
 }
 
+// Squeeze or unsqueeze bytes. Straight from memory, not through a Blob: Safari refuses to read a
+// Blob while the page is closing, and that's exactly when the last screen gets saved.
 async function pipe(bytes, stream) {
-  const s = new Blob([bytes]).stream().pipeThrough(stream);
-  return new Uint8Array(await new Response(s).arrayBuffer());
+  const src = new ReadableStream({ start(c) { c.enqueue(bytes); c.close(); } });
+  return new Uint8Array(await new Response(src.pipeThrough(stream)).arrayBuffer());
 }
 
 export async function seal(keys, obj) {

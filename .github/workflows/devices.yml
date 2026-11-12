@@ -43,7 +43,11 @@ jobs:
           python-version: '3.12'
       - run: npm ci --no-fund --no-audit
         working-directory: agent
-      - run: pip install playwright==1.47.0 && python -m playwright install ${{ matrix.browser }}
+      - name: Install the test browser (tries 3 times, as GitHub's downloads fail now and then)
+        shell: bash
+        run: |
+          pip install playwright==1.47.0
+          for i in 1 2 3; do python -m playwright install ${{ matrix.browser }} && break; sleep 20; done
       - name: Pair, connect, then the same with direct links blocked
         shell: bash
         env:

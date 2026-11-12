@@ -1,5 +1,10 @@
 # Changelog
 
+## Next release
+- **"Your computer is awake" could be skipped.** If you opened the app less than 5 seconds before the sleeping computer's next check-in and then left, it never told you it was up. It now goes by whether you knocked while it slept.
+- **Safari (iPhone):** saving the last screen as the app closed could fail with an error. Packing and unpacking now happen straight from memory.
+- Tests on GitHub: the test browser download is tried 3 times, and one test no longer trips over a list that redraws itself.
+
 ## 7.5.1 (2026-11-12)
 - A phone browser without direct links (WebRTC turned off, some locked-down phones) now goes straight to the board instead of getting stuck on "Connecting".
 - New test run on GitHub's Mac and Windows computers, with the phone as an iPhone (Safari's engine) and as an Android phone: pair, connect, and the same with direct links blocked.

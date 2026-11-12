@@ -50,7 +50,10 @@ jobs:
           python-version: '3.12'
       - run: npm ci --no-fund --no-audit
         working-directory: agent
-      - run: pip install playwright==1.47.0 && python -m playwright install --with-deps chromium
+      - name: Install the test browser (tries 3 times, as GitHub's downloads fail now and then)
+        run: |
+          pip install playwright==1.47.0
+          for i in 1 2 3; do python -m playwright install --with-deps chromium && break; sleep 20; done
       - name: Full run with a sleeping computer
         run: |
           python test/e2e_direct.py | tee out.txt
