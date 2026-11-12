@@ -1,6 +1,6 @@
 # Changelog
 
-## Next release
+## 7.5.1 (2026-11-12)
 - A phone browser without direct links (WebRTC turned off, some locked-down phones) now goes straight to the board instead of getting stuck on "Connecting".
 - New test run on GitHub's Mac and Windows computers, with the phone as an iPhone (Safari's engine) and as an Android phone: pair, connect, and the same with direct links blocked.
 
