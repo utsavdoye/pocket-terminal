@@ -109,6 +109,7 @@ function repo(name) {
   await until(() => tasks.view().tasks.filter((t) => t.kind === 'queue').every((t) => ['done', 'failed'].includes(t.status)), 20000);
   const qs = tasks.view().tasks.filter((t) => t.kind === 'queue');
   ok('queue: both ran, in order, with their exit codes', qs[0].status === 'done' && qs[1].status === 'failed' && fs.existsSync(path.join(q, 'two.txt')), JSON.stringify(qs.map((t) => [t.status, t.why])));
+  await until(() => told.some((e) => /queue/i.test(e.title)));
   ok('queue: one notification at the end', told.filter((e) => /queue/i.test(e.title)).length === 1 && /1 failed/.test(told.find((e) => /queue/i.test(e.title)).title));
   ok('queue: a folder that isn\'t there is refused', !!(await tasks.addTask({ cmd: 'ls', cwd: '/nope/nope' })).error);
 
