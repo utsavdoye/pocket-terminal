@@ -10,7 +10,7 @@ ports=json.loads(svc.stdout.readline()); BOARD=f"http://127.0.0.1:{ports['board'
 agents=[]; envs={}
 for name in ['Laptop','Desktop']:
     h=S+'/'+name; os.makedirs(h+'/home'); os.makedirs(h+'/u')
-    env=dict(os.environ,POCKET_HOME=h+'/home',POCKET_APP_URL=APP,SHELL='/bin/bash'); envs[name]=env
+    env=dict(os.environ,POCKET_HOLDER='0',POCKET_HOME=h+'/home',POCKET_APP_URL=APP,SHELL='/bin/bash'); envs[name]=env
     ph.setup(R, env, name, BOARD)
     agents.append(subprocess.Popen(['node','agent.js'],cwd=R+'/agent',env=dict(env,POWER_BRAIN='0',HOME=h+'/u'),stdout=open(h+'/agent.log','w'),stderr=subprocess.STDOUT))
 ROWS="window.ptText()"

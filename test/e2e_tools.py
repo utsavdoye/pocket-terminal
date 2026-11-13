@@ -20,7 +20,7 @@ svc=subprocess.Popen(['node','test/run-services.js','8884','8885',S+'/board.json
 ports=json.loads(svc.stdout.readline()); BOARD=f"http://127.0.0.1:{ports['board']}"; APP=f"http://localhost:{ports['app']}/app/"
 push=subprocess.Popen(['node','test/push-receiver.js'],cwd=R,stdout=subprocess.PIPE,text=True); SUB=json.loads(push.stdout.readline())
 pushed=[]; threading.Thread(target=lambda: [pushed.append(json.loads(l)) for l in push.stdout],daemon=True).start()
-env=dict(os.environ,POCKET_HOME=S+'/home',POCKET_APP_URL=APP,SHELL='/bin/bash')
+env=dict(os.environ,POCKET_HOLDER='0',POCKET_HOME=S+'/home',POCKET_APP_URL=APP,SHELL='/bin/bash')
 ph.setup(R, env, 'TestMac', BOARD)
 agent=subprocess.Popen(['node','agent.js'],cwd=R+'/agent',env=dict(env,POWER_BRAIN='0',HOME=S+'/u',POCKET_PUSH_TEST='1'),stdout=open(S+'/agent.log','w'),stderr=subprocess.STDOUT)
 ROWS="window.ptText()"
@@ -94,7 +94,7 @@ try:
     pg.bring_to_front(); wait(lambda: awake(pg), 20); ph.nav(pg,'sessions')
     card='#sessList .agent.s-wait:has-text("Ship it")'
     check('12b', 'dashboard shows the waiting terminal with its question', wait(lambda: pg.is_visible(card), 15))
-    check('12c', 'summary counts who needs you', wait(lambda: 'needs you' in pg.inner_text('#agSum') and pg.inner_text('#agSum').strip().startswith('1'), 5))
+    check('12c', 'summary counts who needs you', wait(lambda: 'blocked' in pg.inner_text('#agSum').lower() and pg.inner_text('#agSum').strip().startswith('1'), 5))
     check('12d', 'it shows the folder', '~' in pg.inner_text(card))
     pg.click(card+' button.yes')
     check('12e', 'answering from the dashboard: the card stops waiting', wait(lambda: not pg.is_visible(card), 10))
@@ -153,7 +153,7 @@ try:
     check('12q', 'the "finished" notification says what changed', gotd and '1 file changed (+1 −0)' in gotd[-1]['msg']['body'])
     check('12q2', 'and shows the last lines it printed (not the prompt)', gotd and 'built-ok-7' in gotd[-1]['msg']['body'] and '$' not in gotd[-1]['msg']['body'].split('\n')[-1])
     ph.nav(pg,'sessions'); time.sleep(1.2)
-    check('12r', 'the dashboard shows it finished with its changes', wait(lambda: '1 file changed' in pg.inner_text('#sessList'), 8))
+    check('12r', 'the dashboard shows it finished with its changes', wait(lambda: '1 file +' in pg.inner_text('#sessList'), 8))
     pg.click(f'[data-diff="{chg_sid}"]')
     check('12s', 'See changes shows the real diff', wait(lambda: '+two' in pg.inner_text('#diffOut') and 'tracked.txt' in pg.inner_text('#diffOut'), 10))
     ph.close_menu(pg)

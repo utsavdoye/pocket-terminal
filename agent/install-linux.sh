@@ -67,6 +67,8 @@ Environment=SHELL=${SHELL:-/bin/bash}
 Environment=LANG=${LANG:-C.UTF-8}
 Restart=always
 RestartSec=5
+# Stopping or updating the agent leaves the terminal holder (and your running terminals) alone.
+KillMode=process
 UMask=0077
 StandardOutput=append:$LOG
 StandardError=append:$LOG

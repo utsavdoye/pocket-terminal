@@ -12,7 +12,7 @@ const { EventEmitter } = require('events');
 const { spawn, execFile } = require('child_process');
 const pty = require('node-pty');
 const { plain, asksForInput, lastLine, lastLines, question, isMenu, DEFAULT_AUTO, autoDecision, choicesFor } = require('./rules');
-const { gitChanges, gitDiff } = require('./git');
+const { gitChanges, gitDiff, gitInfo, gitCommit, gitPush } = require('./git');
 const { outsideAgents } = require('./outside');
 
 const BUFFER_LIMIT = 256 * 1024;
@@ -28,15 +28,15 @@ const jobArgs = (cmd) => WIN
   ? (/cmd(\.exe)?$/i.test(SHELL) ? ['/d', '/s', '/c', cmd] : ['-NoProfile', '-NonInteractive', '-Command', cmd])
   : ['-lc', cmd];
 
-function createCore({ log, power, dir }) {
+function createCore({ log, power, dir, host = null }) {
   const events = new EventEmitter();
   const AUTO = dir ? path.join(dir, 'auto.json') : null;
   let auto = { ...DEFAULT_AUTO }; try { auto = { ...DEFAULT_AUTO, ...JSON.parse(fs.readFileSync(AUTO, 'utf8')) }; } catch {}
   const setAuto = (c) => {
-    const allow = Array.isArray(c.allow) ? c.allow.map((x) => String(x).slice(0, 60)).filter((x) => x.trim()).slice(0, 40) : auto.allow;
-    auto = { enabled: !!c.enabled, allow };
+    const words = (v, old) => (Array.isArray(v) ? v.map((x) => String(x).slice(0, 60)).filter((x) => x.trim()).slice(0, 60) : old);
+    auto = { enabled: !!c.enabled, allow: words(c.allow, auto.allow), ask: words(c.ask, auto.ask) };
     if (AUTO) try { fs.writeFileSync(AUTO, JSON.stringify(auto, null, 2), { mode: 0o600 }); } catch {}
-    log(`auto-approve ${auto.enabled ? 'on' : 'off'} (${auto.allow.length} rules)`);
+    log(`auto-approve ${auto.enabled ? 'on' : 'off'} (${auto.allow.length} yes, ${auto.ask.length} ask)`);
     return auto;
   };
   const ran = new Set();
@@ -49,14 +49,15 @@ function createCore({ log, power, dir }) {
   const asks = new Map(); // permission questions from agents outside Pocket Terminal: key -> { key, agent, text, cwd, at, done }
   const ext = new Map(); // agents outside Pocket Terminal, from their hooks: key -> { key, agent, cwd, since, last, busy, done }
   const EXT_BUSY_MS = 15 * 60e3; // no word from it for 15 min: stop keeping the computer awake for it
-  const MAX_SESSIONS = 8;
+  const MAX_SESSIONS = 16;
 
   function getSession(key) {
     let s = sessions.get(key);
     if (!s) {
       s = { key, term: null, buffer: '', tail: '', clients: new Set(), last: Date.now(), created: Date.now(),
         lastOut: 0, program: null, progSince: 0, asked: false, quietT: null, burst: 0,
-        askText: '', askMenu: false, askedAt: 0, done: null, cwd: null, cwdAt: 0, outN: 0, mark: 0 };
+        askText: '', askMenu: false, askedAt: 0, done: null, cwd: null, cwdAt: 0, outN: 0, mark: 0,
+        watches: [], line: '', hear: new Set(), state: 'idle', stateAt: Date.now(), git: null, gitAt: 0, task: null };
       sessions.set(key, s); trim();
     }
     s.last = Date.now();
@@ -65,11 +66,22 @@ function createCore({ log, power, dir }) {
   function kill(s) { clearTimeout(s.quietT); try { s.term && s.term.kill(); } catch {} s.term = null; sessions.delete(s.key); busyChanged(); }
   // Windows can't name the running program, so there "printed something in the last 10 min" counts as running.
   const busy = (s) => !!s.program || (WIN && !!s.term && Date.now() - s.lastOut < 10 * 60e3);
-  const idle = (s) => !s.clients.size && !busy(s) && !s.asked;
+  const idle = (s) => !s.clients.size && !busy(s) && !s.asked && !s.task; // a task's terminal stays until its task is over
+  // What a terminal is doing, in one word (the phone shows it as a coloured dot):
+  //   blocked  it asks you something       working  a program is printing (an agent thinking)
+  //   idle     at a prompt, or a program sitting quiet     (done: a program just ended)
+  // An AI agent's spinner redraws every second while it works, so 15 s of quiet means it stopped.
+  const WORK_QUIET = Number(process.env.POCKET_WORK_QUIET_MS) || 15e3;
+  const stateOf = (s) => (s.asked ? 'blocked' : s.term && busy(s) && Date.now() - s.lastOut < WORK_QUIET ? 'working' : 'idle');
+  function track(s) {
+    const st = stateOf(s); if (st === s.state) return;
+    const from = s.state; s.state = st; s.stateAt = Date.now();
+    events.emit('state', { key: s.key, from, to: st, program: s.program });
+  }
   function trim() { // too many? close the oldest one nobody is looking at and that isn't running anything
     while (sessions.size > MAX_SESSIONS) {
       const old = [...sessions.values()].filter(idle).sort((a, b) => a.last - b.last)[0]
-        || [...sessions.values()].filter((s) => !s.clients.size).sort((a, b) => a.last - b.last)[0];
+        || [...sessions.values()].filter((s) => !s.clients.size && !s.task).sort((a, b) => a.last - b.last)[0];
       if (!old) break; kill(old);
     }
   }
@@ -102,6 +114,7 @@ function createCore({ log, power, dir }) {
     });
   }
   function checkPrograms() {
+    for (const s of sessions.values()) track(s);
     for (const s of sessions.values()) {
       const p = foreground(s);
       if (p === s.raw) continue;
@@ -137,7 +150,7 @@ function createCore({ log, power, dir }) {
     if (!s.term) return;
     const tail = fresh(s).split('\n').slice(-12).join('\n');
     if (!s.asked && asksForInput(tail)) {
-      s.asked = true; s.askText = question(tail).slice(0, 120); s.askMenu = isMenu(tail); s.askedAt = Date.now(); busyChanged();
+      s.asked = true; s.askText = question(tail).slice(0, 120); s.askMenu = isMenu(tail); s.askedAt = Date.now(); busyChanged(); track(s);
       const ok = autoDecision(auto, tail.split('\n').slice(-10).join('\n'), s.askText, s.askMenu); // just the agent's question box
       if (ok) { // answered by your own rule: tell the phone quietly, don't ask
         log(`auto-approved a question (rule: ${ok.rule.slice(0, 20)})`);
@@ -151,23 +164,31 @@ function createCore({ log, power, dir }) {
     s.burst = 0;
   }
 
-  function startShell(s, cols = 80, rows = 24, run = null) {
+  function startShell(s, cols = 80, rows = 24, run = null, at = null) {
     s.buffer = ''; s.tail = '';
     // run: a command started from the computer ("npx pocket-terminal run claude"), with that
     // terminal's own folder and environment, so it behaves exactly as if typed there.
     const args = run ? (WIN ? ['-NoLogo', '-Command', run.cmd] : ['-c', run.cmd]) : SHELL_ARGS;
     const env = run && run.env && typeof run.env === 'object' ? run.env : process.env;
-    let cwd = os.homedir(); if (run && run.cwd) { try { if (fs.statSync(run.cwd).isDirectory()) cwd = run.cwd; } catch {} }
-    const t = pty.spawn(SHELL, args, {
+    let cwd = os.homedir(); const want = (run && run.cwd) || at; if (want) { try { if (fs.statSync(want).isDirectory()) cwd = want; } catch {} }
+    const opts = {
       name: 'xterm-256color', cols, rows, cwd,
       env: { ...env, TERM: 'xterm-256color', COLORTERM: 'truecolor', POCKET_TERMINAL: '1', PROMPT_EOL_MARK: '' }, // no stray '%' after a screen replay
-    });
+    };
+    // In the terminal holder when there is one (it survives a restart of this agent), else right here.
+    const t = host ? host.spawn(SHELL, args, opts, { key: s.key, created: s.created, run: !!run, task: s.task || null }) : pty.spawn(SHELL, args, opts);
+    wire(s, t, run);
+  }
+  function wire(s, t, run) {
     s.term = t;
     const send = (msg) => { for (const c of s.clients) { try { c(msg); } catch {} } };
     t.onData((d) => {
       s.buffer += d; s.total = (s.total || 0) + d.length; if (s.buffer.length > BUFFER_LIMIT) s.buffer = s.buffer.slice(-BUFFER_LIMIT);
       const pd = plain(d); s.tail = (s.tail + pd).slice(-2000); s.outN += pd.length;
+      if (s.watches.length) checkWatches(s, pd);
+      for (const f of s.hear) { try { f(pd); } catch {} }
       const now = Date.now();
+      if (s.state !== 'working' && !s.asked && busy(s)) { s.lastOut = now; track(s); }
       if (!s.burst) s.burst = now;
       s.lastOut = now;
       clearTimeout(s.quietT); s.quietT = setTimeout(() => onQuiet(s), WIN ? 15e3 : 1200);
@@ -223,6 +244,20 @@ function createCore({ log, power, dir }) {
       hasShell: () => !!s.term,
     };
   }
+  // Terminals the holder kept while this agent restarted: back in the list, with their screen.
+  function restore(list) {
+    let n = 0;
+    for (const { term, meta, buf } of list || []) {
+      if (!meta || typeof meta.key !== 'string' || sessions.has(meta.key)) { try { term.kill(); } catch {} continue; }
+      const s = getSession(meta.key);
+      s.created = meta.created || Date.now(); s.task = meta.task || null;
+      s.buffer = buf || ''; s.total = s.buffer.length; s.tail = plain(s.buffer).slice(-2000); s.outN = s.tail.length; s.mark = s.outN;
+      wire(s, term, meta.run); n++;
+    }
+    if (n) { checkPrograms(); log(`${n} terminal${n === 1 ? '' : 's'} kept through the restart`); }
+    return n;
+  }
+
   // Start a command in a new session (from the computer). Returns the session.
   function runIn(key, run, cols, rows) {
     const s = getSession(key);
@@ -252,6 +287,7 @@ function createCore({ log, power, dir }) {
       // for the agents dashboard: what it asks, since when it runs, what just finished, where it runs
       question: s.asked ? s.askText : null, menu: s.asked ? s.askMenu : false, askedAt: s.asked ? s.askedAt : null,
       since: s.program ? s.progSince : null, done: s.done, cwd: cwdOf(s),
+      state: s.state, stateAt: s.stateAt, git: gitOf(s), watches: s.watches.map((w) => ({ id: w.id, text: w.text })), task: s.task,
     })));
   }
   // The folder a terminal is in (its shell's working folder). Cached; refreshed in the background.
@@ -307,6 +343,69 @@ function createCore({ log, power, dir }) {
   }
   function close(key) { const s = sessions.get(key); if (s) kill(s); if (ext.delete(key)) busyChanged(); }
 
+  // ---------- git, for the phone ----------
+  // Branch and ahead/behind for the dashboard. Cached; refreshed in the background (10 s).
+  function gitOf(s) {
+    if (s.term && Date.now() - s.gitAt > 10e3) { s.gitAt = Date.now(); folderOf(s, (d) => gitInfo(d).then((g) => { s.git = g && { branch: g.branch, ahead: g.ahead, behind: g.behind, dirty: g.dirty, upstream: !!g.upstream }; })); }
+    return s.git;
+  }
+  function folderFor(key, cb) { const e = ext.get(key), s = sessions.get(key); if (e) return cb(e.dir || null); if (!s) return cb(null); folderOf(s, cb); }
+  function gitAct(key, what, msg, cb) {
+    folderFor(key, async (d) => {
+      if (!d) return cb({ error: 'Could not find its folder.' });
+      const r = what === 'commit' ? await gitCommit(d, msg) : what === 'push' ? await gitPush(d) : { error: 'unknown' };
+      const s = sessions.get(key); if (s) s.gitAt = 0; // fresh branch info next time
+      log(`git ${what} from the phone: ${r.ok ? 'done' : 'failed'}`);
+      cb({ ...r, info: await gitInfo(d) });
+    });
+  }
+
+  // ---------- "tell me when it says …" ----------
+  // Watch a terminal's output for some text (or /a pattern/). When a line has it: a notification.
+  // Each watch fires once. Up to 5 per terminal.
+  function toRe(text) {
+    const m = /^\/(.+)\/([i]*)$/.exec(text);
+    if (m) { try { return new RegExp(m[1], m[2] || 'i'); } catch { return null; } }
+    return new RegExp(text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i');
+  }
+  function addWatch(key, text) {
+    const s = sessions.get(key); text = String(text || '').replace(/[\x00-\x1f\x7f]/g, '').trim().slice(0, 120);
+    if (!s || !text) return { error: 'Type what to wait for.' };
+    const re = toRe(text); if (!re) return { error: 'That pattern is not valid.' };
+    if (s.watches.length >= 5) return { error: 'Up to 5 per terminal. Remove one first.' };
+    const w = { id: Math.random().toString(36).slice(2, 9), text, re }; s.watches.push(w); s.line = '';
+    return { ok: true, id: w.id };
+  }
+  function removeWatch(key, id) { const s = sessions.get(key); if (s) s.watches = s.watches.filter((w) => w.id !== id); return { ok: true }; }
+  function checkWatches(s, pd) {
+    const lines = (s.line + pd).split('\n'); s.line = lines.pop().slice(-400); // the unfinished line waits for its end
+    for (const l of lines.concat(s.line)) {
+      const hit = s.watches.find((w) => w.re.test(l));
+      if (!hit) continue;
+      s.watches = s.watches.filter((w) => w !== hit); s.line = '';
+      emit(s, 'match', { text: l.trim().slice(0, 160), pattern: hit.text });
+      if (!s.watches.length) break;
+    }
+  }
+
+  // ---------- start something in a new terminal (tasks, races, hand-offs) ----------
+  // A normal login shell in that folder, then the command typed into it, as if you typed it:
+  // your PATH and aliases work, and when the program ends you're back at a prompt there.
+  function startIn(key, { cmd, cwd, cols = 100, rows = 30, task = null }) {
+    const s = getSession(key);
+    if (s.term) return null;
+    s.task = task;
+    startShell(s, cols, rows, null, cwd);
+    if (cmd) {
+      let sent = false, t0 = Date.now();
+      const go = () => { if (sent || !s.term) return; sent = true; s.mark = s.outN; s.term.write(cmd + '\r'); };
+      const wait = () => { if (sent) return; if ((s.lastOut && Date.now() - s.lastOut > 350) || Date.now() - t0 > 4000) go(); else setTimeout(wait, 100); };
+      setTimeout(wait, 300);
+    }
+    return session(key);
+  }
+  const info = (key) => { const s = sessions.get(key); return s ? { state: s.state, stateAt: s.stateAt, program: s.program, running: !!s.term, done: s.done, lastOut: s.lastOut, last: lastLines(s.tail, 6), task: s.task } : null; };
+
   // The relay transport and older phones use one shared session.
   const legacy = session('shared');
 
@@ -335,10 +434,14 @@ function createCore({ log, power, dir }) {
 
   return {
     events, session, dropOthers, list, close, runJob, answer, reply, diff, getAuto: () => auto, setAuto, runIn, ask, extEvent,
+    gitAct, folderFor, addWatch, removeWatch, startIn, info, keys: () => [...sessions.keys()],
+    onOutput: (key, f) => { const s = sessions.get(key); if (!s) return () => {}; s.hear.add(f); return () => s.hear.delete(f); },
     isSession: (key) => sessions.has(key),
     question: (key) => { const s = sessions.get(key); return s && s.asked ? { text: s.askText, menu: s.askMenu } : null; },
     clients: legacy.clients, input: legacy.input, resize: legacy.resize, screen: legacy.screen, hasShell: legacy.hasShell,
-    stop: () => { clearInterval(watch); for (const s of [...sessions.values()]) kill(s); },
+    restore,
+    // keep: the terminals stay in the holder (this agent is restarting, not you closing them)
+    stop: ({ keep = false } = {}) => { clearInterval(watch); if (keep) { for (const s of sessions.values()) clearTimeout(s.quietT); return; } for (const s of [...sessions.values()]) kill(s); },
   };
 }
 

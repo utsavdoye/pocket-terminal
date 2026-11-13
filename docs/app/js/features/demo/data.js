@@ -27,8 +27,22 @@ diff --git a/src/api.ts b/src/api.ts
 +const BASE = import.meta.env.VITE_API ?? 'http://localhost:3000';`;
 export const DEMO_SESSIONS = [
   { sid: 'Q-demo', program: 'Claude Code', ask: true, busy: false, running: true, waiting: true, question: 'Run: npm run deploy:staging', askedAt: T0 - 40e3, created: T0 - 40e3, lastOut: T0 - 40e3, viewers: 0, cwd: '~/Projects/site (VS Code)', line: '' },
-  { sid: 'agent1', program: 'claude', busy: true, running: true, waiting: true, menu: true, question: 'Do you want to make this edit to auth.ts?', askedAt: T0 - 3 * 60e3, since: T0 - 14 * 60e3, lastOut: T0 - 3 * 60e3, created: T0 - 15 * 60e3, viewers: 0, cwd: '~/Projects/shop-app', line: '❯ 1. Yes' },
-  { sid: 'agent2', program: 'codex', busy: true, running: true, waiting: false, since: T0 - 22 * 60e3, lastOut: T0 - 4e3, created: T0 - 23 * 60e3, viewers: 0, cwd: '~/Projects/api', line: '● Running tests (38/60)…' },
-  { sid: 'build1', program: null, busy: false, running: true, waiting: false, done: { program: 'npm', at: T0 - 4 * 60e3, seconds: 312, changes: { files: 4, add: 120, del: 8 } }, lastOut: T0 - 4 * 60e3, created: T0 - 10 * 60e3, viewers: 0, cwd: '~/Projects/web', line: 'webpack compiled successfully in 812 ms' },
+  { sid: 'agent1', program: 'claude', busy: true, running: true, waiting: true, menu: true, question: 'Do you want to make this edit to auth.ts?', askedAt: T0 - 3 * 60e3, since: T0 - 14 * 60e3, lastOut: T0 - 3 * 60e3, created: T0 - 15 * 60e3, viewers: 0, cwd: '~/Projects/shop-app', line: '❯ 1. Yes', state: 'blocked', git: { branch: 'feat/login', ahead: 2, behind: 0, dirty: 3, upstream: true } },
+  { sid: 'agent2', program: 'codex', busy: true, running: true, waiting: false, since: T0 - 22 * 60e3, lastOut: T0 - 4e3, created: T0 - 23 * 60e3, viewers: 0, cwd: '~/Projects/api', line: '● Running tests (38/60)…', state: 'working', git: { branch: 'main', ahead: 0, behind: 1, dirty: 5, upstream: true }, watches: [{ id: 'w1', text: 'tests passed' }] },
+  { sid: 'build1', program: null, busy: false, running: true, waiting: false, done: { program: 'npm', at: T0 - 4 * 60e3, seconds: 312, changes: { files: 4, add: 120, del: 8 } }, lastOut: T0 - 4 * 60e3, created: T0 - 10 * 60e3, viewers: 0, cwd: '~/Projects/web', line: 'webpack compiled successfully in 812 ms', state: 'idle', git: { branch: 'main', ahead: 1, behind: 0, dirty: 4, upstream: true } },
   { sid: 'main', program: null, busy: false, running: true, waiting: false, lastOut: T0, created: T0 - 30 * 60e3, viewers: 1, cwd: '~', line: 'utsav@MacBook-Pro ~ %' },
 ];
+
+// Tasks: a race waiting for you to pick the winner, and a queue that's half done.
+const AG = { claude: 'claude {q}', codex: 'codex {q}', gemini: 'gemini -i {q}', opencode: 'opencode run {q}', aider: 'aider --message {q}' };
+const NM = { claude: 'Claude Code', codex: 'Codex', gemini: 'Gemini CLI', opencode: 'OpenCode', aider: 'Aider' };
+export const DEMO_TASKS = { agents: AG, names: NM,
+  groups: [{ id: 'g1', kind: 'race', prompt: 'add a dark mode toggle to the settings page', where: '~/Projects/shop-app', status: 'compare', test: 'npm test', lanes: ['r1', 'r2', 'r3'], startedAt: T0 - 20 * 60e3 }],
+  tasks: [
+    { id: 'r1', kind: 'race', group: 'g1', agent: 'claude', title: 'Claude Code', where: '~/.pocket-terminal/worktrees/shop-app-claude', status: 'done', sid: 'L-tr1', seconds: 412, changes: { files: 4, add: 96, del: 12 }, tests: { ok: true, last: ['Tests: 60 passed'] }, wt: { branch: 'pt/claude-g1' } },
+    { id: 'r2', kind: 'race', group: 'g1', agent: 'codex', title: 'Codex', where: '~/.pocket-terminal/worktrees/shop-app-codex', status: 'done', sid: 'L-tr2', seconds: 538, changes: { files: 6, add: 141, del: 30 }, tests: { ok: false, last: ['Tests: 2 failed, 58 passed'] }, wt: { branch: 'pt/codex-g1' } },
+    { id: 'r3', kind: 'race', group: 'g1', agent: 'gemini', title: 'Gemini CLI', where: '~/.pocket-terminal/worktrees/shop-app-gemini', status: 'done', sid: 'L-tr3', seconds: 301, changes: { files: 3, add: 70, del: 9 }, tests: { ok: true, last: ['Tests: 60 passed'] }, wt: { branch: 'pt/gemini-g1' } },
+    { id: 'q1', kind: 'queue', agent: 'claude', title: 'Claude Code: write tests for the cart', where: '~/Projects/shop-app', status: 'done', sid: 'L-tq1', seconds: 640, last: ['✓ Added 12 tests'] },
+    { id: 'q2', kind: 'queue', agent: 'codex', title: 'Codex: update the README', where: '~/Projects/shop-app', status: 'running', sid: 'L-tq2', seconds: 95 },
+    { id: 'q3', kind: 'queue', cmd: 'npm run build', title: 'npm run build', where: '~/Projects/shop-app', status: 'waiting' },
+  ] };

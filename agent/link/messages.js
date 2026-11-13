@@ -5,6 +5,7 @@
 const files = require('../lib/files');
 const preview = require('../lib/preview');
 const webpush = require('../lib/webpush');
+const clipboard = require('../lib/clipboard');
 const { choicesFor } = require('../lib/core');
 
 // ctx: shared state (see direct.js). L: this link's state (see channel.js).
@@ -51,6 +52,13 @@ function onMessage(ctx, L, raw) {
     }
     case 'reply': { const ok = core.reply(keyFor(m.sid), m.text); send({ t: 'answered', sid: m.sid, ok }); if (ok) { log('answered a waiting terminal in words'); act({ ev: 'answered', where: 'in words' }); } break; }
     case 'diff': core.diff(keyFor(m.sid), (r) => send({ t: 'diff', id: m.id, ...r })); break;
+    case 'git': if (m.what === 'commit' || m.what === 'push') { act({ ev: 'git-' + m.what }); core.gitAct(keyFor(m.sid), m.what, m.msg, (r) => send({ t: 'git', id: m.id, ...r })); } break;
+    case 'watch-add': send({ t: 'watch', id: m.id, ...core.addWatch(keyFor(m.sid), m.text) }); break;
+    case 'watch-rm': send({ t: 'watch', id: m.id, ...core.removeWatch(keyFor(m.sid), String(m.wid)) }); break;
+    case 'clip-get': act({ ev: 'clipboard', to: 'phone' }); clipboard.getClip().then((r) => send({ t: 'clip', id: m.id, ...r })); break;
+    case 'clip-set': act({ ev: 'clipboard', to: 'computer' }); clipboard.setClip(m.text).then((r) => send({ t: 'clip', id: m.id, ...r })); break;
+    case 'tasks': case 'task-add': case 'task-cancel': case 'race': case 'race-pick': case 'race-test': case 'chain': case 'task-cfg': case 'task-clear': case 'wt-merge': case 'wt-discard':
+      if (core.tasks) core.tasks.onPhone(m, send, keyFor, act); else send({ t: 'tasks', id: m.id, error: 'This computer runs an older Pocket Terminal.' }); break;
     case 'auto-get': send({ t: 'auto', ...core.getAuto() }); break;
     case 'auto-set': if (m.cfg && typeof m.cfg === 'object') send({ t: 'auto', ...core.setAuto(m.cfg) }); break;
     case 'answer': { const ok = core.answer(keyFor(m.sid), m.d); send({ t: 'answered', sid: m.sid, ok }); if (ok) { log('answered a waiting terminal from the dashboard'); act({ ev: 'answered' }); } break; }

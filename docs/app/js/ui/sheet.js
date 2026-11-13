@@ -7,7 +7,7 @@ import { state } from '../core/state.js';
 import { closeQuick } from '../terminal/keyrow.js';
 import { paintAsk } from '../features/ask.js';
 
-const PAGE_TITLES = { home: 'Menu', queue: 'Send a command', snippets: 'Saved commands', ask: 'Ask AI', power: 'Power and battery', settings: 'Settings', sessions: 'Agents & terminals', diff: 'Changes', computers: 'Computers', files: 'Files', web: 'Local websites' };
+const PAGE_TITLES = { home: 'Menu', queue: 'Send a command', snippets: 'Saved commands', ask: 'Ask AI', power: 'Power and battery', settings: 'Settings', sessions: 'Agents & terminals', diff: 'Changes', computers: 'Computers', files: 'Files', web: 'Local websites', work: 'Tasks', clip: 'Clipboard' };
 const pageHooks = {};
 let sheetTab = null;
 export function openSheet(tab) {

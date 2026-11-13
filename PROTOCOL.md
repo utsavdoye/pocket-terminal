@@ -85,6 +85,8 @@ The phone drops a note if it does not decrypt, `from` is not `mac`, or its `id` 
 | `hello` | none | 3 min | "The app is open." The computer stays awake ~2 min and posts `status: online`. If the note is older than 5 s (it waited while the computer slept), the computer may send a "ready" push 15 s later. |
 | `offer` | `oid`, `sdp` | 90 s | A WebRTC offer. The computer answers it. Older than 5 s: also the "ready" push logic. |
 | `cmd` | `cid`, `cmd` | 60 min (`maxCommandAgeMinutes`) | Run one command by itself (backup route). Each `cid` runs only once. Max 4000 characters. |
+| `answer` | `sid`, `a` (`yes` / `no` / `say`), `text` (with `say`, max 500) | 10 min | Answer a waiting agent from the phone's page of *another* computer (Agents → other computers). Same rules as the direct `answer` / `reply`: the computer picks what to type for `yes` / `no`. |
+| `agents?` | none | 10 min | "Send me your agent list." Posts `agents` again if the last one is over a minute old. |
 | `settings` | `power` (object) | 24 h | Change power settings. Allowed keys: `enabled`, `awakeOnCharger`, `batteryMode` (`saver` / `instant`), `checkInMinutes`/`smartCheckIn` (older phones; ignored now), `speed` (`smart` / `fast` / `balanced` / `saver`), `idleMinutes`, `minBattery` (5–90), `stopAlarmsBelow`. |
 
 A **viewer** (share link) computer only reacts to `hello` and `offer`.
@@ -97,6 +99,7 @@ A **viewer** (share link) computer only reacts to `hello` and `offer`.
 | `answer` | `oid`, `sdp` | The WebRTC answer. The phone only takes it if `oid` matches its current attempt and it is still waiting for an answer. |
 | `result` | `cid`, `code`, `out` | Output of a `cmd` sent through the mailbox. If the note is too big, the start of `out` is cut (`…(start cut)…`) until it fits. Also pings the notify topic. |
 | `revoked` | none | This phone was removed on the computer. The phone forgets its key. |
+| `agents` | `list` [{`sid`, `p` (program), `st` (`blocked` / `working` / `idle`), `q` (the question), `menu`, `ask`, `cwd` (last 40 characters), `at`, `t` (task title)}], `n` | Where this computer's agents stand, for the phone's "every computer" list (agent/link/summary.js). Up to 12, the ones waiting first, kept under 2.4 KB. Posted only when something changed, at most every 20 s, and when a phone disconnects; **only to Pocket Terminal's own board**, never to ntfy.sh (whose daily limit stays for pairing and connecting). |
 
 ### Pairing notes (on the one-time invite topic)
 
@@ -166,7 +169,22 @@ If more than 48 KB waits on the link, the computer drops the backlog. When the l
 | `reply` | `sid`, `text` | Answer in your own words (up to 500 characters). On a choice menu the computer presses Esc first, then types the text. Reply: `answered`. |
 | `diff` | `id`, `sid` | `git diff` of that session's folder. Reply: `diff`. |
 | `auto-get` | none | Read the auto-approve rules. Reply: `auto`. |
-| `auto-set` | `cfg` {`enabled`, `allow`} | Save them (max 40 rules, 60 characters each). Reply: `auto`. |
+| `auto-set` | `cfg` {`enabled`, `allow`, `ask`} | Save them (max 60 words per list, 60 characters each). `allow`: always yes; `ask`: always ask (a word matches where a word starts; with spaces or symbols, anywhere). Passwords, `sudo` and `rm -rf` always ask. Reply: `auto`. |
+| `git` | `id`, `sid`, `what` (`commit` / `push`), `msg` (commit message, max 500) | Commit everything in that session's folder (`git add -A`, `git commit -m`), or push its branch (`-u origin <branch>` the first time). git never stops to ask for a login (`GIT_TERMINAL_PROMPT=0`). Reply: `git` with `ok`, `commit` / `branch`, and `info` (`branch`, `upstream`, `ahead`, `behind`, `dirty`), or `error`. |
+| `watch-add` | `id`, `sid`, `text` | Tell me when this session prints `text` (case doesn't matter), or a `/pattern/`. Fires once, as an `alert` of kind `match` (and a notification). Max 5 per session. Reply: `watch` (`ok`, `id`) or `error`. |
+| `watch-rm` | `id`, `sid`, `wid` | Remove one. Reply: `watch`. |
+| `clip-get` | `id` | The computer's clipboard (text, max 100 KB). Reply: `clip` (`text`, `cut`) or `error`. |
+| `clip-set` | `id`, `text` | Put text on the computer's clipboard. Reply: `clip` (`ok`) or `error`. |
+| `tasks` | `id` | Tasks, races and hand-offs (agent/lib/tasks.js). Reply: `tasks` {`agents` (name → command, `{q}` = the task), `names`, `tasks` [{`id`, `kind` (`queue`/`race`/`chain`), `group`, `agent`, `title`, `where`, `status` (`waiting`/`running`/`blocked`/`done`/`failed`/`cancelled`), `why`, `sid`, `seconds`, `changes`, `tests` {`ok`, `last`}, `last`, `wt` {`branch`, `removed`}, `merged`}], `groups` [{`id`, `kind`, `prompt`, `where`, `status`, `test`, `lanes`, `winner`, `at`, `steps`}]}. Every task message below gets this reply too, with `ok` or `error`, and `made` (the new id). |
+| `task-add` | `id`, `cwd`, `agent` + `prompt`, or `cmd`, `worktree` | Add to the queue (runs one at a time). `worktree: true`: in its own git worktree. |
+| `race` | `id`, `cwd` (a git project), `prompt`, `agents` (2–4), `test` | Start the same task in a worktree per agent. When all are done, `test` runs in each, and the race waits for a pick. |
+| `race-pick` | `id`, `gid`, `lane` | Keep one: its work is committed in its worktree and merged (`--no-ff`) into the project's branch; the other worktrees and branches are removed. Refused if the project has uncommitted changes, or on a conflict (then nothing changes). |
+| `race-test` | `id`, `gid` | Run the race's tests again. |
+| `chain` | `id`, `cwd`, `prompt`, `steps` [{`agent`, `ask`}] (1–4), `test` | A hand-off: each step starts when the one before is done; later agents are asked to review the earlier ones' changes; `test` runs last. |
+| `task-cancel` | `id`, `tid` | Stop a task or a whole race / hand-off. |
+| `wt-merge` / `wt-discard` | `id`, `tid` | A finished queue task that ran in its own worktree: merge it in, or throw it away. |
+| `task-clear` | `id` | Forget finished tasks. |
+| `task-cfg` | `id`, `agents` | Set how each agent starts (`name = command {q}`); empty: the defaults. |
 | `push-sub` | `sub` {`endpoint`, `keys` {`p256dh`, `auth`}}, `quiet` | Save this phone's Web Push address (max 3 per phone). Only Apple, Google, Mozilla and Microsoft push hosts are accepted. Reply: `push-ok`. |
 | `push-off` | `endpoint` | Forget a push address. Reply: `push-ok` with `off: true`. |
 | `push-test` | none | Send a test notification. Reply: `push-tested`. |
@@ -193,14 +211,15 @@ If more than 48 KB waits on the link, the computer drops the backlog. When the l
 | `size` | `cols`, `rows` | The session's real size. A viewer scales its screen to match. |
 | `exit` | `code` | The shell or program in the session ended. (The phone does not use it yet.) |
 | `power` | `percent`, `onCharger`, `mode`, `checkInMinutes`, `nextCheckInMinutes`, `awake`, `reasons`, `nextWake`, `settings` | Battery and why the computer is staying awake. |
-| `alert` | `kind`, `sid`, `program`, and by kind: `text`, `menu`, `ask`, `cwd`, `choices`, `rule`, `seconds`, `changes`, `last` | Something happened. `kind`: `input` (needs you), `done` (a program finished; `seconds`, `changes` {`files`, `add`, `del`, `fresh`}, `last`: up to 3 of the last lines it printed, without the prompt or anything that looks like a secret), `quiet` (Windows: output stopped), `auto` (auto-approved; `rule`), `gone` (the question went away). Comes for the session on screen, and for every `Q-`/`C-` id. |
+| `alert` | `kind`, `sid`, `program`, and by kind: `text`, `menu`, `ask`, `cwd`, `choices`, `rule`, `seconds`, `changes`, `last` | Something happened. `kind`: `input` (needs you), `done` (a program finished; `seconds`, `changes` {`files`, `add`, `del`, `fresh`}, `last`: up to 3 of the last lines it printed, without the prompt or anything that looks like a secret), `quiet` (Windows: output stopped), `auto` (auto-approved; `rule`), `gone` (the question went away), `match` (a watch fired; `pattern`, `text`: the line), `task` (the queue, a race or a hand-off finished; `title`, `body`; to every phone). Comes for the session on screen, and for every `Q-`/`C-` id. |
 | `pong` | none | Reply to `ping`. The phone shows the round-trip time. |
 | `result` | `id`, `code`, `out` | A `cmd` finished (output max 64 KB, 10 min time limit). Sent to every open link of this phone. |
-| `sessions` | `list`, `current` | All sessions this phone can see. Each item: `sid`, `program`, `busy`, `running`, `waiting`, `lastOut`, `created`, `viewers`, `line`, `question`, `menu`, `askedAt`, `since`, `done`, `cwd`; `ask: true` for a `Q-` question; `ext: true` and `agent` for a `C-` agent. |
+| `sessions` | `list`, `current` | All sessions this phone can see. Each item: `sid`, `program`, `busy`, `running`, `waiting`, `lastOut`, `created`, `viewers`, `line`, `question`, `menu`, `askedAt`, `since`, `done`, `cwd`, `state` (`blocked` / `working` / `idle`: printing in the last 15 s), `stateAt`, `git` {`branch`, `ahead`, `behind`, `dirty`, `upstream`}, `watches` [{`id`, `text`}], `task` {`id`, `kind`, `title`}; `ask: true` for a `Q-` question; `ext: true` and `agent` for a `C-` agent. |
 | `switched` | `sid` | The switch worked. The phone saves `sid` as its own. |
 | `answered` | `sid`, `ok` | Result of `answer` or `reply`. (A viewer's `answered` has no `sid`.) |
 | `diff` | `id`, `folder`, `diff`, `cut`, `fresh` or `id`, `error` | The change list (cut at 200 KB), and new files not in git yet (max 100). |
-| `auto` | `enabled`, `allow` | The auto-approve rules. |
+| `auto` | `enabled`, `allow`, `ask` | The auto-yes rules. |
+| `git`, `watch`, `clip`, `tasks` | see the requests above | Replies. |
 | `push-ok` | `quiet`, or `off: true`, or `error` | Push address saved, removed, or refused. |
 | `push-tested` | `how` (`push` / `ntfy` / `none`) | How the test went out. |
 | `ports` | `id`, `list` [{`port`, `name`}] | Listening ports. |
@@ -259,6 +278,24 @@ No first line within 10 s also closes it. Lines over 1 MB in total close it.
 | `event` | `agent`, `session`, `cwd`, `kind` (`busy` / `stop`), `away` | An agent outside Pocket Terminal is working or finished. It shows as a `C-` entry. A `stop` after 20 s or more of work sends a `done` alert, if `away` is not false. Reply: `{ok: true}`, then the socket closes. |
 | `ask` | `agent`, `text`, `cwd` | A permission question. It shows as a `Q-` entry with Allow/Deny. The socket stays open. When answered, the reply is `{t: 'decision', v}` with `v` = `yes`, `no` or null. Closing the socket withdraws the question. |
 | `run` | `cmd` (max 4000), `cwd`, `env`, `cols`, `rows` | Start a command in a new `L-` session. Reply: `{t: 'started', sid}`. Then the computer sends `{t: 'o', d}` and `{t: 'exit', code}`. The client sends `{t: 'i', d}` (keys) and `{t: 'r', cols, rows}`. Typing from this window resizes the session back to this window's size. Closing the window leaves the session running. |
+
+### The terminal holder (`agent/lib/holder.js`, Mac and Linux)
+
+The terminals themselves run in a separate small program, so they survive a restart of the agent
+(an update, a crash). Socket `~/.pocket-terminal/holder.sock` (mode 600), token in `holder.token`
+(mode 600, new each time the holder starts), its pid in `holder.pid`. JSON, one per line; the first
+message must be `{op: 'hello', token, v}`, else the connection closes. One agent at a time: a new one
+takes over. The holder leaves once no terminal is left and no agent has been connected for a minute.
+`POCKET_HOLDER=0` turns it off (terminals run in the agent, as before; always so on Windows).
+
+| From | `op` | Fields |
+|---|---|---|
+| agent | `hello` | `token`, `v` (protocol, 1) |
+| holder | `hello` | `v`, `pid`, `list` [{`id`, `pid`, `pty`, `cols`, `rows`, `meta` {`key`, `created`, `run`, `task`}, `buf` (the last 256 KB), `proc`}]: the terminals it kept |
+| agent | `spawn` | `id`, `file`, `args`, `opts` {`name`, `cols`, `rows`, `cwd`, `env`}, `meta` |
+| agent | `write` / `resize` / `kill` / `meta` | `id`, and `d` / `cols`, `rows` / none / `meta` |
+| agent | `quit` | Close every terminal and leave. |
+| holder | `spawned` / `data` / `exit` / `proc` | `id`, and `pid`, `pty` / `d` / `code` / `p` (the foreground program, when it changes) |
 
 ### Claude Code hook outputs (`agent/hook.js`)
 

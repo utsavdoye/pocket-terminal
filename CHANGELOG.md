@@ -1,6 +1,23 @@
 # Changelog
 
-## 7.5.2 (2026-11-12)
+## Next release
+**Run your AI agents together from your phone, and a new look.**
+
+### New
+- **Every agent on every computer, in one list.** Agents now shows the agents on all your paired computers, with the ones waiting for you at the top. Answer an agent on your desktop while your phone is on your laptop: the answer goes through the board, sealed with your key. (A computer must be unlocked on the phone once in 12 hours to show up.)
+- **Race: one task, several agents.** Type the task once and pick 2 to 4 agents (Claude Code, Codex, Gemini CLI, OpenCode, Aider…). Each works in its own copy of your project (a git worktree on its own branch), so they don't get in each other's way. When they are done you see files changed, whether the tests pass, and how long each took. Tap the winner: its work is merged into your project and the other copies are deleted.
+- **Hand-offs.** Set up a chain once, for example Codex writes the code, Claude Code reviews it, then the tests run. Each step starts when the one before is done. One notification at the end.
+- **Task queue.** "When this finishes, run the next one." Agents with a task, or plain commands, one after the other. Optionally in their own copy of the project, then "Bring it in" or "Throw away". One notification when the queue is done.
+- **Commit and push from the phone.** Changes now has a commit box and a Push button. Each terminal shows its git branch and how far it is ahead of or behind its remote.
+- **Working / blocked / idle on every terminal**, as a coloured dot and a word, worked out on the computer.
+- **"Tell me when it says…"**: tap 🔔 on a terminal and type some text (or `/a pattern/`). You get a notification when it appears, for example `tests passed` or `/error|failed/`.
+- **Auto-yes rules you can see and edit**: an "always yes" list and an "always ask" list (rm, push, deploy… by default). Passwords, `sudo` and `rm -rf` always ask, whatever the lists say.
+- **Clipboard**: copy on the phone, paste on the computer, and the other way (Menu → Clipboard).
+- **Terminals survive an update.** On Mac and Linux the terminals now live in a small separate program (the terminal holder), so updating or restarting Pocket Terminal no longer stops your AI agent or closes your terminals. They come back with their screen.
+- **A new look**: monospace, square, quiet, with a status dot per agent. Five color sets (Charcoal, Catppuccin, Nord, Dracula, Gruvbox, plus a light Paper). The old rounded light and dark looks are still in Settings → Appearance.
+- A Tasks button in the bottom bar.
+
+### Fixes
 - **"Your computer is awake" could be skipped.** If you opened the app less than 5 seconds before the sleeping computer's next check-in and then left, it never told you it was up. It now goes by whether you knocked while it slept.
 - **Safari (iPhone):** saving the last screen as the app closed could fail with an error. Packing and unpacking now happen straight from memory.
 - Tests on GitHub: the test browser download is tried 3 times, and one test no longer trips over a list that redraws itself.

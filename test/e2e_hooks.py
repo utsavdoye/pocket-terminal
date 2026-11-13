@@ -11,7 +11,7 @@ svc=subprocess.Popen(['node','test/run-services.js','8890','8891',S+'/board.json
 ports=json.loads(svc.stdout.readline()); BOARD=f"http://127.0.0.1:{ports['board']}"; APP=f"http://localhost:{ports['app']}/app/"
 push=subprocess.Popen(['node','test/push-receiver.js'],cwd=R,stdout=subprocess.PIPE,text=True); SUB=json.loads(push.stdout.readline())
 pushed=[]; threading.Thread(target=lambda: [pushed.append(json.loads(l)) for l in push.stdout],daemon=True).start()
-env=dict(os.environ,POCKET_HOME=S+'/home',POCKET_APP_URL=APP,SHELL='/bin/bash')
+env=dict(os.environ,POCKET_HOLDER='0',POCKET_HOME=S+'/home',POCKET_APP_URL=APP,SHELL='/bin/bash')
 ph.setup(R, env, 'TestMac', BOARD)
 agent=subprocess.Popen(['node','agent.js'],cwd=R+'/agent',env=dict(env,POWER_BRAIN='0',HOME=S+'/u',POCKET_PUSH_TEST='1',POCKET_READY_AFTER_MS='4000'),stdout=open(S+'/agent.log','w'),stderr=subprocess.STDOUT)
 ROWS="window.ptText()"
@@ -111,9 +111,9 @@ try:
     for ev in ['UserPromptSubmit','PreToolUse']:
         h,inp=hook(ev, 600, tool_name='Bash'); h.communicate(inp, timeout=10)
     ph.nav(pg,'sessions')
-    check(15, 'hook: the dashboard shows Claude Code working, in its folder', wait(lambda: 'Claude Code' in pg.inner_text('#sessList') and 'Working' in pg.inner_text('#sessList') and 'proj' in pg.inner_text('#sessList'), 10))
+    check(15, 'hook: the dashboard shows Claude Code working, in its folder', wait(lambda: 'claude code' in pg.inner_text('#sessList').lower() and 'working' in pg.inner_text('#sessList').lower() and 'proj' in pg.inner_text('#sessList'), 10))
     h,inp=hook('Stop', 600); h.communicate(inp, timeout=10)
-    check(16, 'hook: Stop marks it finished', wait(lambda: 'Finished' in pg.inner_text('#sessList'), 10))
+    check(16, 'hook: Stop marks it finished', wait(lambda: 'done' in pg.inner_text('#sessList').lower(), 10))
     # 6. You opened the app, then switched away before it connected (the computer was waking):
     #    once it's up, the phone gets one "it's awake, tap to connect" notification.
     import signal

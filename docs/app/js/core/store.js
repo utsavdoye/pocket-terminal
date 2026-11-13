@@ -3,7 +3,7 @@
 
 import { DEMO, VIEW } from './env.js';
 
-const DEMO_KEEP = new Set(['theme', 'font']);
+const DEMO_KEEP = new Set(['theme', 'palette', 'font']);
 export const store = {
   get(k, d = null) { try { const v = localStorage.getItem('pt_' + k); return v === null ? d : JSON.parse(v); } catch { return d; } },
   set(k, v) { if ((DEMO || VIEW) && !DEMO_KEEP.has(k)) return; try { localStorage.setItem('pt_' + k, JSON.stringify(v)); } catch {} },

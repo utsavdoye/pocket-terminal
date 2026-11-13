@@ -22,7 +22,7 @@ try:
         b = p.chromium.launch(); ctx = b.new_context(viewport={'width': 390, 'height': 844}, has_touch=True); pg = ctx.new_page()
         errs = []; pg.on('pageerror', lambda e: errs.append(str(e)))
         pg.goto(APP); pg.wait_for_selector('#scanBtn', state='visible')
-        check(1, 'light theme by default', pg.evaluate("document.documentElement.dataset.theme") == 'light')
+        check(1, 'the Terminal look by default (dark, monospace)', pg.evaluate("[document.documentElement.dataset.theme, document.documentElement.dataset.style]") == ['dark', 'tech'])
         pg.goto(APP + '#demo'); pg.reload(); wait(pg, "document.querySelector('#status').textContent.includes('Live')", 8000)
         check(2, 'demo opens live without pairing', True)
         pg.click('#term'); pg.keyboard.type('git status\n'); pg.wait_for_timeout(400)

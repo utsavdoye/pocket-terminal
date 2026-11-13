@@ -14,7 +14,7 @@ ports=json.loads(svc.stdout.readline()); BOARD=f"http://127.0.0.1:{ports['board'
 push=subprocess.Popen(['node','test/push-receiver.js'],cwd=R,stdout=subprocess.PIPE,text=True); SUB=json.loads(push.stdout.readline())
 pushed=[]; threading.Thread(target=lambda: [pushed.append(json.loads(l)) for l in push.stdout],daemon=True).start()
 SIM=S+'/sim.json'; json.dump({'percent':70,'onCharger':True,'lid':False},open(SIM,'w'))
-env=dict(os.environ,POCKET_HOME=S+'/home',POCKET_APP_URL=APP)
+env=dict(os.environ,POCKET_HOLDER='0',POCKET_HOME=S+'/home',POCKET_APP_URL=APP)
 ph.setup(R, env, 'TestMac', BOARD)
 agent=subprocess.Popen(['node','agent.js'],cwd=R+'/agent',env=dict(env,POWER_SIM=R+'/agent/test/sim-mac.js',SIM_STATE=SIM,POCKET_PUSH_TEST='1',POCKET_READY_AFTER_MS='3000',POCKET_DEBUG_NOTES='1'),stdout=open(S+'/agent.log','w'),stderr=subprocess.STDOUT)
 awake=lambda pg: 'awake' in (pg.get_attribute('#presence','class') or '')

@@ -48,9 +48,13 @@ class Board {
     this.fails = new Map(); // board -> failed tries in a row (the wait before the next try grows)
   }
 
-  async publish(text, topic = this.topic, headers = {}) {
+  // own: only Pocket Terminal's own boards, not ntfy.sh (whose free daily limit per internet
+  // connection is kept for what matters: pairing, connecting, notifications).
+  async publish(text, topic = this.topic, headers = {}, { own = false } = {}) {
     if (text.length > MAX_NOTE && topic === this.topic) throw new Error('note too big');
-    const results = await Promise.allSettled(this.urls.map((u) =>
+    const urls = own ? this.urls.filter((u) => u !== NTFY) : this.urls;
+    if (!urls.length) throw new Error('no board of our own to post to');
+    const results = await Promise.allSettled(urls.map((u) =>
       fetch(`${u}/${topic}`, { method: 'POST', body: text, headers, signal: AbortSignal.timeout(15e3) })
         .then((r) => { if (!r.ok) throw new Error(`${u} answered ${r.status}`); return r; })));
     const ok = results.filter((r) => r.status === 'fulfilled').length;

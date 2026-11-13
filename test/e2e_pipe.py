@@ -15,7 +15,7 @@ CMD=dict(add='echo via-board-$(40+2)', burst='1..3000 | Select-Object -Last 3; e
 S=__import__('tempfile').mkdtemp(); os.makedirs(S+'/home'); R=os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 svc=subprocess.Popen(['node','test/run-services.js','8902','8903',S+'/board.json'],cwd=R,stdout=subprocess.PIPE,text=True)
 ports=json.loads(svc.stdout.readline()); BOARD=f"http://127.0.0.1:{ports['board']}"; APP=f"http://localhost:{ports['app']}/app/"
-env=dict(os.environ,POCKET_HOME=S+'/home',POCKET_APP_URL=APP)
+env=dict(os.environ,POCKET_HOLDER='0',POCKET_HOME=S+'/home',POCKET_APP_URL=APP)
 if not WIN: env['SHELL']='/bin/bash'
 ph.setup(R, env, 'TestMac', BOARD)
 os.makedirs(S+'/u/docs'); open(S+'/u/docs/hello.txt','w').write('hi from the computer\n')

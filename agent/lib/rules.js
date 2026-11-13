@@ -34,14 +34,26 @@ const isMenu = (tail) => /(?:^|\n)\s*(?:❯|›|>)?\s*1\.\s+\S[\s\S]*\n\s*2\.\s+
 
 // ---------- smart auto-approve ----------
 // Off by default. When on, a question is answered "yes" by itself only if the screen shows one of
-// your allowed words AND none of the risky ones. Anything else still asks you.
-const RISKY = /\b(rm|rmdir|del|delete|remove|drop|truncate|force|--force|-f\b|push|deploy|publish|release|sudo|chmod|chown|kill|reset|revert|overwrite|format|mkfs|dd|curl|wget|install|uninstall|payment|secret|token|password|passphrase|prod|production|migrat)/i;
-const DEFAULT_AUTO = { enabled: false, allow: ['npm test', 'npm run test', 'pytest', 'go test', 'cargo test', 'git status', 'git diff', 'ls', 'cat ', 'Read(', 'Read file', 'Search(', 'Grep'] };
+// your "always yes" words AND none of your "always ask" words. Anything else still asks you.
+// Both lists are yours to edit (Settings → AI agents). A few things always ask, whatever the
+// lists say: passwords, sudo, and deleting folders (rm -rf).
+const ALWAYS_ASK = /password|passphrase|\bsudo\b|\brm\s+-[a-z]*[rf][a-z]*\b/i;
+const DEFAULT_ASK = ['rm', 'rmdir', 'del', 'delete', 'remove', 'drop', 'truncate', 'force', 'push', 'deploy', 'publish', 'release', 'chmod', 'chown', 'kill', 'reset', 'revert', 'overwrite', 'format', 'mkfs', 'dd', 'curl', 'wget', 'install', 'uninstall', 'payment', 'secret', 'token', 'prod', 'production', 'migrat'];
+const DEFAULT_AUTO = { enabled: false, allow: ['npm test', 'npm run test', 'pytest', 'go test', 'cargo test', 'git status', 'git diff', 'ls', 'cat ', 'Read(', 'Read file', 'Search(', 'Grep'], ask: DEFAULT_ASK };
+const esc = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+// A word from the "always ask" list: a word matches where a word starts ("rm" catches "rm" and
+// "rmdir", not "format"); anything with spaces or symbols ("git push") matches anywhere.
+function askHit(cfg, tail) {
+  if (ALWAYS_ASK.test(tail)) return 'always';
+  const list = Array.isArray(cfg.ask) ? cfg.ask : DEFAULT_ASK;
+  for (const w of list) { const t = String(w).trim(); if (!t) continue; const re = new RegExp((/^\w/.test(t) ? '\\b' : '') + esc(t), 'i'); if (re.test(tail)) return t; }
+  return null;
+}
 function autoDecision(cfg, tail, text, menu) {
   if (!cfg || !cfg.enabled || !Array.isArray(cfg.allow) || !cfg.allow.length) return null;
   if (/password|passphrase/i.test(text)) return null;
+  if (askHit(cfg, tail)) return null;
   const screen = tail.toLowerCase();
-  if (RISKY.test(tail)) return null;
   const hit = cfg.allow.map((a) => String(a).trim()).filter(Boolean).find((a) => screen.includes(a.toLowerCase()));
   if (!hit) return null;
   const c = choicesFor(text, menu).find((x) => x.a === 'yes');
@@ -59,4 +71,4 @@ function choicesFor(text, menu) {
   return [];
 }
 
-module.exports = { plain, asksForInput, lastLine, lastLines, question, isMenu, DEFAULT_AUTO, autoDecision, choicesFor };
+module.exports = { plain, asksForInput, lastLine, lastLines, question, isMenu, DEFAULT_AUTO, DEFAULT_ASK, autoDecision, askHit, choicesFor };

@@ -20,7 +20,20 @@ const TERM_THEMES = {
     black: '#1E2338', red: '#FF7A7A', green: '#4FD1A1', yellow: '#F4B740', blue: '#7AA2FF', magenta: '#C79BFF', cyan: '#6FD3E6', white: '#E9E7F2',
     brightBlack: '#5D6283', brightRed: '#FF9C9C', brightGreen: '#7BE3BD', brightYellow: '#FFD07A', brightBlue: '#9DBBFF', brightMagenta: '#DAB8FF', brightCyan: '#9BE6F2', brightWhite: '#FFFFFF' },
 };
-const termTheme = () => TERM_THEMES[document.documentElement.dataset.theme === 'dark' ? 'dark' : 'light'];
+// The Terminal look's palettes (Settings → Appearance → Colors). Catppuccin (Mocha), Nord, Dracula
+// and Gruvbox are the well-known open color schemes of those names.
+const P = (bg, fg, cursor, sel, n, b) => ({ background: bg, foreground: fg, cursor, cursorAccent: bg, selectionBackground: sel,
+  black: n[0], red: n[1], green: n[2], yellow: n[3], blue: n[4], magenta: n[5], cyan: n[6], white: n[7],
+  brightBlack: b[0], brightRed: b[1], brightGreen: b[2], brightYellow: b[3], brightBlue: b[4], brightMagenta: b[5], brightCyan: b[6], brightWhite: b[7] });
+const PALETTES = {
+  charcoal: P('#1e1f22', '#d6d6da', '#e8956b', '#3a3d45', ['#2b2d31', '#f0717c', '#8fcf9a', '#e5c07b', '#6ea8fe', '#b998e6', '#6fc6c8', '#c8c8cc'], ['#5c5f66', '#ff8f98', '#a8e0b2', '#f0d397', '#91bdff', '#cdb2f0', '#8fd9db', '#f2f2f4']),
+  catppuccin: P('#1e1e2e', '#cdd6f4', '#f5e0dc', '#45475a', ['#45475a', '#f38ba8', '#a6e3a1', '#f9e2af', '#89b4fa', '#f5c2e7', '#94e2d5', '#bac2de'], ['#585b70', '#f38ba8', '#a6e3a1', '#f9e2af', '#89b4fa', '#f5c2e7', '#94e2d5', '#a6adc8']),
+  nord: P('#2e3440', '#d8dee9', '#d8dee9', '#434c5e', ['#3b4252', '#bf616a', '#a3be8c', '#ebcb8b', '#81a1c1', '#b48ead', '#88c0d0', '#e5e9f0'], ['#4c566a', '#bf616a', '#a3be8c', '#ebcb8b', '#81a1c1', '#b48ead', '#8fbcbb', '#eceff4']),
+  dracula: P('#282a36', '#f8f8f2', '#f8f8f2', '#44475a', ['#21222c', '#ff5555', '#50fa7b', '#f1fa8c', '#bd93f9', '#ff79c6', '#8be9fd', '#f8f8f2'], ['#6272a4', '#ff6e6e', '#69ff94', '#ffffa5', '#d6acff', '#ff92df', '#a4ffff', '#ffffff']),
+  gruvbox: P('#282828', '#ebdbb2', '#ebdbb2', '#504945', ['#282828', '#cc241d', '#98971a', '#d79921', '#458588', '#b16286', '#689d6a', '#a89984'], ['#928374', '#fb4934', '#b8bb26', '#fabd2f', '#83a598', '#d3869b', '#8ec07c', '#ebdbb2']),
+  paper: P('#f7f5ef', '#2b2a27', '#b5651d', '#e8dcc3', ['#2b2a27', '#c4372f', '#3f7d3a', '#9a6a00', '#2f5fa8', '#8a4fa8', '#1f7f86', '#8a877f'], ['#6b6860', '#d9534a', '#4f9a49', '#b8860b', '#3d74c4', '#a066c2', '#2a99a2', '#b3afa5']),
+};
+const termTheme = () => { const r = document.documentElement.dataset; return r.style === 'tech' ? PALETTES[r.palette] || PALETTES.charcoal : TERM_THEMES[r.theme === 'dark' ? 'dark' : 'light']; };
 
 export function setupTerminal() {
   let size = store.get('font', matchMedia('(max-width:700px)').matches ? 13 : 15);

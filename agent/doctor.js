@@ -142,6 +142,12 @@ function log() {
     else bad('The agent is not running', 'Start it:  npx pocket-terminal   (it also starts by itself when you log in)');
     phones(cfg);
   }
+  if (have && up && !WIN) { // the terminal holder: terminals that survive a restart of the agent
+    let pid = 0; try { pid = Number(fs.readFileSync(path.join(DIR, 'holder.pid'), 'utf8')); } catch {}
+    let alive = false; try { alive = pid > 0 && (process.kill(pid, 0), true); } catch {}
+    if (alive) ok('Terminals keep running when the agent restarts (terminal holder)');
+    else warn('Terminals end when the agent restarts (the terminal holder is not running)', 'It starts with the agent. If this stays, look in ~/.pocket-terminal/holder.log');
+  }
   await boards(cfg);
   if (have) { await direct(cfg); notifications(); await wakeups(); }
   const lg = log();

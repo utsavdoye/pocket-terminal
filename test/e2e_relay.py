@@ -16,7 +16,7 @@ turn=subprocess.Popen(['turnserver','-n',f'--listening-ip={IP}',f'--relay-ip={IP
 ICE=[{'urls':[f'turn:{IP}:3488?transport=udp',f'turn:{IP}:53?transport=udp'],'username':'u1','credential':'c1/+='}]
 svc=subprocess.Popen(['node','test/run-services.js','8898','8899',S+'/board.json'],cwd=R,stdout=subprocess.PIPE,text=True,env=dict(os.environ,MOCK_TURN_ICE=json.dumps(ICE)))
 ports=json.loads(svc.stdout.readline()); BOARD=f"http://127.0.0.1:{ports['board']}"; APP=f"http://localhost:{ports['app']}/app/"
-env=dict(os.environ,POCKET_HOME=S+'/home',POCKET_APP_URL=APP,SHELL='/bin/bash')
+env=dict(os.environ,POCKET_HOLDER='0',POCKET_HOME=S+'/home',POCKET_APP_URL=APP,SHELL='/bin/bash')
 ph.setup(R, env, 'TestMac', BOARD)
 def start_agent(extra={}):
     return subprocess.Popen(['node','agent.js'],cwd=R+'/agent',env=dict(env,POWER_BRAIN='0',**extra),stdout=open(S+'/agent.log','a'),stderr=subprocess.STDOUT)

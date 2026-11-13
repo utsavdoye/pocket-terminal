@@ -7,7 +7,7 @@ from playwright.sync_api import sync_playwright
 S=__import__('tempfile').mkdtemp(); os.makedirs(S+'/home'); R=os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 svc=subprocess.Popen(['node','test/run-services.js','8880','8881',S+'/board.json'],cwd=R,stdout=subprocess.PIPE,text=True)
 ports=json.loads(svc.stdout.readline()); BOARD=f"http://127.0.0.1:{ports['board']}"; APP=f"http://localhost:{ports['app']}/app/"
-env=dict(os.environ,POCKET_HOME=S+'/home',POCKET_APP_URL=APP,SHELL='/bin/bash')
+env=dict(os.environ,POCKET_HOLDER='0',POCKET_HOME=S+'/home',POCKET_APP_URL=APP,SHELL='/bin/bash')
 ph.setup(R, env, 'TestMac', BOARD)
 agent=subprocess.Popen(['node','agent.js'],cwd=R+'/agent',env=dict(env,POWER_BRAIN='0'),stdout=open(S+'/agent.log','w'),stderr=subprocess.STDOUT)
 ROWS="window.ptText()"

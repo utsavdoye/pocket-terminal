@@ -22,8 +22,12 @@ export function setupSettings() {
     location.reload();
   };
   $('unpair').onclick = async () => { if (!confirm(`Remove the pairing key for ${state.S.name} from this phone?`)) return; await removeComputer(state.S.topic); location.reload(); };
-  const paintTheme = () => document.querySelectorAll('#themeSeg button').forEach((b) => b.classList.toggle('on', b.dataset.v === window.ptTheme.pick()));
+  const paintTheme = () => {
+    document.querySelectorAll('#themeSeg button').forEach((b) => b.classList.toggle('on', b.dataset.v === window.ptTheme.pick()));
+    $('paletteRow').hidden = window.ptTheme.pick() !== 'tech'; $('paletteSel').value = window.ptTheme.palette();
+  };
   document.querySelectorAll('#themeSeg button').forEach((b) => (b.onclick = () => { store.set('theme', b.dataset.v); window.ptTheme.apply(); paintTheme(); }));
+  $('paletteSel').onchange = () => { store.set('palette', $('paletteSel').value); window.ptTheme.apply(); };
   paintTheme();
   if (DEMO) {
     const leave = () => { location.replace(location.pathname); };

@@ -8,7 +8,7 @@ svc=subprocess.Popen(['node','test/run-services.js','8810','8811',S+'/board.json
 ports=json.loads(svc.stdout.readline()); BOARD=f"http://127.0.0.1:{ports['board']}"; APP=f"http://localhost:{ports['app']}/app/"
 json.dump({'percent':70,'onCharger':True,'lid':True},open(S+'/sim.json','w'))
 json.dump({'checkInMinutes':0.4,'idleMinutes':0.05},open(S+'/home/power.json','w'))
-env=dict(os.environ,POCKET_HOME=S+'/home',POCKET_APP_URL=APP)
+env=dict(os.environ,POCKET_HOLDER='0',POCKET_HOME=S+'/home',POCKET_APP_URL=APP)
 ph.setup(R, env, 'TestMac', BOARD)
 def start_agent(extra={}):
     return subprocess.Popen(['node','agent.js'],cwd=R+'/agent',env=dict(env,POWER_SIM=R+'/agent/test/sim-mac.js',SIM_STATE=S+'/sim.json',**extra),stdout=open(S+'/agent.log','a'),stderr=subprocess.STDOUT)

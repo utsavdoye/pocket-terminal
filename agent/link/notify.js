@@ -53,6 +53,8 @@ function startNotify(ctx) {
     const msg = ev.kind === 'input' && ev.ask ? { title: `${prog} asks for permission`, body: (ev.text || 'It is waiting for your answer.') + where }
       : ev.kind === 'input' ? { title: `${prog} needs you`, body: ev.text || 'It is waiting for your answer.' }
       : ev.kind === 'done' ? { title: `${prog} finished`, body: `after ${ev.seconds >= 120 ? Math.round(ev.seconds / 60) + ' min' : ev.seconds + ' s'}${ev.changes && ev.changes.files ? ` · ${ev.changes.files} file${ev.changes.files === 1 ? '' : 's'} changed (+${ev.changes.add} −${ev.changes.del})` : ''}.${Array.isArray(ev.last) && ev.last.length ? '\n' + ev.last.join('\n') : ' Tap to see the result.'}` }
+      : ev.kind === 'match' ? { title: `${prog}: "${String(ev.pattern || '').slice(0, 40)}"`, body: ev.text || 'It printed what you were waiting for.' }
+      : ev.kind === 'task' ? { title: String(ev.title || 'Tasks').slice(0, 80), body: String(ev.body || '').slice(0, 300) }
       : ev.kind === 'quiet' ? { title: 'Your terminal went quiet', body: ev.text || 'It may be done, or waiting for you.' }
       : ev.kind === 'ready' ? { title: `${cfg.name || os.hostname()} is awake ✓`, body: 'Ready when you are. Tap to connect (it stays awake for 3 minutes).' }
       : { title: 'Notifications work ✅', body: `${cfg.name || os.hostname()} can reach this phone.` };

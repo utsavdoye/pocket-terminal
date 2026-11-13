@@ -45,7 +45,7 @@ export function setupUi() {
     live: () => !!(state.dc && state.dc.readyState === 'open'), send: sendTerm, on,
     listen, unlisten, newId: randomId,
     sid: () => state.SID, setSid, size: () => ({ cols: state.term.cols, rows: state.term.rows }),
-    input, focus: () => state.term.focus(), relayout: () => requestAnimationFrame(() => state.fit.fit()),
+    input, paste: (t) => state.term.paste(t), focus: () => state.term.focus(), relayout: () => requestAnimationFrame(() => state.fit.fit()),
     openSheet, closeSheet, pageOpen,
     onPage, onInput,
     pushKey: getPushKey, drain, ask: () => doAsk(), demo: DEMO, viewer: !!state.S.viewer,

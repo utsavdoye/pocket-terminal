@@ -3,7 +3,7 @@
 
 import { state } from '../../core/state.js';
 import { handleMsg } from '../../connection/messages.js';
-import { C, PROMPT, DEMO_OUT, DEMO_DIFF, DEMO_SESSIONS, DEMO_AUTO } from './data.js';
+import { C, PROMPT, DEMO_OUT, DEMO_DIFF, DEMO_SESSIONS, DEMO_AUTO, DEMO_TASKS } from './data.js';
 import { demoSleep } from './demo.js';
 
 const demoRun = (cmd) => {
@@ -33,7 +33,7 @@ export function demoShell(m) {
     if (x && x.waiting) { x.waiting = false; x.question = null; x.lastOut = Date.now(); x.line = `✻ ${m.text.slice(0, 60)}`; }
     return reply({ t: 'answered', sid: m.sid, ok: !!x });
   }
-  if (m.t === 'auto-get' || m.t === 'auto-set') { if (m.cfg) demoAuto = { enabled: !!m.cfg.enabled, allow: m.cfg.allow }; return reply({ t: 'auto', ...demoAuto }); }
+  if (m.t === 'auto-get' || m.t === 'auto-set') { if (m.cfg) demoAuto = { enabled: !!m.cfg.enabled, allow: m.cfg.allow, ask: m.cfg.ask }; return reply({ t: 'auto', ...demoAuto }); }
   if (m.t === 'diff') return reply({ t: 'diff', id: m.id, folder: '~/Projects/web', cut: false, fresh: ['src/Cart.test.tsx'], diff: DEMO_DIFF });
   if (m.t === 'answer') {
     const x = demoSess.find((y) => y.sid === m.sid);
@@ -42,6 +42,15 @@ export function demoShell(m) {
     return reply({ t: 'answered', sid: m.sid, ok: !!x });
   }
   if (m.t === 'shares') return reply({ t: 'shares', list: [] });
+  // tasks, git, watches, clipboard: the demo shows them, and says what would happen
+  const later = 'In the demo nothing runs. Pair your computer to do it for real.';
+  if (['tasks', 'task-clear', 'task-cfg'].includes(m.t)) return reply({ t: 'tasks', id: m.id, ...DEMO_TASKS });
+  if (['task-add', 'race', 'chain', 'race-pick', 'race-test', 'task-cancel', 'wt-merge', 'wt-discard'].includes(m.t)) return reply({ t: 'tasks', id: m.id, error: later, ...DEMO_TASKS }, 400);
+  if (m.t === 'git') return reply({ t: 'git', id: m.id, error: later }, 500);
+  if (m.t === 'watch-add') { const x = demoSess.find((y) => y.sid === m.sid); if (x) x.watches = [...(x.watches || []), { id: String(now), text: m.text }]; return reply({ t: 'watch', id: m.id, ok: true }); }
+  if (m.t === 'watch-rm') { const x = demoSess.find((y) => y.sid === m.sid); if (x) x.watches = (x.watches || []).filter((w) => w.id !== m.wid); return reply({ t: 'watch', id: m.id, ok: true }); }
+  if (m.t === 'clip-get') return reply({ t: 'clip', id: m.id, text: 'git checkout -b feat/dark-mode', cut: false });
+  if (m.t === 'clip-set') return reply({ t: 'clip', id: m.id, ok: true });
   if (m.t === 'share') return reply({ t: 'share', id: 'demo', link: 'https://pocket-terminal.utsavdoye.com/app/#watch=only-a-demo', expires: now + m.minutes * 60e3 });
   if (m.t === 'push-test' || m.t === 'push-sub') return reply({ t: 'push-tested', how: 'none' });
   if (m.t === 'ports') return reply({ t: 'ports', id: m.id, list: [{ port: 3000, name: 'node' }, { port: 5173, name: 'vite' }, { port: 8000, name: 'python3' }] });

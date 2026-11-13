@@ -172,6 +172,7 @@ function startChannel(ctx) {
       peers.delete(send); sess && sess.clients.delete(client); clearTimeout(flushT);
       if (!viewer) power && power.setPhoneWanting(peers.size > 0);
       log(`${viewer ? 'viewer' : 'phone'} disconnected (${peers.size} open)`);
+      if (!viewer && ctx.postSummary) ctx.postSummary(); // where things stand, for the phone's other-computers list
       act({ ev: 'disconnected', keys: L.typed });
       try { pc.close(); } catch {}
     });

@@ -19,7 +19,7 @@ const DIR = process.env.POCKET_HOME || path.join(os.homedir(), '.pocket-terminal
 const log = (...a) => console.log(new Date().toISOString(), ...a);
 const readJson = (f) => { try { return JSON.parse(fs.readFileSync(path.join(DIR, f), 'utf8')); } catch { return null; } };
 
-function main() {
+async function main() {
   const direct = readJson('direct.json');
   const relay = process.env.RELAY_URL && process.env.AGENT_TOKEN
     ? { relay: process.env.RELAY_URL, token: process.env.AGENT_TOKEN } : readJson('agent.json');
@@ -41,7 +41,14 @@ function main() {
     }, sim || {});
   }
 
-  const core = createCore({ log, power, dir: DIR });
+  // Terminals live in the terminal holder (lib/holder.js) when it can run, so they survive a
+  // restart of this agent (an update, a crash): an AI agent keeps working through it.
+  const host = await require('./lib/ptyhost').startHost({ dir: process.env.POCKET_HOLDER === '0' ? null : DIR, log });
+  const core = createCore({ log, power, dir: DIR, host });
+  core.restore(host.restored);
+  // Tasks from the phone: a queue, races between agents, hand-offs (lib/tasks.js).
+  const { SHELL } = require('./lib/core');
+  core.tasks = require('./lib/tasks').createTasks({ core, log, dir: DIR, shell: SHELL, alert: (ev) => core.events.emit('alert', ev) });
   if (mode === 'direct') {
     transport = require('./devices').startDevices({ core, power, log, dir: DIR });
   } else {
@@ -53,7 +60,7 @@ function main() {
   log(`agent running in ${mode} mode`);
 
   const stop = async () => {
-    core.stop(); local.stop();
+    core.tasks.stop(); core.stop({ keep: host.kind === 'holder' }); host.stop(); local.stop();
     try { transport.stop(); } catch {}
     if (power) await power.stop(); // never leave the Mac stuck awake
     process.exit(0);
@@ -62,4 +69,4 @@ function main() {
   process.on('SIGTERM', stop);
 }
 
-if (require.main === module || process.env.POCKET_EMBEDDED) main();
+if (require.main === module || process.env.POCKET_EMBEDDED) main().catch((e) => { console.error(e); process.exit(1); });

@@ -6,6 +6,8 @@
 //   Files       browse, download to this phone, upload from it
 //   Websites    open the computer's localhost:3000 here, through the encrypted link
 //   Voice       say what you want in Ask
+//   Tasks       a queue, races between agents, hand-offs (work.js); every computer's agents (everywhere.js)
+//   Clipboard   copy on the phone, paste on the computer and back (clip.js)
 // ui/setup.js hands in `ctx` (the link, the menu, toasts…); nothing here talks to the network by itself.
 // Each tool lives in its own file. `t` is how they reach each other: needs.js puts its answer
 // buttons there, agents.js the dashboard refresh and the terminal on screen.
@@ -19,6 +21,9 @@ import { setupFiles } from './files.js';
 import { setupWebsites } from './websites.js';
 import { setupVoice } from './voice.js';
 import { setupUpdate } from './update.js';
+import { setupWork } from './work.js';
+import { setupClip } from './clip.js';
+import { setupEverywhere } from './everywhere.js';
 
 export function setupTools(ctx) {
   const t = {};
@@ -31,5 +36,7 @@ export function setupTools(ctx) {
   setupWebsites(ctx);
   setupVoice(ctx);
   setupUpdate(ctx);
+  setupEverywhere(ctx, t);
+  if (!ctx.viewer) { setupWork(ctx, t); setupClip(ctx); }
   return { hideNeeds: t.hideNeeds, refreshSessions: t.refreshSessions };
 }

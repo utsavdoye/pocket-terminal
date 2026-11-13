@@ -13,6 +13,9 @@ else
   pkill -f 'pocket-terminal.*agent.js' 2>/dev/null || true
   ( crontab -l 2>/dev/null | grep -v 'pocket-terminal/.*agent.js' ) | crontab - 2>/dev/null || true
 fi
+# The terminal holder keeps your terminals through agent restarts: removing Pocket Terminal closes it.
+[ -f "$HOME/.pocket-terminal/holder.pid" ] && kill "$(cat "$HOME/.pocket-terminal/holder.pid")" 2>/dev/null || true
+pkill -f 'pocket-terminal.*holder\.js' 2>/dev/null || true
 [ -f /etc/sudoers.d/pocket-terminal ] && sudo rm -f /etc/sudoers.d/pocket-terminal
 if [ "$1" = "--purge" ]; then rm -rf "$HOME/.pocket-terminal"; echo "Pairing key deleted."; fi
 echo "Pocket Terminal removed. Sleep works normally again."

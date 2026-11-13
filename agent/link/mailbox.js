@@ -7,7 +7,7 @@ const path = require('path');
 const { seal, open, msgId } = require('../lib/crypto');
 const { Board, boardsFor } = require('../lib/board');
 
-const FRESH = { hello: 10 * 60e3, offer: 90e3, settings: 24 * 3600e3 };
+const FRESH = { hello: 10 * 60e3, offer: 90e3, settings: 24 * 3600e3, answer: 10 * 60e3 };
 
 // Sets ctx.board, ctx.post, ctx.saveState, ctx.readySoon and ctx.onNote.
 function startMailbox(ctx) {
@@ -25,9 +25,9 @@ function startMailbox(ctx) {
     fs.writeFile(STATE, JSON.stringify({ since: board.since, seen: [...seen].slice(-500) }), { mode: 0o600 }, () => {});
   }, 500); };
 
-  async function post(type, extra = {}) {
+  async function post(type, extra = {}, { own = false } = {}) {
     const note = { id: msgId(), ts: Date.now(), from: 'mac', type, ...extra };
-    try { await board.publish(seal(keys, note)); return true; } catch (e) { log(`could not post ${type}: ${e.message}`); return false; }
+    try { await board.publish(seal(keys, note), undefined, {}, { own }); return true; } catch (e) { if (!own) log(`could not post ${type}: ${e.message}`); return false; }
   }
 
   // The phone opened the app while this computer slept, and has moved on since (nothing connected
@@ -79,6 +79,10 @@ function startMailbox(ctx) {
       ctx.core.runJob(String(m.cid), m.cmd, (r) => ctx.deliver(r));
     } else if (m.type === 'settings' && age < FRESH.settings) {
       ctx.applySettings(m.power);
+    } else if (m.type === 'answer' && age < FRESH.answer && typeof m.sid === 'string') {
+      ctx.onBoardAnswer && ctx.onBoardAnswer(m); // answered from the phone's page of another computer
+    } else if (m.type === 'agents?' && age < FRESH.answer) {
+      ctx.postSummary && ctx.postSummary(true); // the phone wants a fresh list
     }
   }
 

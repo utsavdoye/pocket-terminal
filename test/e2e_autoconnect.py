@@ -7,7 +7,7 @@ S=__import__('tempfile').mkdtemp(); os.makedirs(S+'/home'); R=os.path.dirname(os
 svc=subprocess.Popen(['node','test/run-services.js','8870','8871',S+'/board.json'],cwd=R,stdout=subprocess.PIPE,text=True)
 ports=json.loads(svc.stdout.readline()); BOARD=f"http://127.0.0.1:{ports['board']}"; APP=f"http://localhost:{ports['app']}/app/"
 json.dump({'percent':70,'onCharger':True,'lid':False},open(S+'/sim.json','w'))
-env=dict(os.environ,POCKET_HOME=S+'/home',POCKET_APP_URL=APP)
+env=dict(os.environ,POCKET_HOLDER='0',POCKET_HOME=S+'/home',POCKET_APP_URL=APP)
 ph.setup(R, env, 'TestMac', BOARD)
 agent=subprocess.Popen(['node','agent.js'],cwd=R+'/agent',env=dict(env,POWER_SIM=R+'/agent/test/sim-mac.js',SIM_STATE=S+'/sim.json'),stdout=open(S+'/agent.log','w'),stderr=subprocess.STDOUT)
 awake=lambda pg: 'awake' in (pg.get_attribute('#presence','class') or '')

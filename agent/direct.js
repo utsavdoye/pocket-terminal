@@ -24,6 +24,7 @@ const { derive } = require('./lib/crypto');
 const { startMailbox } = require('./link/mailbox');
 const { startResults } = require('./link/results');
 const { startNotify } = require('./link/notify');
+const { startSummary } = require('./link/summary');
 const { startChannel, DEFAULT_ICE } = require('./link/channel');
 const { startPipe } = require('./link/pipe');
 
@@ -42,6 +43,7 @@ function startDirect({ cfg, core, power, log, dir, x = {} }) {
   startNotify(ctx); // notify, onAnswer
   startChannel(ctx); // answerOffer, attachLink
   startPipe(ctx); // joinPipe: the link through the board, when a network blocks a direct one
+  startSummary(ctx); // postSummary, onBoardAnswer: every agent on every computer, for the phone
   const { viewer, peers, board, onNote, post, postStatus, saveState, notify } = ctx;
 
   // How long each step takes after a wake-up (to keep "wakes in 20 s" honest): logged, nothing private.
@@ -72,11 +74,11 @@ function startDirect({ cfg, core, power, log, dir, x = {} }) {
     },
     onPower: (s) => { if (!viewer) for (const p of peers.keys()) p({ t: 'power', ...s }); },
     alert: (ev) => {
-      if (!viewer && /^local:[QC]-/.test(String(ev.key))) for (const p of peers.keys()) p({ t: 'alert', ...ev, key: undefined, sid: ev.key.slice(6) });
+      if (!viewer && (/^local:[QC]-/.test(String(ev.key)) || ev.kind === 'task')) for (const p of peers.keys()) p({ t: 'alert', ...ev, key: undefined, sid: ev.key.slice(6) });
       return notify(ev);
     },
     closeAll: () => { for (const p of peers.keys()) p({ t: 'share-ended' }); },
-    stop: () => { board.stop(); saveState(); },
+    stop: () => { ctx.stopSummary && ctx.stopSummary(); board.stop(); saveState(); },
     revoke: async () => { for (const p of peers.keys()) p({ t: 'revoked' }); await post('revoked'); },
   };
 }

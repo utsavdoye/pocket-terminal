@@ -79,6 +79,8 @@ jobs:
         run: python test/e2e_wake.py | tee out.txt && grep -q "ALL OK" out.txt
       - name: Several computers on one phone
         run: python test/e2e_computers.py | tee out.txt && grep -q "ALL OK" out.txt
+      - name: End-to-end, tasks, races, commit, every computer's agents
+        run: python test/e2e_work.py | tee out.txt && grep -q "ALL OK" out.txt
       - name: Through the board when the direct link is blocked
         run: python test/e2e_pipe.py | tee out.txt && grep -q "ALL OK" out.txt
       - name: Through the relay (mobile data, strict Wi-Fi)

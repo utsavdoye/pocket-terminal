@@ -42,17 +42,21 @@ npx pocket-terminal
 **For AI agents**
 - **Start on the computer, carry on from the phone:** `npx pocket-terminal run claude` (or `codex`, `gemini`, any command) runs in your window as usual and live on your phone. Walk away and keep going there.
 - **Claude Code anywhere, even in VS Code:** `npx pocket-terminal claude on` connects its official hooks. When you're away, its permission questions come to your phone with Allow / Deny; at the computer they stay on screen. It keeps the computer awake while Claude works and tells you when it's done.
-- **Agents dashboard:** every agent and terminal on one screen: who needs you (with the question), what's working and for how long, what just finished. Answer a waiting one right there.
+- **Agents dashboard:** every agent and terminal on one screen, on **every computer you paired**: blocked (with the question), working, idle, with its folder and git branch. Answer a waiting one right there, even on another computer.
+- **Race your agents:** one task to 2–4 agents at once (Claude Code, Codex, Gemini CLI, OpenCode, Aider…), each in its own git worktree. Compare files changed, tests and time, then keep the winner: it's merged, the rest is thrown away.
+- **Hand-offs and a task queue:** "Codex writes it, Claude Code reviews it, then the tests run", or "when this finishes, run the next one". One notification at the end.
+- **Commit and push from the phone**, after looking at the changes.
+- **"Tell me when it says…":** a notification when a terminal prints `tests passed`, or anything matching `/error|failed/`.
 - **Answer from the notification:** Yes / No buttons right on the notification, with the app closed and the phone locked. (Android; on iPhone, tap the notification to answer in the app.)
 - **Answer in your own words:** type or say "No, keep the old tests" and it goes to the agent as its next instruction.
-- **Auto-approve safe steps (opt-in):** steps that match your safe words (like `npm test`) are answered by themselves; anything risky (delete, push, deploy, install, sudo…) still asks you.
+- **Auto-yes rules (opt-in):** an "always yes" list (like `npm test`) and an "always ask" list (rm, push, deploy, install…), both yours to edit. Passwords, `sudo` and `rm -rf` always ask.
 - **What changed:** when an agent finishes you get "4 files changed (+120 −8)", and *See changes* shows the full diff on your phone.
 - **Team links:** share a live view that can also press Yes / No on questions, and nothing else.
 - The computer stays awake while a program is working, even on battery with the lid closed.
 
 **A real terminal**
 - zsh, bash or PowerShell with colours, tab completion, and Ctrl, Esc and arrow keys on a touch key bar.
-- Several terminals at once: swipe left or right to switch. Programs keep running when you close the app.
+- Several terminals at once: swipe left or right to switch. Programs keep running when you close the app, and (Mac, Linux) when Pocket Terminal itself updates or restarts.
 - Several computers on one phone (laptop, desktop, a server): tap the name at the top to switch.
 - Send a command while the computer sleeps; it runs at the next check-in and the reply comes back to you.
 - Works on a weak signal: output is compressed, a slow link skips ahead to the current screen instead of lagging, and it reconnects by itself when you switch between Wi-Fi and mobile data.
@@ -60,6 +64,7 @@ npx pocket-terminal
 **Beyond the terminal**
 - Open the computer's `localhost` sites on your phone, privately, from any network.
 - Download files from the computer, upload into a project folder, or tap a file to put its path in the terminal.
+- Copy on the phone, paste on the computer (and back).
 - Share a live, view-only link to one terminal. It expires.
 - Ask in plain English ("free up port 3000") and get the right command for your system, explained, with a safety label. Works offline for 70+ common commands; optional AI with your own key.
 
