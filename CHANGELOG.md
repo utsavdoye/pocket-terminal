@@ -1,6 +1,6 @@
 # Changelog
 
-## Next release
+## 7.6.1 (2026-11-13)
 - **Installing on Linux with the newest npm (version 12) works again.** npm 12 no longer runs a package's install step unless the project allows it, so the terminal library (node-pty) was never built on Linux and the agent could not start. Pocket Terminal now allows that one package by name and version. (Mac and Windows were not affected.)
 
 ## 7.6.0 (2026-11-13)
