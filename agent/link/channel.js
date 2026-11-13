@@ -90,7 +90,7 @@ function startChannel(ctx) {
         const wait = () => {
           if (!dc.isOpen()) return;
           if (queued() > OUT_LOW) return setTimeout(wait, 200);
-          behind = false; if (sess) send({ t: 'reset', d: sess.screen() });
+          behind = false; const at = sess; if (at) at.redraw((d) => { if (sess === at) send({ t: 'reset', d }); });
         };
         setTimeout(wait, 200); return;
       }

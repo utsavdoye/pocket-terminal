@@ -91,6 +91,19 @@ function repo(name) {
   ok('the agent ran in that folder', fs.existsSync(path.join(work, 'hello.txt')));
   core.close('local:L-x1');
 
+  // a full-screen program: a phone joining later gets the whole screen and its modes, not half a screen
+  core.startIn('local:L-fs', { cmd: `node ${path.join(__dirname, 'fixtures', 'fullscreen.js')}`, cwd: work, cols: 80, rows: 24 });
+  const fs1 = core.session('local:L-fs');
+  await until(() => /counter 39\d/.test(fs1.screen()), 15000);
+  const lost = !/LINE-3/.test(fs1.screen().slice(-3000)); // the first full drawing is far back in the history
+  const shot = await new Promise((r) => fs1.fit(80, 24, r));
+  ok('full screen: rejoining redraws the whole screen with its modes', /\x1b\[\?1049h/.test(shot) && /\x1b\[\?1000h/.test(shot) && /\x1b\[\?1006h/.test(shot) && /LINE-1/.test(shot) && /LINE-5/.test(shot), JSON.stringify(shot.slice(0, 200)) + ' lost=' + lost);
+  ok('full screen: the size is back as it was', fs1.size().rows === 24 && fs1.size().cols === 80);
+  fs1.input('q'); await sleep(300);
+  const plainShot = await new Promise((r) => fs1.fit(80, 24, r));
+  ok('a plain shell keeps its history as is (no redraw)', plainShot === fs1.screen());
+  core.close('local:L-fs');
+
   // ---------- tasks ----------
   const told = [];
   const tasks = createTasks({ core, log: () => {}, dir: HOME, shell: '/bin/bash', alert: (ev) => told.push(ev) });

@@ -179,11 +179,43 @@ function createCore({ log, power, dir, host = null }) {
     const t = host ? host.spawn(SHELL, args, opts, { key: s.key, created: s.created, run: !!run, task: s.task || null }) : pty.spawn(SHELL, args, opts);
     wire(s, t, run);
   }
+  // Which terminal modes the program has switched on (full screen, mouse, bracketed paste…), so a
+  // phone that joins later gets them too: the history alone may not have them any more.
+  const MODES = new Set([1, 25, 47, 1047, 1049, 1000, 1002, 1003, 1004, 1005, 1006, 1015, 2004]);
+  function trackModes(s, d) {
+    s.modes = s.modes || {};
+    for (const m of d.matchAll(/\x1b\[\?([\d;]+)([hl])/g)) for (const n of m[1].split(';')) if (MODES.has(+n)) s.modes[n] = m[2];
+    s.alt = ['1049', '1047', '47'].some((n) => s.modes[n] === 'h');
+  }
+  const modesNow = (s) => {
+    const m = s.modes || {}, alt = ['1049', '1047', '47'].find((n) => m[n] === 'h');
+    return (alt ? `\x1b[?${alt}h` : '') + Object.keys(m).filter((n) => !['1049', '1047', '47'].includes(n)).map((n) => `\x1b[?${n}${m[n]}`).join('');
+  };
+  // A full-screen program (Claude Code, vim, htop) draws only what changed, so replaying its
+  // history after a reconnect shows half a screen. Instead: nudge it to redraw everything (a tiny
+  // resize, the way a real terminal does when its window changes), and give the phone just that.
+  function redraw(s, cb) {
+    if (!s.term || !s.alt) return cb(s.buffer);
+    const cols = s.term.cols, rows = s.term.rows, mark = s.total || 0, t0 = Date.now();
+    try { s.term.resize(cols, Math.max(2, rows - 1)); } catch { return cb(s.buffer); }
+    setTimeout(() => { try { s.term.resize(cols, rows); } catch {} }, 60);
+    const check = () => {
+      const fresh = (s.total || 0) - mark, quiet = Date.now() - s.lastOut;
+      if ((fresh > 0 && quiet >= 200 && Date.now() - t0 > 250) || Date.now() - t0 > 1500) {
+        if (fresh > 0 && fresh <= s.buffer.length) return cb(modesNow(s) + '\x1b[H\x1b[2J' + s.buffer.slice(-fresh));
+        return cb(s.buffer);
+      }
+      setTimeout(check, 60);
+    };
+    setTimeout(check, 150);
+  }
+
   function wire(s, t, run) {
     s.term = t;
     const send = (msg) => { for (const c of s.clients) { try { c(msg); } catch {} } };
     t.onData((d) => {
       s.buffer += d; s.total = (s.total || 0) + d.length; if (s.buffer.length > BUFFER_LIMIT) s.buffer = s.buffer.slice(-BUFFER_LIMIT);
+      if (d.includes('\x1b[?')) trackModes(s, d);
       const pd = plain(d); s.tail = (s.tail + pd).slice(-2000); s.outN += pd.length;
       if (s.watches.length) checkWatches(s, pd);
       for (const f of s.hear) { try { f(pd); } catch {} }
@@ -218,6 +250,7 @@ function createCore({ log, power, dir, host = null }) {
       },
       size: () => (s.term ? { cols: s.term.cols, rows: s.term.rows } : null),
       screen: () => s.buffer,
+      redraw: (cb) => redraw(s, cb),
       // The screen for a viewer of this size. Same size: the history as is. A different size (a
       // session shared with the computer's own window): resize, let the program redraw itself for
       // the new size, and give just that redraw on a clean screen. Replaying output drawn for
@@ -225,7 +258,8 @@ function createCore({ log, power, dir, host = null }) {
       fit: (cols, rows, cb) => {
         const ok = cols > 0 && rows > 0 && cols < 1000 && rows < 1000;
         if (!s.term) { if (ok) startShell(s, cols, rows); return cb(s.buffer); } // a new terminal starts at this size
-        if (!ok || (s.term.cols === cols && s.term.rows === rows)) return cb(s.buffer);
+        if (!ok) return cb(s.buffer);
+        if (s.term.cols === cols && s.term.rows === rows) return redraw(s, cb); // same size: a full-screen program redraws, a shell keeps its history
         const mark = s.total || 0, t0 = Date.now();
         s.term.resize(cols, rows);
         for (const c of s.clients) { try { c({ t: 'size', cols, rows }); } catch {} }
@@ -234,7 +268,7 @@ function createCore({ log, power, dir, host = null }) {
         const check = () => {
           const fresh = (s.total || 0) - mark, quiet = Date.now() - s.lastOut;
           if (fresh > 0 && quiet >= 250 || Date.now() - t0 > 1500) {
-            if (fresh > 0 && fresh <= s.buffer.length) return cb('\x1b[H\x1b[2J\x1b[3J' + s.buffer.slice(-fresh));
+            if (fresh > 0 && fresh <= s.buffer.length) return cb(modesNow(s) + '\x1b[H\x1b[2J\x1b[3J' + s.buffer.slice(-fresh));
             return cb(s.buffer); // nothing redrew (a plain shell): the history is fine as is
           }
           setTimeout(check, 80);
@@ -251,7 +285,7 @@ function createCore({ log, power, dir, host = null }) {
       if (!meta || typeof meta.key !== 'string' || sessions.has(meta.key)) { try { term.kill(); } catch {} continue; }
       const s = getSession(meta.key);
       s.created = meta.created || Date.now(); s.task = meta.task || null;
-      s.buffer = buf || ''; s.total = s.buffer.length; s.tail = plain(s.buffer).slice(-2000); s.outN = s.tail.length; s.mark = s.outN;
+      s.buffer = buf || ''; s.total = s.buffer.length; trackModes(s, s.buffer); s.tail = plain(s.buffer).slice(-2000); s.outN = s.tail.length; s.mark = s.outN;
       wire(s, term, meta.run); n++;
     }
     if (n) { checkPrograms(); log(`${n} terminal${n === 1 ? '' : 's'} kept through the restart`); }

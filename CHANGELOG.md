@@ -1,5 +1,9 @@
 # Changelog
 
+## Next release
+- **Coming back to the app reconnects at once.** After a few seconds away the phone has usually frozen the link: the app now builds a new one right away (and shows Reconnecting, not Live), instead of first waiting for an answer that wouldn't come.
+- **No more half-drawn screen after reconnecting** to Claude Code, vim or htop. They only draw what changed, so replaying their history showed half a screen. The computer now asks the program to redraw everything (a tiny resize, like a real terminal) and sends just that, with its full-screen and mouse modes.
+
 ## 7.6.2 (2026-11-13)
 - **Scrolling back through Claude Code (and other full-screen agents) works.** A swipe on a program that asked for the mouse now sends mouse-wheel turns, like a real terminal. Before, it sent the Up arrow, which brought back your last message instead of scrolling.
 

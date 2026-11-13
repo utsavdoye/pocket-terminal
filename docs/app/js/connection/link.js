@@ -28,7 +28,10 @@ export function watchLink() {
     if (document.visibilityState !== 'visible') { clearTimeout(state.retryTimer); return; }
     state.retryN = 0; state.knockAt = null; // a fresh knock now; earlier ones don't count as missed
     state.board.restart(); // phones kill background connections
-    checkLink(2500);
+    // Away more than a few seconds: the phone has usually frozen the link. Build a new one at once
+    // (no waiting 2.5 s for an answer that won't come), and don't show "Live" meanwhile.
+    if (state.dc && Date.now() - lastRx > 8e3) { rebuild(); return; }
+    checkLink(2000);
   });
   // Weak or changing networks: Wi-Fi to mobile data, a lift, a train. React at once instead of
   // waiting for the old link to time out.
