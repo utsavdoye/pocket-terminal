@@ -1,5 +1,8 @@
 # Changelog
 
+## Next release
+- **Scrolling back through Claude Code (and other full-screen agents) works.** A swipe on a program that asked for the mouse now sends mouse-wheel turns, like a real terminal. Before, it sent the Up arrow, which brought back your last message instead of scrolling.
+
 ## 7.6.1 (2026-11-13)
 - **Installing on Linux with the newest npm (version 12) works again.** npm 12 no longer runs a package's install step unless the project allows it, so the terminal library (node-pty) was never built on Linux and the agent could not start. Pocket Terminal now allows that one package by name and version. (Mac and Windows were not affected.)
 

@@ -115,8 +115,21 @@ function useGpu(term) {
   document.head.appendChild(s);
 }
 
+// A swipe as mouse-wheel turns, the way a real terminal sends them to a full-screen program that
+// asked for the mouse (Claude Code, Codex, vim with mouse on). Arrow keys would be wrong there:
+// in an AI agent's prompt, Up brings back your last message instead of scrolling.
+// n > 0: finger moved up, so the view goes down (wheel down).
+function wheel(n) {
+  const term = state.term, btn = n > 0 ? 65 : 64;
+  const col = Math.floor(term.cols / 2) + 1, row = Math.floor(term.rows / 2) + 1;
+  let enc = 'SGR'; try { enc = term._core.coreMouseService.activeEncoding || 'SGR'; } catch {}
+  const one = enc === 'SGR' ? `\x1b[<${btn};${col};${row}M` : `\x1b[M${String.fromCharCode(32 + btn, 32 + Math.min(col, 223), 32 + Math.min(row, 223))}`;
+  return one.repeat(Math.min(Math.abs(n), 5));
+}
+
 // Swipe up/down on the terminal scrolls only the terminal (never the page). In full-screen
-// programs (nano, less, top) a swipe sends arrow keys instead. Swipe left/right: the next or
+// programs a swipe scrolls the program's own view: mouse-wheel turns if it asked for the mouse
+// (Claude Code, Codex), arrow keys otherwise (less, nano, top). Swipe left/right: the next or
 // previous terminal (agents.js listens for 'pt-swipe').
 function setupTouchScroll() {
   const term = state.term;
@@ -134,8 +147,9 @@ function setupTouchScroll() {
     if (axis === 'x') return;
     const y = t.clientY; acc += ty - y; ty = y;
     const n = Math.trunc(acc / lineH()); if (!n) return; acc -= n * lineH();
-    if (term.buffer.active.type === 'alternate') input((n > 0 ? KEYS.down : KEYS.up).repeat(Math.min(Math.abs(n), 5)));
-    else term.scrollLines(n);
+    if (term.buffer.active.type !== 'alternate') term.scrollLines(n);
+    else if (term.modes.mouseTrackingMode !== 'none') input(wheel(n)); // Claude Code, Codex, vim with mouse: scroll their own view
+    else input((n > 0 ? KEYS.down : KEYS.up).repeat(Math.min(Math.abs(n), 5))); // less, nano, top: arrow keys
   }, { passive: false, capture: true });
   el.addEventListener('touchend', () => {
     if (axis === 'x' && Math.abs(dx) > 70) dispatchEvent(new CustomEvent('pt-swipe', { detail: dx < 0 ? 1 : -1 }));
