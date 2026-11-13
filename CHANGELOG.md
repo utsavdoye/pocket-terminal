@@ -1,6 +1,6 @@
 # Changelog
 
-## Next release
+## 7.6.2 (2026-11-13)
 - **Scrolling back through Claude Code (and other full-screen agents) works.** A swipe on a program that asked for the mouse now sends mouse-wheel turns, like a real terminal. Before, it sent the Up arrow, which brought back your last message instead of scrolling.
 
 ## 7.6.1 (2026-11-13)
