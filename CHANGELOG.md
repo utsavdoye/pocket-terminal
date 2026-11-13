@@ -1,6 +1,6 @@
 # Changelog
 
-## Next release
+## 7.6.0 (2026-11-13)
 **Run your AI agents together from your phone, and a new look.**
 
 ### New
