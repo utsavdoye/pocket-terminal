@@ -23,10 +23,13 @@ export function handleMsg(m) {
       return;
     }
     if (m.id && listeners.has(m.id)) { listeners.get(m.id)(m); return; }
-    if (m.t === 'o') state.term.write(m.d);
+    if (m.t === 'o') { if (Date.now() < (state.replayUntil || 0)) { state.replayUntil = Date.now() + 1500; state.term.write(m.d, () => { state.replayUntil = Date.now() + 300; }); } else state.term.write(m.d); }
     else if (m.t === 'size') { if (state.S.viewer) viewerSize(m.cols, m.rows); }
     else if (m.t === 'share-ended') { state.term.write('\r\n\x1b[33m[The live view ended. Ask for a new link to keep watching.]\x1b[0m\r\n'); state.ended = true; try { state.dc && state.dc.close(); state.pc && state.pc.close(); } catch {} state.board.stop(); state.linkState = 'ended'; paint(); }
-    else if (m.t === 'reset') { state.term.reset(); if (m.d) state.term.write(m.d); }
+    // A replay of the screen holds the questions programs asked the terminal back then (its colours,
+    // where the cursor is). The terminal would answer them again now, and the answers would land
+    // at your prompt as junk like "11;rgb:1e1e/1f1f/2222". While a replay is drawn, they are dropped.
+    else if (m.t === 'reset') { state.term.reset(); state.replayUntil = Date.now() + 1500; if (m.d) state.term.write(m.d, () => { state.replayUntil = Date.now() + 300; }); }
     else if (m.t === 'power') { state.livePower = m; paint(); }
     else if (m.t === 'pong') { state.lastPong = Date.now(); if (state.pingSent) { state.rtt = Math.round(performance.now() - state.pingSent); state.pingSent = 0; paintPing(); } }
     else if (m.t === 'hi') { if (m.os) setOs(m.os); pushKey = m.push || null; }

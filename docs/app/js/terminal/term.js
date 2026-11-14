@@ -46,7 +46,10 @@ export function setupTerminal() {
   window.ptText = () => { const b = term.buffer.active, out = []; for (let y = b.viewportY; y < b.viewportY + term.rows; y++) { const l = b.getLine(y); out.push(l ? l.translateToString(true) : ''); } return out.join('\n'); };
   if (!state.S.viewer) { setupPredict(term); showLastScreen(term); keepLastScreen(term); }
   if (state.S.viewer) { term.options.disableStdin = true; term.options.cursorBlink = false; state.fit = { fit: () => viewerSize() }; }
-  term.onData((d) => input(applyMods(d)));
+  // The terminal's own answers to a program's questions (colours, cursor position, which terminal
+  // it is) while an old screen is replayed: the program that asked is long gone. Drop them.
+  const REPLY = /^(?:\x1b\](?:4;\d+|1[0-9]);[^\x07\x1b]*(?:\x07|\x1b\\)|\x1b\[\??\d+(?:;\d+)*R|\x1b\[[?>=][\d;]*c|\x1bP[^\x1b]*\x1b\\|\x1b\[\??[\d;]*\$y|\x1b\[[IO])+$/;
+  term.onData((d) => { if (Date.now() < (state.replayUntil || 0) && REPLY.test(d)) return; input(applyMods(d)); });
   // Holding delete on a phone keyboard: some keyboards send only "delete" events (no key press)
   // and speed up to whole words after a moment. Turn those into terminal deletes, so holding it
   // clears text the way it does in a message. A real key press is left to the terminal (no doubles).
@@ -64,6 +67,28 @@ export function setupTerminal() {
   }, true);
   term.onResize(() => sendTerm({ t: 'r', cols: term.cols, rows: term.rows }));
   const setFont = (n) => { size = Math.max(9, Math.min(24, n)); term.options.fontSize = size; store.set('font', size); state.fit.fit(); };
+  // Wide lines (the ↔ button): the terminal is made wider than the phone, so long commands and
+  // output stay on one line; the slider under it (or dragging sideways) moves along the line.
+  if (!state.S.viewer) {
+    const fitScreen = state.fit.fit.bind(state.fit);
+    state.wide = store.get('wide', false) === true;
+    state.fit.fit = () => {
+      fitScreen();
+      const want = Math.max(term.cols, Number(store.get('wideCols', 160)) || 160);
+      if (state.wide && term.cols < want) term.resize(want, term.rows);
+      pan(state.panX || 0);
+    };
+    // The phone scrolls a box to show its focused field (the terminal's hidden text field sits at
+    // the cursor): with wide lines that shifted the whole terminal. Only the slider moves it.
+    $('term').addEventListener('scroll', () => { const b = $('term'); if (b.scrollLeft || b.scrollTop) { b.scrollLeft = 0; b.scrollTop = 0; } });
+    // Typing at the end of a long line: follow the cursor so you see what you type.
+    term.onCursorMove(() => {
+      if (!state.wide) return;
+      const x = term.buffer.active.cursorX * cellSize(term).w, w = $('term').clientWidth - 30, p0 = state.panX || 0;
+      if (x < p0 || x > p0 + w) pan(x > w - 40 ? x - w + 40 : 0); // back to the start when the cursor is there
+    });
+    window.ptWide = (on) => { state.wide = !!on; store.set('wide', state.wide); state.panX = 0; state.fit.fit(); document.dispatchEvent(new Event('pt-wide')); };
+  }
   $('smaller').onclick = () => setFont(size - 1); $('bigger').onclick = () => setFont(size + 1);
   const app = $('app');
   const layout = () => {
@@ -73,10 +98,22 @@ export function setupTerminal() {
     state.fit.fit();
   };
   if (window.visualViewport) { visualViewport.addEventListener('resize', layout); visualViewport.addEventListener('scroll', layout); }
+  const hp = $('hPan'); if (hp) hp.addEventListener('input', () => pan(Number(hp.value)));
   addEventListener('resize', layout); layout();
   if (document.fonts) document.fonts.ready.then(layout); // refit once the terminal font has loaded
   // Phones scroll the page to show a focused input; put it back when the keyboard closes.
   document.addEventListener('focusout', () => setTimeout(() => { if (!document.activeElement || document.activeElement === document.body) { window.scrollTo(0, 0); layout(); } }, 50));
+}
+
+// Wide lines: move the terminal sideways by x pixels (kept within its width). The slider follows.
+export function pan(x) {
+  const term = state.term, el = term && term.element; if (!el) return 0;
+  const box = $('term'), sc = el.querySelector('.xterm-screen');
+  const max = Math.max(0, (sc ? sc.offsetWidth : 0) - (box.clientWidth - 18));
+  state.panX = Math.max(0, Math.min(max, x));
+  el.style.transform = state.panX ? `translateX(${-state.panX}px)` : '';
+  const s = $('hPan'); if (s) { s.max = String(max); s.value = String(state.panX); s.parentElement.hidden = !state.wide || max < 4; }
+  return max;
 }
 
 // The size of one character cell on screen, in CSS pixels.
@@ -133,18 +170,18 @@ function wheel(n) {
 // previous terminal (agents.js listens for 'pt-swipe').
 function setupTouchScroll() {
   const term = state.term;
-  const el = $('term'); let ty = null, acc = 0, x0 = 0, y0 = 0, axis = null, dx = 0;
+  const el = $('term'); let ty = null, acc = 0, x0 = 0, y0 = 0, axis = null, dx = 0, px0 = 0;
   const lineH = () => cellSize(term).h;
   el.addEventListener('touchstart', (e) => {
     ty = e.touches.length === 1 ? e.touches[0].clientY : null; acc = 0; axis = null; dx = 0;
-    if (ty !== null) { x0 = e.touches[0].clientX; y0 = ty; }
+    if (ty !== null) { x0 = e.touches[0].clientX; y0 = ty; px0 = state.panX || 0; }
   }, { passive: true, capture: true });
   el.addEventListener('touchmove', (e) => {
     if (ty === null) return;
     e.preventDefault(); e.stopPropagation();
     const t = e.touches[0]; dx = t.clientX - x0;
     if (!axis && (Math.abs(dx) > 14 || Math.abs(t.clientY - y0) > 14)) axis = Math.abs(dx) > Math.abs(t.clientY - y0) * 1.5 ? 'x' : 'y';
-    if (axis === 'x') return;
+    if (axis === 'x') { if (state.wide) pan(px0 - dx); return; } // wide lines: drag sideways along them
     const y = t.clientY; acc += ty - y; ty = y;
     const n = Math.trunc(acc / lineH()); if (!n) return; acc -= n * lineH();
     if (term.buffer.active.type !== 'alternate') term.scrollLines(n);
@@ -152,7 +189,7 @@ function setupTouchScroll() {
     else input((n > 0 ? KEYS.down : KEYS.up).repeat(Math.min(Math.abs(n), 5))); // less, nano, top: arrow keys
   }, { passive: false, capture: true });
   el.addEventListener('touchend', () => {
-    if (axis === 'x' && Math.abs(dx) > 70) dispatchEvent(new CustomEvent('pt-swipe', { detail: dx < 0 ? 1 : -1 }));
+    if (axis === 'x' && !state.wide && Math.abs(dx) > 70) dispatchEvent(new CustomEvent('pt-swipe', { detail: dx < 0 ? 1 : -1 }));
     ty = null; axis = null;
   }, { passive: true, capture: true });
   // Everywhere else: only real scroll areas may scroll; the page itself never moves.

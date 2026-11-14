@@ -1,5 +1,10 @@
 # Changelog
 
+## Next release
+- **Tabs for your terminals.** Each terminal has its own tab over the screen, with a dot for what it is doing. Tap to open one, + for a new one.
+- **Wide lines (the ↔ button).** Long commands and output stay on one line instead of wrapping; drag sideways or use the slider under the terminal to read along them.
+- **No more junk like `11;rgb:1e1e/1f1f/2222;1R` at your prompt.** When the app redrew an old screen it answered questions programs had asked long ago (their colours, the cursor position), and the answers were typed into your shell. They are now dropped.
+
 ## 7.6.3 (2026-11-14)
 - **Coming back to the app reconnects at once.** After a few seconds away the phone has usually frozen the link: the app now builds a new one right away (and shows Reconnecting, not Live), instead of first waiting for an answer that wouldn't come.
 - **No more half-drawn screen after reconnecting** to Claude Code, vim or htop. They only draw what changed, so replaying their history showed half a screen. The computer now asks the program to redraw everything (a tiny resize, like a real terminal) and sends just that, with its full-screen and mouse modes.

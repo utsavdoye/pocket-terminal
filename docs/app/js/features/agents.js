@@ -64,7 +64,28 @@ export function setupAgents(ctx, t) {
   ctx.on('answered', (m) => { toast(m.ok ? 'Sent ✓' : 'It isn’t waiting anymore'); if (m.sid === current) hideNeeds(); refreshSessionsSoon(); });
   function refreshSessions() { if (ctx.live()) ctx.send({ t: 'sessions' }); }
   let rsT; function refreshSessionsSoon() { clearTimeout(rsT); rsT = setTimeout(refreshSessions, 400); }
-  ctx.on('sessions', (m) => { sessions = m.list || []; current = m.current; paintSessions(); paintStrip(); });
+  ctx.on('sessions', (m) => { sessions = m.list || []; current = m.current; paintSessions(); paintStrip(); paintTabs(); });
+  // Tabs over the terminal: each terminal on its own tab (tap to open it), + for a new one, and ↔
+  // for wide lines (long commands on one line, with a slider to move along them).
+  function paintTabs() {
+    const el = $('tTabs'); if (ctx.viewer) return;
+    const terms = sessions.filter((s) => !s.ask && !s.ext).sort((a, b) => a.created - b.created);
+    el.hidden = !ctx.live() || !terms.length;
+    el.innerHTML = `<div class="tt-list">${terms.map((s, i) => { const st = stateOf(s); return `<button type="button" class="tt${s.sid === current ? ' on' : ''}" data-tab="${esc(s.sid)}"><i class="st s-${st}"></i>${i + 1} ${esc(label(s))}</button>`; }).join('')}<button type="button" class="tt add" data-tabnew aria-label="New terminal">+</button></div><button type="button" class="tt wide${window.ptWide && document.documentElement.dataset.wide === '1' ? ' on' : ''}" data-wide aria-label="Wide lines" aria-pressed="${document.documentElement.dataset.wide === '1'}">↔</button>`;
+    const on = el.querySelector('.tt.on'); if (on && on.scrollIntoView) on.scrollIntoView({ inline: 'nearest', block: 'nearest' });
+  }
+  $('tTabs').addEventListener('click', (e) => {
+    const b = e.target.closest('button'); if (!b) return;
+    if (b.dataset.tab) { if (b.dataset.tab !== current) switchTo(b.dataset.tab); return; }
+    if ('tabnew' in b.dataset) { if (!ctx.live()) return toast('Connect first'); switchTo(ctx.newId()); toast('New terminal'); return; }
+    if ('wide' in b.dataset && window.ptWide) {
+      const on = document.documentElement.dataset.wide !== '1';
+      document.documentElement.dataset.wide = on ? '1' : ''; window.ptWide(on);
+      toast(on ? 'Wide lines: drag sideways or use the slider' : 'Lines fit the screen'); paintTabs();
+    }
+  });
+  document.documentElement.dataset.wide = ctx.store.get('wide', false) === true ? '1' : '';
+
   // The live strip over the terminal: other agents that need you or are working. One tap: the dashboard.
   function paintStrip() {
     const el = $('agStrip'); if (ctx.viewer) { el.hidden = true; return; }

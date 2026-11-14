@@ -81,6 +81,8 @@ jobs:
         run: python test/e2e_computers.py | tee out.txt && grep -q "ALL OK" out.txt
       - name: End-to-end, tasks, races, commit, every computer's agents
         run: python test/e2e_work.py | tee out.txt && grep -q "ALL OK" out.txt
+      - name: Terminal tabs, wide lines, no junk after a replay
+        run: python test/e2e_tabs.py | tee out.txt && grep -q "ALL OK" out.txt
       - name: Through the board when the direct link is blocked
         run: python test/e2e_pipe.py | tee out.txt && grep -q "ALL OK" out.txt
       - name: Through the relay (mobile data, strict Wi-Fi)
