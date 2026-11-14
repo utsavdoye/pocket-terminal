@@ -1,6 +1,6 @@
 # Changelog
 
-## Next release
+## 7.6.4 (2026-11-14)
 - **Tabs for your terminals.** Each terminal has its own tab over the screen, with a dot for what it is doing. Tap to open one, + for a new one.
 - **Wide lines (the ↔ button).** Long commands and output stay on one line instead of wrapping; drag sideways or use the slider under the terminal to read along them.
 - **No more junk like `11;rgb:1e1e/1f1f/2222;1R` at your prompt.** When the app redrew an old screen it answered questions programs had asked long ago (their colours, the cursor position), and the answers were typed into your shell. They are now dropped.
