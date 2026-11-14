@@ -5,6 +5,7 @@
 //             time; keep the winner (merged into your project), the rest are thrown away
 //   hand-off  a chain: one agent writes, the next reviews, then tests; one notification at the end
 
+import { setHTML } from '../core/dom.js';
 export function setupWork(ctx, t) {
   const { $, esc, ago, toast, store } = ctx;
   let mode = 'queue', view = null, steps = ['claude', 'codex'], picked = new Set(store.get('racePick', ['claude', 'codex']));
@@ -69,7 +70,7 @@ export function setupWork(ctx, t) {
   function call(msg, done) {
     if (!ctx.live()) { toast('Connect first'); return; }
     const id = ctx.newId();
-    const late = setTimeout(() => { ctx.unlisten(id); $('wGo').disabled = false; if (msg.t !== 'tasks') toast('No answer from the computer. If it runs an older Pocket Terminal: npx pocket-terminal@latest'); else if (!view) $('workList').innerHTML = '<div class="empty">This computer runs an older Pocket Terminal. Update it: <code>npx pocket-terminal@latest</code></div>'; }, msg.t === 'race' || msg.t === 'race-pick' ? 120e3 : 20e3);
+    const late = setTimeout(() => { ctx.unlisten(id); $('wGo').disabled = false; if (msg.t !== 'tasks') toast('No answer from the computer. If it runs an older Pocket Terminal: npx pocket-terminal@latest'); else if (!view) $('workList').innerHTML = '<div class="empty">This computer runs an older Pocket Terminal. Update it: <code>npx pocket-terminal@latest</code></div>'; }, ['race', 'race-pick', 'task-push', 'wt-merge'].includes(msg.t) ? 120e3 : 20e3);
     ctx.listen(id, (m) => { clearTimeout(late); ctx.unlisten(id); if (m.agents) { const first = !view; view = m; paintList(); if (first) paintForm(); } done && done(m); });
     ctx.send({ ...msg, id });
   }
@@ -93,6 +94,15 @@ export function setupWork(ctx, t) {
 
   // ---------- the list ----------
   const task = (id) => view.tasks.find((x) => x.id === id);
+  const busy = new Set(); // lanes being merged right now (the list refreshes meanwhile)
+  // After work was kept into the project: offer to push the project itself (its own branch, e.g.
+  // main), never the agent's copy (that would put a pt/… branch on GitHub as a pull request).
+  const offerPush = (m) => {
+    if (m.note) alert(m.note);
+    if (!m.root || !confirm('Merged into your project ✓\n\nPush your project now (git push)?')) return toast('Merged into your project ✓');
+    toast('Pushing…');
+    call({ t: 'task-push', root: m.root }, (p) => { if (p.error) alert(p.error); else toast(`Pushed ${p.branch || ''} ✓`.replace('  ', ' ')); });
+  };
   function lane(x, g) {
     const ch = x.changes, tests = x.tests;
     const facts = [x.status === 'done' || x.status === 'failed' ? (ch ? `<span>${ch.files} file${ch.files === 1 ? '' : 's'} <i class="plus">+${ch.add}</i> <i class="minus">−${ch.del}</i></span>` : '') : '',
@@ -105,7 +115,7 @@ export function setupWork(ctx, t) {
       <div class="ln-top"><i class="st ${DOT[x.status]}"></i><b>${esc(x.title)}</b><span class="ln-st">${win ? 'kept ✓' : WORD[x.status]}</span></div>
       ${facts ? `<div class="ln-facts">${facts}</div>` : ''}
       ${x.why ? `<p class="ag-note">${esc(x.why)}</p>` : ''}${tests && !tests.ok && tests.last && tests.last.length ? `<code>${esc(tests.last.slice(-1)[0])}</code>` : ''}
-      ${live || canKeep ? `<div class="ag-acts">${live ? `<button class="btn small ghost" data-open="${esc(x.sid)}" type="button">Open</button><button class="btn small ghost" data-changes="${esc(x.sid)}" type="button">Changes</button>` : ''}${canKeep ? `<button class="btn small${tests && !tests.ok ? ' ghost' : ''}" data-keep="${esc(g.id)}" data-lane="${esc(x.id)}" type="button">Keep this one</button>` : ''}</div>` : ''}
+      ${live || canKeep ? `<div class="ag-acts">${live ? `<button class="btn small ghost" data-open="${esc(x.sid)}" type="button">Open</button><button class="btn small ghost" data-changes="${esc(x.sid)}" type="button">Changes</button>` : ''}${canKeep ? (busy.has(x.id) ? '<button class="btn small" type="button" disabled>Merging…</button>' : `<button class="btn small${tests && !tests.ok ? ' ghost' : ''}" data-keep="${esc(g.id)}" data-lane="${esc(x.id)}" type="button"${busy.size ? ' disabled' : ''}>Keep this one</button>`) : ''}</div>` : ''}
     </div>`;
   }
   function paintList() {
@@ -138,7 +148,7 @@ export function setupWork(ctx, t) {
         </div>`);
       }
     }
-    $('workList').innerHTML = out.join('') || '<div class="empty">Nothing yet. Add a task above.</div>';
+    setHTML($('workList'), out.join('') || '<div class="empty">Nothing yet. Add a task above.</div>');
     const n = view.groups.filter((g) => g.status === 'compare').length + view.tasks.filter((x) => x.status === 'blocked').length;
     $('workBadge').hidden = !n; $('workBadge').textContent = n || ''; $('workCount').textContent = n || '';
     if (mode && !$('wAgent').options.length) paintForm();
@@ -150,12 +160,12 @@ export function setupWork(ctx, t) {
     if (d.changes) return t.openDiff(d.changes);
     if (d.keep) {
       const x = task(d.lane); if (!confirm(`Keep ${x ? x.title : 'this one'}'s work? It is merged into your project and the other copies are thrown away.`)) return;
-      b.disabled = true; b.textContent = 'Merging…';
-      return call({ t: 'race-pick', gid: d.keep, lane: d.lane }, (m) => { if (m.error) { b.disabled = false; b.textContent = 'Keep this one'; toast(m.error.split('.')[0]); alert(m.error); } else toast('Merged into your project ✓'); });
+      busy.add(d.lane); paintList();
+      return call({ t: 'race-pick', gid: d.keep, lane: d.lane }, (m) => { busy.delete(d.lane); paintList(); if (m.error) { toast(m.error.split('.')[0]); alert(m.error); } else offerPush(m); });
     }
     if (d.retest) return call({ t: 'race-test', gid: d.retest }, (m) => toast(m.error || 'Running the tests again…'));
     if (d.cancel) { if (!confirm('Stop it?')) return; return call({ t: 'task-cancel', tid: d.cancel }, (m) => toast(m.error || 'Stopped')); }
-    if (d.wtmerge) return call({ t: 'wt-merge', tid: d.wtmerge }, (m) => { if (m.error) alert(m.error); else toast('Brought into your project ✓'); });
+    if (d.wtmerge) return call({ t: 'wt-merge', tid: d.wtmerge }, (m) => { if (m.error) alert(m.error); else offerPush(m); });
     if (d.wtdrop) { if (!confirm('Throw its changes away?')) return; return call({ t: 'wt-discard', tid: d.wtdrop }, (m) => toast(m.error || 'Thrown away')); }
   };
   $('wClear').onclick = () => call({ t: 'task-clear' }, () => toast('Cleared'));

@@ -2,13 +2,14 @@
 // working, what finished), the live strip over the terminal, switching and closing terminals,
 // and the "See changes" diff of what an agent changed.
 
+import { setHTML } from '../core/dom.js';
 export function setupAgents(ctx, t) {
   const { $, esc, ago, toast } = ctx;
   const { answerBtns, openSay, hideNeeds } = t;
 
   // ================= Terminals =================
   let sessions = [], current = null, sessBtns = {};
-  const NAMES = { claude: 'Claude Code', codex: 'Codex', gemini: 'Gemini CLI', aider: 'Aider', opencode: 'OpenCode', 'cursor-agent': 'Cursor', amp: 'Amp', goose: 'Goose', qwen: 'Qwen Code', npm: 'npm', pnpm: 'pnpm', yarn: 'yarn' };
+  const NAMES = { claude: 'Claude Code', codex: 'Codex', gemini: 'Gemini CLI', aider: 'Aider', opencode: 'OpenCode', 'cursor-agent': 'Cursor', qwen: 'Qwen Code', copilot: 'GitHub Copilot', amp: 'Amp', goose: 'Goose', droid: 'Factory Droid', npm: 'npm', pnpm: 'pnpm', yarn: 'yarn' };
   const nice = (p) => NAMES[p] || (p ? p[0].toUpperCase() + p.slice(1) : '');
   const label = (s) => s.ext ? nice(s.agent) : s.program ? nice(s.program) : s.running ? 'Shell' : 'Not started';
   const dur = (ms) => { const sec = Math.max(1, Math.round(ms / 1000)); return sec < 60 ? `${sec} s` : sec < 3600 ? `${Math.round(sec / 60)} min` : `${(sec / 3600).toFixed(sec < 36000 ? 1 : 0)} h`; };
@@ -28,10 +29,10 @@ export function setupAgents(ctx, t) {
     const waiting = sessions.filter((s) => s.waiting && s.sid !== current).length;
     $('sessCount').textContent = waiting || '';
     const n = { wait: 0, work: 0, idle: 0 }; for (const s of sessions) { const k = stateOf(s); if (k === 'wait' || k === 'work') n[k]++; else n.idle++; }
-    $('agSum').innerHTML = sessions.length ? `<span class="${n.wait ? 'hot' : ''}"><i class="st s-wait"></i><b>${n.wait}</b> blocked</span><span><i class="st s-work"></i><b>${n.work}</b> working</span><span><i class="st s-idle"></i><b>${n.idle}</b> idle</span>` : '';
+    setHTML($('agSum'), sessions.length ? `<span class="${n.wait ? 'hot' : ''}"><i class="st s-wait"></i><b>${n.wait}</b> blocked</span><span><i class="st s-work"></i><b>${n.work}</b> working</span><span><i class="st s-idle"></i><b>${n.idle}</b> idle</span>` : '');
     sessBtns = {};
     const list = [...sessions].sort((a, b) => ORDER[stateOf(a)] - ORDER[stateOf(b)] || a.created - b.created);
-    $('sessList').innerHTML = list.length ? list.map((s) => {
+    setHTML($('sessList'), list.length ? list.map((s) => {
       const st = stateOf(s), cur = s.sid === current, others = s.viewers - (cur ? 1 : 0);
       const when = st === 'wait' ? (s.askedAt ? dur(Date.now() - s.askedAt) : '')
         : st === 'work' ? (s.since ? dur(Date.now() - s.since) : '')
@@ -57,7 +58,7 @@ export function setupAgents(ctx, t) {
         <div class="ag-top"><i class="st s-${st}"></i><span class="ag-name"><b>${esc(title)}</b>${s.task ? `<em class="ag-task">${esc(s.task.title)}</em>` : ''}<small>${s.cwd ? esc(s.cwd) : ''}${branch(s.git)}</small></span><span class="ag-tag">${esc(tag)}</span></div>
         ${body}${w ? `<div class="wchips">${w}</div>` : ''}${wform}
         ${term || s.ext ? `<div class="ag-acts">${term ? `<button class="btn small ghost" data-sw="${esc(s.sid)}" type="button">${cur ? 'Open · on screen' : 'Open'}</button>` : ''}${changes ? `<button class="btn small ghost" data-diff="${esc(s.sid)}" type="button">Changes</button>` : ''}${term && s.running ? `<button class="btn small ghost" data-watch="${esc(s.sid)}" type="button" aria-label="Tell me when it says something">🔔</button>` : ''}${others > 0 ? `<span class="ag-eye">👁 ${others}</span>` : ''}${!cur ? `<button class="x" data-close="${esc(s.sid)}" type="button" aria-label="${s.ext ? 'Remove from the list' : 'Close terminal'}">✕</button>` : ''}</div>` : ''}</div>`;
-    }).join('') : '<div class="empty">Connect to see your agents and terminals.</div>';
+    }).join('') : '<div class="empty">Connect to see your agents and terminals.</div>');
     if (watchFor) { const f = $('sessList').querySelector('[data-wform] input'); if (f && document.activeElement !== f) f.focus(); }
     t.paintOthers && t.paintOthers();
   }
@@ -70,9 +71,9 @@ export function setupAgents(ctx, t) {
   function paintTabs() {
     const el = $('tTabs'); if (ctx.viewer) return;
     const terms = sessions.filter((s) => !s.ask && !s.ext).sort((a, b) => a.created - b.created);
-    el.hidden = !ctx.live() || !terms.length;
-    el.innerHTML = `<div class="tt-list">${terms.map((s, i) => { const st = stateOf(s); return `<button type="button" class="tt${s.sid === current ? ' on' : ''}" data-tab="${esc(s.sid)}"><i class="st s-${st}"></i>${i + 1} ${esc(label(s))}</button>`; }).join('')}<button type="button" class="tt add" data-tabnew aria-label="New terminal">+</button></div><button type="button" class="tt wide${window.ptWide && document.documentElement.dataset.wide === '1' ? ' on' : ''}" data-wide aria-label="Wide lines" aria-pressed="${document.documentElement.dataset.wide === '1'}">↔</button>`;
-    const on = el.querySelector('.tt.on'); if (on && on.scrollIntoView) on.scrollIntoView({ inline: 'nearest', block: 'nearest' });
+    el.hidden = !terms.length; // not on every short drop of the link: hiding it resizes the terminal (a flicker)
+    const changed = setHTML(el, `<div class="tt-list">${terms.map((s, i) => { const st = stateOf(s); return `<button type="button" class="tt${s.sid === current ? ' on' : ''}" data-tab="${esc(s.sid)}"><i class="st s-${st}"></i>${i + 1} ${esc(label(s))}</button>`; }).join('')}<button type="button" class="tt add" data-tabnew aria-label="New terminal">+</button></div><button type="button" class="tt wide${window.ptWide && document.documentElement.dataset.wide === '1' ? ' on' : ''}" data-wide aria-label="Wide lines" aria-pressed="${document.documentElement.dataset.wide === '1'}">↔</button>`);
+    const on = changed && el.querySelector('.tt.on'); if (on && on.scrollIntoView) on.scrollIntoView({ inline: 'nearest', block: 'nearest' });
   }
   $('tTabs').addEventListener('click', (e) => {
     const b = e.target.closest('button'); if (!b) return;

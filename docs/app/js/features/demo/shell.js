@@ -45,7 +45,7 @@ export function demoShell(m) {
   // tasks, git, watches, clipboard: the demo shows them, and says what would happen
   const later = 'In the demo nothing runs. Pair your computer to do it for real.';
   if (['tasks', 'task-clear', 'task-cfg'].includes(m.t)) return reply({ t: 'tasks', id: m.id, ...DEMO_TASKS });
-  if (['task-add', 'race', 'chain', 'race-pick', 'race-test', 'task-cancel', 'wt-merge', 'wt-discard'].includes(m.t)) return reply({ t: 'tasks', id: m.id, error: later, ...DEMO_TASKS }, 400);
+  if (['task-add', 'race', 'chain', 'race-pick', 'race-test', 'task-cancel', 'wt-merge', 'wt-discard', 'task-push'].includes(m.t)) return reply({ t: 'tasks', id: m.id, error: later, ...DEMO_TASKS }, 400);
   if (m.t === 'git') return reply({ t: 'git', id: m.id, error: later }, 500);
   if (m.t === 'watch-add') { const x = demoSess.find((y) => y.sid === m.sid); if (x) x.watches = [...(x.watches || []), { id: String(now), text: m.text }]; return reply({ t: 'watch', id: m.id, ok: true }); }
   if (m.t === 'watch-rm') { const x = demoSess.find((y) => y.sid === m.sid); if (x) x.watches = (x.watches || []).filter((w) => w.id !== m.wid); return reply({ t: 'watch', id: m.id, ok: true }); }

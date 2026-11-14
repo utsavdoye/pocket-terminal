@@ -35,12 +35,16 @@ const DEFAULT_AGENTS = {
   claude: 'claude {q}',
   codex: 'codex {q}',
   gemini: 'gemini -i {q}',
-  opencode: 'opencode run {q}',
-  aider: 'aider --message {q}',
+  opencode: 'opencode --prompt {q}',
   cursor: 'cursor-agent {q}',
+  copilot: 'copilot -i {q}',
+  amp: 'amp -x {q}',
+  goose: 'goose run -s -t {q}',
+  droid: 'droid {q}',
   qwen: 'qwen -i {q}',
+  aider: 'aider --message {q}',
 };
-const NAMES = { claude: 'Claude Code', codex: 'Codex', gemini: 'Gemini CLI', opencode: 'OpenCode', aider: 'Aider', cursor: 'Cursor', qwen: 'Qwen Code' };
+const NAMES = { claude: 'Claude Code', codex: 'Codex', gemini: 'Gemini CLI', opencode: 'OpenCode', cursor: 'Cursor', copilot: 'GitHub Copilot', amp: 'Amp', goose: 'Goose', droid: 'Factory Droid', qwen: 'Qwen Code', aider: 'Aider' };
 const nice = (a) => NAMES[a] || a;
 
 function quote(text, shell) {
@@ -184,7 +188,7 @@ function createTasks({ core, log, dir, shell, alert }) {
     const busy = data.tasks.some((x) => x.kind === 'queue' && ['waiting', 'running', 'blocked'].includes(x.status));
     t.batchAt = busy ? (data.tasks.filter((x) => x.kind === 'queue' && x.batchAt).slice(-1)[0] || {}).batchAt || Date.now() : Date.now();
     if (worktree) {
-      const w = await G.worktreeAdd(dirp, `${agent || 'cmd'}-${t.id}`);
+      const w = await G.worktreeAdd(dirp, `${agent || 'cmd'}-${t.id}`, agent || 'cmd');
       if (w.error) return w;
       t.wt = { dir: w.dir, branch: w.branch, root: w.root, base: w.base, baseCommit: w.baseCommit }; t.cwd = w.dir; t.where = tidy(w.dir);
     }
@@ -205,7 +209,7 @@ function createTasks({ core, log, dir, shell, alert }) {
     const g = { id: newId(), kind: 'race', prompt, cwd: info.root, where: tidy(info.root), test: test || null, status: 'running', startedAt: Date.now(), lanes: [] };
     for (const a of agents) {
       const id = newId();
-      const w = await G.worktreeAdd(info.root, `${a}-${g.id}`);
+      const w = await G.worktreeAdd(info.root, `${a}-${g.id}`, a);
       if (w.error) { await cleanup(g); return { error: w.error }; }
       const t = { id, kind: 'race', group: g.id, agent: a, prompt, cwd: w.dir, where: tidy(w.dir), title: nice(a), status: 'waiting', addedAt: Date.now(), wt: { dir: w.dir, branch: w.branch, root: w.root, base: w.base, baseCommit: w.baseCommit } };
       data.tasks.push(t); g.lanes.push(id);
@@ -254,8 +258,19 @@ function createTasks({ core, log, dir, shell, alert }) {
     if (s.error) return s;
     const m = await G.worktreeMerge(t.wt.root, t.wt.branch, `Pocket Terminal: ${message}`);
     if (m.error) return m;
-    return { ok: true };
+    pushable.set(t.wt.root, Date.now());
+    return { ok: true, root: t.wt.root, ...(m.note ? { note: m.note } : {}) };
   }
+  // Projects that just had work kept into them: the phone may push them (and only them).
+  const pushable = new Map();
+  async function push(root) {
+    const at = pushable.get(root);
+    if (!at || Date.now() - at > 3600e3) return { error: 'Push it from the terminal (or Changes) instead.' };
+    const r = await G.gitPush(root); if (r.ok) pushable.delete(root);
+    return r;
+  }
+  // A finished race (or a queue task brought in / thrown away) leaves the list.
+  function forget(ids) { const drop = new Set(ids); data.tasks = data.tasks.filter((t) => !drop.has(t.id)); data.groups = data.groups.filter((g) => !drop.has(g.id)); }
   async function dropCopy(t) {
     if (t.key && core.isSession(t.key)) core.close(t.key);
     if (t.wt && !t.wt.removed) { await G.worktreeRemove(t.wt.root, t.wt.dir, t.wt.branch); t.wt.removed = true; }
@@ -270,9 +285,9 @@ function createTasks({ core, log, dir, shell, alert }) {
     const r = await keep(t, `${g.prompt.slice(0, 60)} (${t.title})`);
     if (r.error) return r;
     g.status = 'picked'; g.winner = t.id; g.endedAt = Date.now();
-    await cleanup(g); save();
+    await cleanup(g); forget([g.id, ...g.lanes]); save();
     log(`race ${g.id}: kept ${t.agent}`);
-    return { ok: true };
+    return r;
   }
 
   // ---------- hand-off chains ----------
@@ -318,7 +333,7 @@ function createTasks({ core, log, dir, shell, alert }) {
       if (['picked', 'done', 'failed', 'cancelled'].includes(g.status)) return { error: 'It already ended.' };
       g.status = 'cancelled'; g.endedAt = Date.now();
       for (const lid of g.lanes) { const t = task(lid); if (t && !['done', 'failed', 'cancelled'].includes(t.status)) { const L = live.get(t.id); if (L) { L.off(); live.delete(t.id); } t.status = 'cancelled'; t.endedAt = Date.now(); if (t.key) core.close(t.key); } }
-      if (g.kind === 'race') await cleanup(g);
+      if (g.kind === 'race') { await cleanup(g); forget([g.id, ...g.lanes]); }
       save(); return { ok: true };
     }
     const t = task(id); if (!t) return { error: 'That task is gone.' };
@@ -332,8 +347,9 @@ function createTasks({ core, log, dir, shell, alert }) {
   async function wt(id, how) {
     const t = task(id); if (!t || !t.wt || t.wt.removed) return { error: 'Nothing to bring in.' };
     if (t.status === 'running' || t.status === 'blocked' || t.status === 'waiting') return { error: 'It is still working.' };
-    if (how === 'merge') { const r = await keep(t, (t.prompt || t.cmd || 'task').slice(0, 60)); if (r.error) return r; t.merged = true; }
-    await dropCopy(t); save(); return { ok: true };
+    let r = { ok: true };
+    if (how === 'merge') { r = await keep(t, (t.prompt || t.cmd || 'task').slice(0, 60)); if (r.error) return r; }
+    await dropCopy(t); forget([t.id]); save(); return r;
   }
   function clear() {
     const ended = (x) => ['done', 'failed', 'cancelled'].includes(x.status) && (!x.wt || x.wt.removed);
@@ -365,6 +381,7 @@ function createTasks({ core, log, dir, shell, alert }) {
         case 'task-clear': return reply(clear());
         case 'wt-merge': return reply(await wt(String(m.tid), 'merge'));
         case 'wt-discard': return reply(await wt(String(m.tid), 'discard'));
+        case 'task-push': return reply(await push(String(m.root || '')));
         case 'task-cfg': {
           const a = m.agents && typeof m.agents === 'object' ? m.agents : {};
           const next = {};
@@ -379,7 +396,7 @@ function createTasks({ core, log, dir, shell, alert }) {
   for (const t of kept) follow(t, true);
   // At start: the queue carries on where it was.
   setTimeout(() => nextInQueue(null), 2000);
-  return { onPhone, view, stop: () => clearInterval(timer), addTask, race, chain, pick, cancel, wt, tick, _data: () => data };
+  return { onPhone, view, stop: () => clearInterval(timer), addTask, race, chain, pick, cancel, wt, push, tick, _data: () => data };
 }
 
 const dur = (s) => (!s ? '–' : s < 60 ? `${s} s` : s < 3600 ? `${Math.round(s / 60)} min` : `${(s / 3600).toFixed(1)} h`);

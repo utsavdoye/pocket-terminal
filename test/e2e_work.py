@@ -77,9 +77,17 @@ try:
     check(8, 'both finish, tests run, ready to pick', wait(lambda: 'pick the winner' in pg.inner_text('#workList').lower() and pg.inner_text('#workList').lower().count('tests ✓')==2, 40))
     check(9, 'each lane shows its changes (1 file)', pg.inner_text('#workList').count('1 file')==2)
     check(10, 'the project itself is untouched so far', not os.path.exists(REPO+'/apple.txt'))
+    pg.evaluate("window.__lane = document.querySelector('#workList .lane')"); time.sleep(4)  # the list refreshes every 3 s
+    check('10b', 'the list stays still while it refreshes (no redraw, no flicker)', pg.evaluate("window.__lane.isConnected"))
+    open(REPO+'/tracked.txt','a').write('my own unsaved line\n')  # you were editing the project meanwhile
+    dialogs=[]; pg.on('dialog', lambda d: dialogs.append(d.message))
     pg.click('#workList .lane:has-text("once") [data-keep]')
-    check(11, 'keep one: merged into the project, the copies gone', wait(lambda: os.path.exists(REPO+'/apple.txt') and 'kept' in pg.inner_text('#workList').lower(), 20)
+    check(11, 'keep one (with your own unsaved changes): merged, your changes still there, the copies gone', wait(lambda: os.path.exists(REPO+'/apple.txt'), 20)
+          and 'my own unsaved line' in open(REPO+'/tracked.txt').read()
           and subprocess.run(['git','-C',REPO,'branch','--list','pt/*'],capture_output=True,text=True).stdout.strip()=='')
+    check('11b', 'the race leaves the list', wait(lambda: not pg.query_selector('#workList .wgroup'), 10))
+    check('11c', 'it offers to push the project itself (here: no remote, so it says so)', wait(lambda: pg.wait_for_timeout(200) or any('Push your project' in d for d in dialogs) and any('no remote' in d.lower() for d in dialogs), 15))
+    subprocess.run(['git','-C',REPO,'checkout','--','tracked.txt'],check=True)
 
     # ---- 3. the queue ----
     pg.click('#workSeg [data-v=queue]'); pg.select_option('#wAgent', '__cmd')

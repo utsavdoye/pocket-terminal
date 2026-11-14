@@ -3,6 +3,9 @@
 
 export const $ = (id) => document.getElementById(id);
 export const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
+// Replace an element's HTML only when it changed: lists that refresh every few seconds then stay still
+// (no flicker, no lost taps, open menus and scroll positions kept).
+export const setHTML = (el, html) => { if (!el || el._html === html) return false; el._html = html; el.innerHTML = html; return true; };
 export const ago = (t) => { if (!t) return 'never'; const s = Math.round((Date.now() - t) / 1000);
   return s < 60 ? 'just now' : s < 3600 ? `${Math.round(s / 60)} min ago` : s < 86400 ? `${Math.round(s / 3600)} h ago` : `${Math.round(s / 86400)} d ago`; };
 let toastT; export const toast = (m) => { const t = $('toast'); t.textContent = m; t.style.display = 'block'; t.classList.remove('show'); void t.offsetWidth; t.classList.add('show'); clearTimeout(toastT); toastT = setTimeout(() => (t.style.display = 'none'), 2600); };

@@ -11,6 +11,13 @@
 
 ## 7.6.2 (2026-11-13)
 - **Scrolling back through Claude Code (and other full-screen agents) works.** A swipe on a program that asked for the mouse now sends mouse-wheel turns, like a real terminal. Before, it sent the Up arrow, which brought back your last message instead of scrolling.
+- **Race: keeping a winner works even while you have unsaved changes** in the project. They are set aside for the merge and put back after it (if they clash, they stay safe in `git stash`). Before, it refused.
+- **A kept race leaves the task list** (so does a stopped one, and a queue task you brought in or threw away). Then the app offers to push your project.
+- **No more pull requests from race copies.** Pushing from an agent's copy pushed its `pt/…` branch to GitHub, which offered it as a pull request. Copies are never pushed now; keep the winner, then push your project (its own branch, e.g. `main`).
+- **Each agent's copy is the same folder every time** (one per project and agent), so Claude Code and Codex ask "do you trust this folder?" once, not on every race.
+- **Auto-yes works in Claude Code's full screen.** The whole screen was read as one line, so old words above the question (like "pushed" or "removed") made it ask you anyway. Only the question box counts now.
+- **The app no longer flickers.** Lists that refresh every few seconds (agents, tasks, tabs) are only redrawn when something changed, and the tabs no longer hide (and resize the terminal) on a short drop of the link.
+- **More agents in Tasks:** GitHub Copilot (`copilot -i`), Amp (`amp -x`), Goose (`goose run -s -t`) and Factory Droid (`droid`). OpenCode now starts in its normal screen (`opencode --prompt`).
 
 ## 7.6.1 (2026-11-13)
 - **Installing on Linux with the newest npm (version 12) works again.** npm 12 no longer runs a package's install step unless the project allows it, so the terminal library (node-pty) was never built on Linux and the agent could not start. Pocket Terminal now allows that one package by name and version. (Mac and Windows were not affected.)

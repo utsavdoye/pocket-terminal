@@ -11,7 +11,7 @@ const path = require('path');
 const { EventEmitter } = require('events');
 const { spawn, execFile } = require('child_process');
 const pty = require('node-pty');
-const { plain, asksForInput, lastLine, lastLines, question, isMenu, DEFAULT_AUTO, autoDecision, choicesFor } = require('./rules');
+const { plain, asksForInput, lastLine, lastLines, question, isMenu, DEFAULT_AUTO, autoDecision, askBox, choicesFor } = require('./rules');
 const { gitChanges, gitDiff, gitInfo, gitCommit, gitPush } = require('./git');
 const { outsideAgents } = require('./outside');
 
@@ -148,10 +148,10 @@ function createCore({ log, power, dir, host = null }) {
   const fresh = (s) => { const n = s.outN - s.mark; return n <= 0 ? '' : n >= s.tail.length ? s.tail : s.tail.slice(-n); };
   function onQuiet(s) {
     if (!s.term) return;
-    const tail = fresh(s).split('\n').slice(-12).join('\n');
+    const all = fresh(s), tail = all.split('\n').filter((l) => l.trim()).slice(-12).join('\n');
     if (!s.asked && asksForInput(tail)) {
       s.asked = true; s.askText = question(tail).slice(0, 120); s.askMenu = isMenu(tail); s.askedAt = Date.now(); busyChanged(); track(s);
-      const ok = autoDecision(auto, tail.split('\n').slice(-10).join('\n'), s.askText, s.askMenu); // just the agent's question box
+      const ok = autoDecision(auto, askBox(all), s.askText, s.askMenu); // just the agent's question box
       if (ok) { // answered by your own rule: tell the phone quietly, don't ask
         log(`auto-approved a question (rule: ${ok.rule.slice(0, 20)})`);
         setTimeout(() => { if (s.asked && s.term) session(s.key).input(ok.d); }, 800);

@@ -4,6 +4,7 @@
 // them from here: the answer goes back as an encrypted note, without switching computers.
 // A computer whose PIN is needed (locked on this phone) shows as locked: tap to switch and unlock.
 
+import { setHTML } from '../core/dom.js';
 import { computers, sessionFor, switchTo as useComputer } from '../core/computers.js';
 import { seal, open, randomId } from '../crypto.js';
 import { boardsFor, ownBoard } from '../core/env.js';
@@ -71,14 +72,14 @@ export function setupEverywhere(ctx, t) {
   }
 
   const DOT = { blocked: 's-wait', working: 's-work', idle: 's-idle' };
-  const NAMES = { claude: 'Claude Code', codex: 'Codex', gemini: 'Gemini CLI', aider: 'Aider', opencode: 'OpenCode', 'cursor-agent': 'Cursor', qwen: 'Qwen Code' };
+  const NAMES = { claude: 'Claude Code', codex: 'Codex', gemini: 'Gemini CLI', aider: 'Aider', opencode: 'OpenCode', 'cursor-agent': 'Cursor', qwen: 'Qwen Code', copilot: 'GitHub Copilot', amp: 'Amp', goose: 'Goose', droid: 'Factory Droid' };
   const nice = (p) => NAMES[p] || (p ? p[0].toUpperCase() + p.slice(1) : 'Terminal');
   let sayFor = null;
   function paintOthers() {
     $('thisComp').textContent = `This computer · ${mac.name || (state.S && state.S.name) || ''}`;
     $('thisComp').hidden = !others.length;
     let blocked = 0;
-    $('others').innerHTML = others.map((o) => {
+    setHTML($('others'), others.map((o) => {
       const head = `<div class="sub other-h"><span>${esc(o.name)}</span>${o.locked ? '<em>locked</em>' : o.asleep ? '<em>asleep</em>' : o.ts ? `<em>${esc(ago(o.ts))}</em>` : ''}</div>`;
       if (o.locked) return `${head}<div class="item agent s-idle"><p class="ag-note">Locked on this phone. Unlock it once (12 hours) to see its agents here.</p><div class="ag-acts"><button class="btn small ghost" data-unlock="${esc(o.topic)}" type="button">Switch &amp; unlock</button></div></div>`;
       if (!o.list) return `${head}<div class="item agent s-idle"><p class="ag-note">No word from it yet. It sends its list when an agent starts, needs you or stops (it needs Pocket Terminal 7.6 or newer).</p></div>`;
@@ -93,7 +94,7 @@ export function setupEverywhere(ctx, t) {
           ${sayFor === k ? `<form class="row2 wform" data-osay="${esc(k)}"><input class="field-in plain" name="w" placeholder="No, do it this way instead…" autocomplete="off" enterkeyhint="send"><button class="btn small">Send</button></form>` : ''}
         </div>`;
       }).join('')}</div>`;
-    }).join('');
+    }).join(''));
     // the dock's Agents badge counts these too
     const here = t.sessions().filter((s) => s.waiting).length, badge = $('dockBadge');
     const n = here + blocked; badge.hidden = !n; if (n) badge.textContent = n; badge.parentElement.classList.toggle('hot', !!n);

@@ -34,7 +34,7 @@ export const DEMO_SESSIONS = [
 ];
 
 // Tasks: a race waiting for you to pick the winner, and a queue that's half done.
-const AG = { claude: 'claude {q}', codex: 'codex {q}', gemini: 'gemini -i {q}', opencode: 'opencode run {q}', aider: 'aider --message {q}' };
+const AG = { claude: 'claude {q}', codex: 'codex {q}', gemini: 'gemini -i {q}', opencode: 'opencode --prompt {q}', aider: 'aider --message {q}' };
 const NM = { claude: 'Claude Code', codex: 'Codex', gemini: 'Gemini CLI', opencode: 'OpenCode', aider: 'Aider' };
 export const DEMO_TASKS = { agents: AG, names: NM,
   groups: [{ id: 'g1', kind: 'race', prompt: 'add a dark mode toggle to the settings page', where: '~/Projects/shop-app', status: 'compare', test: 'npm test', lanes: ['r1', 'r2', 'r3'], startedAt: T0 - 20 * 60e3 }],

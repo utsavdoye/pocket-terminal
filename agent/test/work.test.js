@@ -41,6 +41,11 @@ function repo(name) {
   ok('auto-yes: your own "always ask" word works', !rules.autoDecision({ ...cfg, ask: ['vercel'] }, 'Bash(npm test; vercel)\nDo you want to proceed?', 'Do you want to proceed?', true));
   ok('auto-yes: sudo and rm -rf ask, even if you emptied the list', !rules.autoDecision({ ...cfg, ask: [] }, 'sudo npm test\nDo you want to proceed?', 'Do you want to proceed?', true) && !rules.autoDecision({ ...cfg, ask: [] }, 'rm -rf build && npm test\nDo you want to proceed?', 'Do you want to proceed?', true));
   ok('auto-yes: a word matches at a word start only ("rm" is not in "format")', rules.askHit({ ask: ['rm'] }, 'npm run format') === null && rules.askHit({ ask: ['rm'] }, 'rmdir x') === 'rm');
+  { // a full-screen agent draws with cursor moves: old text above the question box must not count
+    const scr = '\x1b[2J\x1b[1;1HEarlier I pushed the branch and removed old files.\x1b[5;1HBash command\x1b[7;3Hnpm test\x1b[8;3HRun the tests\x1b[10;1HDo you want to proceed?\x1b[11;1H\u276f 1. Yes\x1b[12;3H2. No';
+    const box = rules.askBox(rules.plain(scr));
+    ok('auto-yes: in a full-screen agent only its question box counts', !/pushed/.test(box) && !!rules.autoDecision(cfg, box, 'Do you want to proceed?', true), JSON.stringify(box));
+  }
   ok('quote: a task with quotes is one shell word', quote("it's \"fine\"", '/bin/bash') === `'it'\\''s "fine"'` && quote("it's", 'powershell.exe') === "'it''s'");
   ok('marker: PowerShell gets its own exit code variable', /\$LASTEXITCODE/.test(marker('x', 'pwsh')) && /\$\?/.test(marker('x', '/bin/zsh')));
 
@@ -64,6 +69,11 @@ function repo(name) {
   ok('git: push without a remote says so plainly', /no remote/i.test((await G.gitPush(repo('noremote'))).error || ''));
   const w = await G.worktreeAdd(r, 'Claude!');
   ok('git: worktree on its own branch, outside the project', w.ok && w.branch === 'pt/claude' && fs.existsSync(path.join(w.dir, 'a.js')) && !w.dir.startsWith(r), JSON.stringify(w));
+  ok('git: a copy\'s branch (pt/…) is never pushed', /copy/i.test((await G.gitPush(w.dir)).error || ''));
+  const w2 = await G.worktreeAdd(r, 'claude-x1', 'claude'), w3 = await G.worktreeAdd(r, 'claude-x2', 'claude');
+  await G.worktreeRemove(r, w2.dir, w2.branch); const w4 = await G.worktreeAdd(r, 'claude-x3', 'claude');
+  ok('git: the same folder each time for one agent (it asks "trust this folder?" once), another while it is in use', w2.ok && w3.ok && w4.ok && w4.dir === w2.dir && w3.dir !== w2.dir, JSON.stringify([w2.dir, w3.dir, w4.dir]));
+  await G.worktreeRemove(r, w3.dir, w3.branch); await G.worktreeRemove(r, w4.dir, w4.branch);
   fs.writeFileSync(path.join(w.dir, 'c.js'), 'z\n');
   await G.worktreeSave(w.dir, 'c from claude');
   const m = await G.worktreeMerge(r, w.branch, 'merge it');
@@ -140,7 +150,13 @@ function repo(name) {
   ok('race: one notification to compare', told.some((e) => /Race ready/.test(e.title)));
   out = [];
   const win = lanes.find((t) => t.agent === 'once');
+  fs.writeFileSync(path.join(rr, 'README.md'), 'my own unsaved line\n'); // you were editing the project meanwhile
   await tasks.onPhone({ t: 'race-pick', id: 'p', gid: res.id, lane: win.id }, send(out), (s) => s, () => {});
+  ok('race: keeping works with your own unsaved changes, and they stay', out[0].ok && fs.readFileSync(path.join(rr, 'README.md'), 'utf8') === 'my own unsaved line\n', JSON.stringify(out[0].error));
+  ok('race: once kept, it leaves the task list', !tasks.view().groups.some((x) => x.id === res.id) && !tasks.view().tasks.some((t) => t.group === res.id));
+  const pushOut = []; await tasks.onPhone({ t: 'task-push', id: 'q', root: out[0].root }, send(pushOut), (s) => s, () => {});
+  const pushOther = []; await tasks.onPhone({ t: 'task-push', id: 'q2', root: os.tmpdir() }, send(pushOther), (s) => s, () => {});
+  ok('race: then "push your project" pushes that project only', /no remote/i.test(pushOut[0].error || '') && /terminal/i.test(pushOther[0].error || ''), JSON.stringify([pushOut[0].error, pushOther[0].error]));
   ok('race: the winner\'s work is merged into the project', out[0].ok && fs.existsSync(path.join(rr, 'apple.txt')) && /Pocket Terminal/.test(sh(rr, 'log', '-1', '--format=%s')), JSON.stringify(out[0].error));
   ok('race: the other copies and branches are gone', !sh(rr, 'branch', '--list', 'pt/*') && sh(rr, 'worktree', 'list').split('\n').length === 1);
   ok('race: needs 2 agents and a git project', !!(await tasks.race({ prompt: 'x', cwd: rr, agents: ['fake'] })).error && !!(await tasks.race({ prompt: 'x', cwd: os.tmpdir(), agents: ['fake', 'once'] })).error);

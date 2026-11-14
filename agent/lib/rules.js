@@ -4,7 +4,10 @@
 
 // ---------- the watcher's rules ----------
 const ANSI = /\x1b\[[0-9;?<>=]*[ -\/]*[@-~]|\x1b\][^\x07\x1b]*(?:\x07|\x1b\\)|\x1b[P^_][^\x1b]*\x1b\\|\x1b[@-Z\\-_]|[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]/g;
-const plain = (s) => s.replace(ANSI, '').replace(/\r(?!\n)/g, '\n');
+// Full-screen programs (Claude Code, Codex) move the cursor instead of printing new lines: each move
+// starts a new line here, so the question on screen isn't glued to old text above it.
+const MOVE = /\x1b\[\d*(?:;\d*)?[Hf]|\x1b\[\d*[ABEFd]/g;
+const plain = (s) => s.replace(MOVE, '\n').replace(ANSI, '').replace(/\r(?!\n)/g, '\n');
 // "Is the screen asking me something?" Checked on the last few lines, once output goes quiet.
 const ASKS = [
   /do you want to\b/i,                                   // Claude Code, Codex: "Do you want to proceed?"
@@ -49,6 +52,15 @@ function askHit(cfg, tail) {
   for (const w of list) { const t = String(w).trim(); if (!t) continue; const re = new RegExp((/^\w/.test(t) ? '\\b' : '') + esc(t), 'i'); if (re.test(tail)) return t; }
   return null;
 }
+// Just the agent's question box at the bottom of the screen: from its last tool heading
+// ("Bash command", "Bash(…)", "Edit file", …), or else the last 12 lines. Old text above it
+// (earlier work, which may say "pushed" or "removed") must not decide the answer.
+const HEAD = /^[\s│|>]*(?:Bash command|Bash\(|Edit file|Create file|Write\(|Edit\(|Update\(|Fetch\(|Read\(|Shell|Run command|Allow command|Tool use)/i;
+function askBox(tail) {
+  const lines = String(tail || '').split('\n').filter((l) => l.trim()).slice(-30);
+  let i = -1; for (let k = lines.length - 1; k >= 0; k--) if (HEAD.test(lines[k])) { i = k; break; }
+  return (i >= 0 ? lines.slice(i) : lines.slice(-12)).join('\n');
+}
 function autoDecision(cfg, tail, text, menu) {
   if (!cfg || !cfg.enabled || !Array.isArray(cfg.allow) || !cfg.allow.length) return null;
   if (/password|passphrase/i.test(text)) return null;
@@ -71,4 +83,4 @@ function choicesFor(text, menu) {
   return [];
 }
 
-module.exports = { plain, asksForInput, lastLine, lastLines, question, isMenu, DEFAULT_AUTO, DEFAULT_ASK, autoDecision, askHit, choicesFor };
+module.exports = { askBox, plain, asksForInput, lastLine, lastLines, question, isMenu, DEFAULT_AUTO, DEFAULT_ASK, autoDecision, askHit, choicesFor };

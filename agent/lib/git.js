@@ -82,6 +82,9 @@ async function gitPush(dirp) {
   const info = await gitInfo(dirp);
   if (!info) return { error: 'This folder is not a git project.' };
   if (!info.branch) return { error: 'Not on a branch (detached HEAD), so there is nothing to push.' };
+  // A race or task copy works on its own branch (pt/…). Pushing it would put that branch on GitHub
+  // (where it shows up as a pull request), so keep it into the project and push the project instead.
+  if (/^pt\//.test(info.branch)) return { error: 'This is a copy made for a race or task (its branch is ' + info.branch + '). Keep it in Tasks first, then push your project.' };
   const args = info.upstream ? ['push'] : ['push', '-u', 'origin', info.branch];
   const r = await git(dirp, args, { timeout: 90e3 });
   if (!r.ok) {
@@ -100,13 +103,18 @@ async function gitPush(dirp) {
 const WT_HOME = () => path.join(process.env.POCKET_HOME || path.join(os.homedir(), '.pocket-terminal'), 'worktrees');
 const safeName = (s) => String(s || '').toLowerCase().replace(/[^a-z0-9-]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 40) || 'agent';
 
-async function worktreeAdd(repoDir, name) {
+// folder: the copy's folder name, the same each time for one agent in one project (e.g. "codex"), so
+// an agent that asks "do you trust this folder?" asks once, not on every race.
+async function worktreeAdd(repoDir, name, folder) {
   const info = await gitInfo(repoDir);
   if (!info) return { error: 'That folder is not a git project. Worktrees need git.' };
   const head = await git(info.root, ['rev-parse', 'HEAD']);
   if (!head.ok) return { error: 'This project has no commits yet. Make a first commit, then try again.' };
   const n = safeName(name), branch = `pt/${n}`;
-  const dir = path.join(WT_HOME(), `${safeName(path.basename(info.root))}-${n}`);
+  const base = path.join(WT_HOME(), `${safeName(path.basename(info.root))}-${safeName(folder || name)}`);
+  let dir = base;
+  for (let i = 2; fs.existsSync(dir); i++) dir = i < 10 ? `${base}-${i}` : path.join(WT_HOME(), `${safeName(path.basename(info.root))}-${n}`); // that one is in use (another race)
+  if (fs.existsSync(dir)) return { error: 'Too many copies of this project are in use. Finish or stop a race first.' };
   fs.mkdirSync(WT_HOME(), { recursive: true });
   const r = await git(info.root, ['worktree', 'add', '-b', branch, dir, 'HEAD'], { timeout: 60e3 });
   if (!r.ok) return { error: firstLine(r.err) || 'git could not make a worktree.' };
@@ -122,15 +130,19 @@ async function worktreeSave(dir, message) {
 }
 
 // Bring a worktree's branch into the project: a merge on the project's own branch.
+// Your own unsaved changes in the project are put aside for the merge and put back after it
+// (git's --autostash); if they clash with the merged work they stay safe in "git stash".
 async function worktreeMerge(root, branch, message) {
-  const st = await git(root, ['status', '--porcelain', '--untracked-files=no']);
-  if (st.ok && st.out.trim()) return { error: 'Your project has changes that are not committed. Commit or stash them first, then pick again.' };
-  const r = await git(root, ['merge', '--no-ff', '-m', String(message || `Merge ${branch}`).slice(0, 200), branch], { timeout: 60e3 });
+  const r = await git(root, ['merge', '--no-ff', '--autostash', '-m', String(message || `Merge ${branch}`).slice(0, 200), branch], { timeout: 60e3 });
+  const said = r.out + '\n' + r.err;
   if (!r.ok) {
+    if (/unknown option.*autostash/i.test(said)) return { error: 'Your project has changes that are not committed. Commit or stash them first, then pick again.' };
     await git(root, ['merge', '--abort']);
-    return { error: /conflict/i.test(r.out + r.err) ? 'Its changes clash with changes made since it started (a merge conflict). Nothing was changed.' : firstLine(r.err || r.out) || 'git could not merge.' };
+    if (/would be overwritten/i.test(said)) return { error: 'New files in your project have the same names as files it made. Move or commit them, then pick again.' };
+    return { error: /conflict/i.test(said) ? 'Its changes clash with changes made since it started (a merge conflict). Nothing was changed.' : firstLine(r.err || r.out) || 'git could not merge.' };
   }
-  return { ok: true };
+  const stashed = /autostash.*conflict|changes are safe in the stash/i.test(said);
+  return { ok: true, ...(stashed ? { note: 'Merged. Your own unsaved changes clashed with it, so they are kept aside: run git stash pop in the project to get them back.' } : {}) };
 }
 
 // Remove a worktree and its branch. force: even with changes in it.
