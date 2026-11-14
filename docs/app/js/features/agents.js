@@ -68,12 +68,18 @@ export function setupAgents(ctx, t) {
   ctx.on('sessions', (m) => { sessions = m.list || []; current = m.current; paintSessions(); paintStrip(); paintTabs(); });
   // Tabs over the terminal: each terminal on its own tab (tap to open it), + for a new one, and ↔
   // for wide lines (long commands on one line, with a slider to move along them).
+  let tabKey = '';
   function paintTabs() {
     const el = $('tTabs'); if (ctx.viewer) return;
     const terms = sessions.filter((s) => !s.ask && !s.ext).sort((a, b) => a.created - b.created);
     el.hidden = !terms.length; // not on every short drop of the link: hiding it resizes the terminal (a flicker)
+    const was = el.querySelector('.tt-list'), left = was ? was.scrollLeft : 0, key = current + ':' + terms.length;
     const changed = setHTML(el, `<div class="tt-list">${terms.map((s, i) => { const st = stateOf(s); return `<button type="button" class="tt${s.sid === current ? ' on' : ''}" data-tab="${esc(s.sid)}"><i class="st s-${st}"></i>${i + 1} ${esc(label(s))}</button>`; }).join('')}<button type="button" class="tt add" data-tabnew aria-label="New terminal">+</button></div><button type="button" class="tt wide${window.ptWide && document.documentElement.dataset.wide === '1' ? ' on' : ''}" data-wide aria-label="Wide lines" aria-pressed="${document.documentElement.dataset.wide === '1'}">↔</button>`);
-    const on = changed && el.querySelector('.tt.on'); if (on && on.scrollIntoView) on.scrollIntoView({ inline: 'nearest', block: 'nearest' });
+    if (!changed) return;
+    // Stay where you slid the tabs to; only bring the open tab into view when you switch (or one is added).
+    const list = el.querySelector('.tt-list'); list.scrollLeft = left;
+    const on = tabKey !== key && el.querySelector('.tt.on'); tabKey = key;
+    if (on && on.scrollIntoView) on.scrollIntoView({ inline: 'nearest', block: 'nearest' });
   }
   $('tTabs').addEventListener('click', (e) => {
     const b = e.target.closest('button'); if (!b) return;

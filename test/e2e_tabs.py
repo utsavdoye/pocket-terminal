@@ -38,6 +38,7 @@ try:
     t=pg.evaluate('window.ptText()')
     check(4,'no colour/cursor answers typed at the prompt after a replay', 'rgb:' not in t and ';1R' not in t)
     # wide lines
+    check('3b','the row of tabs can be slid sideways (to see every terminal)', pg.evaluate("(() => { const e = new Event('touchmove', { bubbles: true, cancelable: true }); document.querySelector('#tTabs .tt-list .tt').dispatchEvent(e); return !e.defaultPrevented; })()"))
     pg.click('#tTabs [data-wide]'); time.sleep(1)
     pg.click('#term'); pg.keyboard.type('echo ' + 'A'*60 + 'B'*60 + 'END\n'); time.sleep(1)
     t=pg.evaluate('window.ptText()')

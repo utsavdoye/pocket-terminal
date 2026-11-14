@@ -194,6 +194,6 @@ function setupTouchScroll() {
   }, { passive: true, capture: true });
   // Everywhere else: only real scroll areas may scroll; the page itself never moves.
   document.addEventListener('touchmove', (e) => {
-    if (!e.target.closest('.pane, .gate, .chips, .keys, .panel, textarea, input, .scanner, .card-state')) e.preventDefault();
+    if (!e.target.closest('.pane, .gate, .chips, .keys, .tt-list, .panel, textarea, input, .scanner, .card-state')) e.preventDefault();
   }, { passive: false });
 }

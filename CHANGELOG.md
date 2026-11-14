@@ -17,6 +17,7 @@
 - **Each agent's copy is the same folder every time** (one per project and agent), so Claude Code and Codex ask "do you trust this folder?" once, not on every race.
 - **Auto-yes works in Claude Code's full screen.** The whole screen was read as one line, so old words above the question (like "pushed" or "removed") made it ask you anyway. Only the question box counts now.
 - **The app no longer flickers.** Lists that refresh every few seconds (agents, tasks, tabs) are only redrawn when something changed, and the tabs no longer hide (and resize the terminal) on a short drop of the link.
+- **The row of terminal tabs slides.** With many terminals open, drag the tabs sideways to see them all (it didn't move before). It stays where you left it, and doesn't switch terminals.
 - **More agents in Tasks:** GitHub Copilot (`copilot -i`), Amp (`amp -x`), Goose (`goose run -s -t`) and Factory Droid (`droid`). OpenCode now starts in its normal screen (`opencode --prompt`).
 
 ## 7.6.1 (2026-11-13)
