@@ -39,6 +39,8 @@ const WHAT = {
   unshare: () => 'stopped a live-view link',
   'close-terminal': (e) => `closed terminal ${e.sid}`,
   notifications: (e) => `turned notifications ${e.on ? 'on' : 'off'}`,
+  schedule: () => 'saved a schedule',
+  github: () => 'set up GitHub issues for a project',
   paired: () => 'was paired',
   removed: () => 'was removed',
 };

@@ -227,6 +227,7 @@
     </div>
     <div class="pane" id="pane-work">
       <div class="seg wide" id="workSeg"><button data-v="queue" class="on">Queue</button><button data-v="race">Race</button><button data-v="chain">Hand-off</button></div>
+      <div class="recipes" id="wRecipes" hidden></div>
       <form class="workform" id="workForm" autocomplete="off">
         <p class="hint" id="workHint"></p>
         <label class="lbl">Folder<input class="field-in" id="wFolder" list="wFolders" placeholder="~/projects/my-app" autocapitalize="off" autocorrect="off" spellcheck="false"></label>
@@ -248,6 +249,15 @@
         <label class="toggle small wf-queue"><input type="checkbox" id="wCopy"> In its own copy of the project (git worktree)</label>
         <button class="btn" id="wGo">Add to queue</button>
         <p class="note" id="wNote"></p>
+        <div class="wmore"><button class="linkbtn" id="wSchedOpen" type="button">Run it on a schedule</button><button class="linkbtn" id="wSaveRecipe" type="button">Save as a recipe</button></div>
+        <div class="schedform" id="wSched" hidden>
+          <p class="hint">Starts by itself at this time, with the folder and task above. The computer must be on (asleep is fine).</p>
+          <label class="lbl">Time<input class="field-in" type="time" id="wSchedAt" value="02:00"></label>
+          <div class="lbl">Days <small>none picked: every day</small></div>
+          <div class="pickchips" id="wSchedDays"></div>
+          <label class="lbl">Name<input class="field-in" id="wSchedName" placeholder="Nightly tests" maxlength="60"></label>
+          <div class="row2"><button class="btn" id="wSchedSave" type="button">Save the schedule</button><button class="btn ghost" id="wSchedCancel" type="button">Cancel</button></div>
+        </div>
       </form>
       <div class="list" id="workList"></div>
       <div class="row2" style="margin-top:12px"><button class="btn ghost small" id="wClear" type="button">Clear finished</button><button class="btn ghost small" id="wAgents" type="button">Agent commands</button></div>
@@ -256,6 +266,28 @@
         <textarea class="field-in" id="wAgentsText" rows="8" autocapitalize="off" autocorrect="off" spellcheck="false"></textarea>
         <div class="row2"><button class="btn">Save</button><button type="button" class="btn ghost" id="wAgentsReset">Defaults</button></div>
       </form>
+      <div class="sub">Schedules</div>
+      <div class="list" id="schedList"></div>
+      <div class="sub">Morning summary</div>
+      <label class="toggle small"><input type="checkbox" id="mornOn"> One notification each morning: what your agents did, what waits for you</label>
+      <div class="row2" style="margin-top:8px"><input class="field-in" type="time" id="mornAt" value="08:00" aria-label="Time of the morning summary"><button class="btn ghost small" id="mornNow" type="button">Send it now</button></div>
+      <div class="sub">GitHub issues</div>
+      <p class="hint">Put a label on an issue you wrote, and your agents start on it. Uses GitHub's <code>gh</code> tool on the computer.</p>
+      <div class="list" id="ghList"></div>
+      <button class="linkbtn" id="ghAdd" type="button">+ Add a project</button>
+      <form class="aiform" id="ghForm" hidden autocomplete="off">
+        <label class="lbl">Folder<input class="field-in" id="ghFolder" list="wFolders" placeholder="~/projects/my-app" autocapitalize="off" autocorrect="off" spellcheck="false"></label>
+        <label class="lbl">Label<input class="field-in" id="ghLabel" value="pocket" maxlength="40" autocapitalize="off" autocorrect="off" spellcheck="false"></label>
+        <div class="lbl">Agents <small>2 or more race; 1 works alone</small></div>
+        <div class="pickchips" id="ghAgents"></div>
+        <label class="lbl">Tests <small>optional</small><input class="field-in" id="ghTest" placeholder="npm test" autocapitalize="off" autocorrect="off" spellcheck="false"></label>
+        <div class="row2"><button class="btn">Save</button><button type="button" class="btn ghost" id="ghCancel">Cancel</button></div>
+        <p class="note" id="ghNote"></p>
+      </form>
+      <div class="sub">For AI agents (MCP)</div>
+      <p class="hint">Let an agent ask you a question on this phone, send you a note, or start tasks and races. Run this once on the computer:</p>
+      <code class="cmdline">claude mcp add pocket-terminal -- npx -y pocket-terminal mcp</code>
+      <p class="hint">Other agents: add the command <code>npx -y pocket-terminal mcp</code> as an MCP server.</p>
     </div>
     <div class="pane" id="pane-clip">
       <p class="hint">Text only. Goes through the same encrypted link.</p>
@@ -317,6 +349,11 @@
       </div>
       <p class="hint" id="diffInfo">Loading the changes…</p>
       <pre class="diff" id="diffOut"></pre>
+      <div class="review" id="review" hidden>
+        <div class="rv-notes" id="rvNotes"></div>
+        <form class="row2" id="rvForm" hidden><input class="field-in plain" id="rvIn" placeholder="What should change here?" autocomplete="off" autocorrect="on" enterkeyhint="done" maxlength="300"><button class="btn small">Add</button></form>
+        <button class="btn" id="rvSend" type="button" hidden>Send to the agent</button>
+      </div>
     </div>
     <div class="pane" id="pane-settings">
       <div class="field"><div>Connection<small id="connInfo">–</small></div><button class="btn small ghost" id="retryDirect">Reconnect</button></div>

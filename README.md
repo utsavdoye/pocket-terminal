@@ -45,6 +45,13 @@ npx pocket-terminal
 - **Agents dashboard:** every agent and terminal on one screen, on **every computer you paired**: blocked (with the question), working, idle, with its folder and git branch. Answer a waiting one right there, even on another computer.
 - **Race your agents:** one task to 2–4 agents at once (Claude Code, Codex, Gemini CLI, OpenCode, Aider…), each in its own git worktree. Compare files changed, tests and time, then keep the winner: it's merged, the rest is thrown away.
 - **Hand-offs and a task queue:** "Codex writes it, Claude Code reviews it, then the tests run", or "when this finishes, run the next one". One notification at the end.
+- **Schedules:** "every night at 2:00, run the tests and fix what fails". A task, a race or a hand-off at a time of day, with a log of every run.
+- **Morning summary:** one notification with what your agents did overnight and what waits for you.
+- **Recipes:** save a way of working ("Codex writes, Claude Code reviews, tests run") as one button, and share it as a link.
+- **Cost meter:** tokens used per task and about what they cost, read from Claude Code's, Codex's and Gemini CLI's own logs on your computer.
+- **Start from a GitHub issue:** put the label `pocket` on an issue you wrote and a race starts on it. Keep the winner and the commit says `fixes #12`.
+- **Tools for your agents (MCP):** `claude mcp add pocket-terminal -- npx -y pocket-terminal mcp` lets an agent ask you a question on your phone and wait for the answer (yes, no, or your own words), send you a note, and start tasks and races.
+- **Review from the phone:** tap a changed line, write what should be different, and send your notes to the agent.
 - **Commit and push from the phone**, after looking at the changes.
 - **"Tell me when it says…":** a notification when a terminal prints `tests passed`, or anything matching `/error|failed/`.
 - **Answer from the notification:** Yes / No buttons right on the notification, with the app closed and the phone locked. (Android; on iPhone, tap the notification to answer in the app.)
@@ -131,6 +138,7 @@ The phone app handles your key, so the most careful setup hosts your own copy: f
 | `npx pocket-terminal pair` | Pair another phone |
 | `npx pocket-terminal list` | Show the phones that can connect |
 | `npx pocket-terminal remove 2` | Lock a phone out (number, name or `all`) |
+| `npx pocket-terminal mcp` | Tools for AI agents (MCP server over stdin/stdout): `ask_phone`, `notify_phone`, `list_terminals`, `read_terminal`, `start_task`, `start_race`, `task_status` |
 | `npx pocket-terminal activity` | What your phones did here: connected, files, answers (never what you typed) |
 | `npx pocket-terminal logs` | Follow the agent's log |
 | `npx pocket-terminal doctor` | Something not working? Checks the setup and prints a report for a bug report (no keys or names in it) |

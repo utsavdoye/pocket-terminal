@@ -35,6 +35,10 @@ async function boot() {
     if (/^[QC]-/.test(h.get('s'))) state.openAgentsSoon = true; else { setSid(h.get('s')); state.attachFresh = false; }
     history.replaceState(null, '', location.pathname + location.search);
   }
+  if (h.get('recipe')) { // a shared recipe link: kept until Tasks opens, then you are asked before it is added
+    try { localStorage.setItem('pt-recipe-in', h.get('recipe').slice(0, 6000)); } catch {}
+    history.replaceState(null, '', location.pathname + location.search);
+  }
   if (h.get('join') || h.get('pair')) {
     history.replaceState(null, '', location.pathname + location.search); // remove the code from the address bar
     if (!h.get('join')) { showNone(); toast('That is an old pairing code. Run  npx pocket-terminal pair  on your computer for a new one.'); return; }

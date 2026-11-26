@@ -7,15 +7,16 @@ const { gitChanges } = require('./git');
 function outsideAgents({ asks, ext, events, log, tidy, busyChanged }) {
   // ---- AI agents running outside Pocket Terminal (e.g. Claude Code in VS Code), via their hooks ----
   // A permission question waits here until a phone answers, the computer answers it, or it's dropped.
-  function ask({ agent, text, cwd }) {
+  // words: a plain question from an agent's tool (MCP ask_phone): Yes / No, or an answer in your own words.
+  function ask({ agent, text, cwd, words }) {
     const key = 'local:Q-' + Math.random().toString(36).slice(2, 10);
     let done;
     const p = new Promise((res) => { done = res; });
-    const a = { key, agent: String(agent || 'AI agent').slice(0, 40), text: String(text || '').slice(0, 300), cwd: tidy(cwd), at: Date.now(), done };
+    const a = { key, agent: String(agent || 'AI agent').slice(0, 40), text: String(text || '').slice(0, 300), cwd: tidy(cwd), at: Date.now(), done, words: !!words };
     asks.set(key, a);
-    log(`${a.agent} asks for permission (sent to the phone)`); // what it asks is never logged
-    events.emit('alert', { key, kind: 'input', program: a.agent, text: a.text, ask: true, cwd: a.cwd,
-      choices: [{ a: 'yes', title: 'Allow', d: 'yes' }, { a: 'no', title: 'Deny', d: 'no' }] });
+    log(`${a.agent} ${a.words ? 'asks you a question' : 'asks for permission'} (sent to the phone)`); // what it asks is never logged
+    events.emit('alert', { key, kind: 'input', program: a.agent, text: a.text, ask: true, words: a.words || undefined, cwd: a.cwd,
+      choices: a.words ? [{ a: 'yes', title: 'Yes', d: 'yes' }, { a: 'no', title: 'No', d: 'no' }] : [{ a: 'yes', title: 'Allow', d: 'yes' }, { a: 'no', title: 'Deny', d: 'no' }] });
     const end = (v) => { if (!asks.has(key)) return; asks.delete(key); done(v); events.emit('alert', { key, kind: 'gone' }); };
     return { key, decision: p, cancel: () => end(null), settle: end };
   }

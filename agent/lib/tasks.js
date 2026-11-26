@@ -23,6 +23,7 @@ const path = require('path');
 const { spawn } = require('child_process');
 const G = require('./git');
 const { plain } = require('./rules');
+const { costOf } = require('./cost');
 
 const IDLE_DONE = Number(process.env.POCKET_TASK_IDLE_MS) || 20e3;
 const TEST_TIMEOUT = 10 * 60e3;
@@ -79,6 +80,9 @@ function createTasks({ core, log, dir, shell, alert }) {
   const task = (id) => data.tasks.find((t) => t.id === id);
   const group = (id) => data.groups.find((g) => g.id === id);
   const live = new Map(); // task id -> { off: unsubscribe output, sawWork, idleSince }
+  // Others listen for work that ended (schedules log it, the morning summary counts it).
+  const enders = new Set();
+  const ended = (ev) => { for (const f of enders) { try { f(ev); } catch (e) { log('tasks: ' + e.message); } } };
   const tell = (title, body) => { try { alert({ key: 'local:L-tasks', kind: 'task', title, body }); } catch {} };
 
   function trimOld() {
@@ -158,7 +162,9 @@ function createTasks({ core, log, dir, shell, alert }) {
     const i = core.info(t.key); t.last = i ? i.last.filter((l) => !/\[pt:done:/.test(l)).slice(-3) : [];
     log(`task ${t.id} ${status}`);
     try { t.changes = await changesOf(t); } catch {}
+    try { if (t.agent && status !== 'cancelled') t.cost = costOf(t, { dir }); } catch {} // tokens and about what they cost, from the agent's own log
     save();
+    if (t.kind === 'queue') ended({ kind: 'queue', task: t, from: t.from || null });
     const g = t.group && group(t.group);
     if (t.kind === 'queue') nextInQueue(t);
     else if (g && g.kind === 'race') raceStep(g);
@@ -178,13 +184,13 @@ function createTasks({ core, log, dir, shell, alert }) {
     }
   }
 
-  async function addTask({ agent, prompt, cmd, cwd, worktree }) {
+  async function addTask({ agent, prompt, cmd, cwd, worktree, from }) {
     const dirp = expand(cwd);
     try { if (!fs.statSync(dirp).isDirectory()) throw 0; } catch { return { error: `No folder ${cwd || ''} on this computer.` }; }
     prompt = clean(prompt, 2000); cmd = clean(cmd, 2000);
     if (!cmd && !(agent && prompt)) return { error: 'Pick an agent and write the task, or type a command.' };
     if (agent && !/^[\w-]{1,30}$/.test(agent)) return { error: 'Unknown agent.' };
-    const t = { id: newId(), kind: 'queue', agent: cmd ? null : agent, prompt: cmd ? null : prompt, cmd: cmd || null, cwd: dirp, where: tidy(dirp), title: cmd ? cmd.slice(0, 60) : `${nice(agent)}: ${prompt.slice(0, 50)}`, status: 'waiting', addedAt: Date.now() };
+    const t = { id: newId(), kind: 'queue', agent: cmd ? null : agent, prompt: cmd ? null : prompt, cmd: cmd || null, cwd: dirp, where: tidy(dirp), title: cmd ? cmd.slice(0, 60) : `${nice(agent)}: ${prompt.slice(0, 50)}`, status: 'waiting', addedAt: Date.now(), ...(from ? { from } : {}) };
     const busy = data.tasks.some((x) => x.kind === 'queue' && ['waiting', 'running', 'blocked'].includes(x.status));
     t.batchAt = busy ? (data.tasks.filter((x) => x.kind === 'queue' && x.batchAt).slice(-1)[0] || {}).batchAt || Date.now() : Date.now();
     if (worktree) {
@@ -198,7 +204,7 @@ function createTasks({ core, log, dir, shell, alert }) {
   }
 
   // ---------- race ----------
-  async function race({ prompt, cwd, agents, test }) {
+  async function race({ prompt, cwd, agents, test, from }) {
     prompt = clean(prompt, 2000); test = clean(test, 300);
     agents = [...new Set((Array.isArray(agents) ? agents : []).filter((a) => /^[\w-]{1,30}$/.test(a)))].slice(0, 4);
     if (!prompt) return { error: 'Write the task first.' };
@@ -206,7 +212,7 @@ function createTasks({ core, log, dir, shell, alert }) {
     const dirp = expand(cwd);
     const info = await G.gitInfo(dirp);
     if (!info) return { error: 'A race needs a git project (each agent gets its own copy of it). That folder isn\'t one.' };
-    const g = { id: newId(), kind: 'race', prompt, cwd: info.root, where: tidy(info.root), test: test || null, status: 'running', startedAt: Date.now(), lanes: [] };
+    const g = { id: newId(), kind: 'race', prompt, cwd: info.root, where: tidy(info.root), test: test || null, status: 'running', startedAt: Date.now(), lanes: [], ...(from ? { from } : {}) };
     for (const a of agents) {
       const id = newId();
       const w = await G.worktreeAdd(info.root, `${a}-${g.id}`, a);
@@ -237,6 +243,7 @@ function createTasks({ core, log, dir, shell, alert }) {
     g.status = 'compare'; g.readyAt = Date.now(); save();
     const best = lanes.filter((t) => t.status === 'done' && (!t.tests || t.tests.ok));
     tell('Race ready to compare', lanes.map((t) => `${t.title}: ${t.status === 'done' ? `${t.changes ? t.changes.files : 0} files` : t.status}${t.tests ? (t.tests.ok ? ' · tests pass' : ' · tests fail') : ''} · ${dur(t.seconds)}`).join('\n') + (best.length ? '' : '\nNone passed.'));
+    ended({ kind: 'race', group: g, lanes, from: g.from || null });
   }
   function testIn(dirp, cmd) {
     return new Promise((res) => {
@@ -282,7 +289,7 @@ function createTasks({ core, log, dir, shell, alert }) {
     if (g.status === 'picked') return { error: 'A winner was already picked.' };
     const t = task(laneId); if (!t || t.group !== g.id) return { error: 'Not one of its agents.' };
     if (t.status === 'running' || t.status === 'blocked') return { error: 'It is still working. Wait for it, or stop it first.' };
-    const r = await keep(t, `${g.prompt.slice(0, 60)} (${t.title})`);
+    const r = await keep(t, `${g.prompt.split('\n')[0].slice(0, 60)} (${t.title})${g.from && g.from.issue ? ` (fixes #${g.from.issue})` : ''}`);
     if (r.error) return r;
     g.status = 'picked'; g.winner = t.id; g.endedAt = Date.now();
     await cleanup(g); forget([g.id, ...g.lanes]); save();
@@ -292,7 +299,7 @@ function createTasks({ core, log, dir, shell, alert }) {
 
   // ---------- hand-off chains ----------
   const REVIEW = (task, prev) => `Another AI agent (${prev}) just worked on this task in this folder: "${task}". Review its changes (see git diff and new files), fix any bugs or missing parts you find, and keep the changes small.`;
-  async function chain({ prompt, cwd, steps, test }) {
+  async function chain({ prompt, cwd, steps, test, from }) {
     prompt = clean(prompt, 2000); test = clean(test, 300);
     const dirp = expand(cwd);
     try { if (!fs.statSync(dirp).isDirectory()) throw 0; } catch { return { error: `No folder ${cwd || ''} on this computer.` }; }
@@ -300,7 +307,7 @@ function createTasks({ core, log, dir, shell, alert }) {
     if (!prompt) return { error: 'Write the task first.' };
     if (!steps.length) return { error: 'Add at least one agent.' };
     if (test) steps.push({ cmd: test });
-    const g = { id: newId(), kind: 'chain', prompt, cwd: dirp, where: tidy(dirp), status: 'running', startedAt: Date.now(), steps, at: 0, lanes: [] };
+    const g = { id: newId(), kind: 'chain', prompt, cwd: dirp, where: tidy(dirp), status: 'running', startedAt: Date.now(), steps, at: 0, lanes: [], ...(from ? { from } : {}) };
     data.groups.push(g);
     startStep(g, null); save();
     return { ok: true, id: g.id };
@@ -318,12 +325,14 @@ function createTasks({ core, log, dir, shell, alert }) {
     if (t.status !== 'done') {
       g.status = 'failed'; g.endedAt = Date.now(); save();
       tell(`Hand-off stopped at ${t.title}`, t.why || 'A step did not finish.');
+      ended({ kind: 'chain', group: g, lanes: g.lanes.map(task).filter(Boolean), from: g.from || null });
       return;
     }
     if (g.at + 1 < g.steps.length) { g.at++; startStep(g, t); save(); return; }
     g.status = 'done'; g.endedAt = Date.now(); save();
     const lanes = g.lanes.map(task).filter(Boolean);
     tell('Hand-off done ✓', `${g.prompt.slice(0, 80)}\n${lanes.map((x) => `✓ ${x.title}`).join('\n')}${t.changes ? `\n${t.changes.files} files changed (+${t.changes.add} −${t.changes.del})` : ''}`);
+    ended({ kind: 'chain', group: g, lanes, from: g.from || null });
   }
 
   // ---------- stop ----------
@@ -348,7 +357,7 @@ function createTasks({ core, log, dir, shell, alert }) {
     const t = task(id); if (!t || !t.wt || t.wt.removed) return { error: 'Nothing to bring in.' };
     if (t.status === 'running' || t.status === 'blocked' || t.status === 'waiting') return { error: 'It is still working.' };
     let r = { ok: true };
-    if (how === 'merge') { r = await keep(t, (t.prompt || t.cmd || 'task').slice(0, 60)); if (r.error) return r; }
+    if (how === 'merge') { r = await keep(t, (t.prompt || t.cmd || 'task').split('\n')[0].slice(0, 60) + (t.from && t.from.issue ? ` (fixes #${t.from.issue})` : '')); if (r.error) return r; }
     await dropCopy(t); forget([t.id]); save(); return r;
   }
   function clear() {
@@ -363,8 +372,8 @@ function createTasks({ core, log, dir, shell, alert }) {
     agents: data.agents, names: NAMES,
     tasks: data.tasks.map((t) => ({ id: t.id, kind: t.kind, group: t.group || null, agent: t.agent, title: t.title, where: t.where, status: t.status, why: t.why, sid: t.sid || null,
       addedAt: t.addedAt, startedAt: t.startedAt || null, endedAt: t.endedAt || null, seconds: t.seconds || (t.startedAt && !t.endedAt ? Math.round((Date.now() - t.startedAt) / 1000) : 0),
-      changes: t.changes || null, tests: t.tests || null, last: t.last || [], wt: t.wt ? { branch: t.wt.branch, removed: !!t.wt.removed } : null, merged: !!t.merged, step: t.step })),
-    groups: data.groups.map((g) => ({ id: g.id, kind: g.kind, prompt: g.prompt, where: g.where, status: g.status, test: g.test || null, lanes: g.lanes, winner: g.winner || null, at: g.at, steps: g.steps ? g.steps.length : null, startedAt: g.startedAt })),
+      changes: t.changes || null, tests: t.tests || null, last: t.last || [], wt: t.wt ? { branch: t.wt.branch, removed: !!t.wt.removed } : null, merged: !!t.merged, step: t.step, cost: t.cost || null, from: t.from || null })),
+    groups: data.groups.map((g) => ({ id: g.id, kind: g.kind, prompt: g.prompt, where: g.where, status: g.status, test: g.test || null, lanes: g.lanes, winner: g.winner || null, at: g.at, steps: g.steps ? g.steps.length : null, startedAt: g.startedAt, from: g.from || null })),
   });
 
   async function onPhone(m, send, keyFor, act) {
@@ -396,7 +405,7 @@ function createTasks({ core, log, dir, shell, alert }) {
   for (const t of kept) follow(t, true);
   // At start: the queue carries on where it was.
   setTimeout(() => nextInQueue(null), 2000);
-  return { onPhone, view, stop: () => clearInterval(timer), addTask, race, chain, pick, cancel, wt, push, tick, _data: () => data };
+  return { onPhone, view, stop: () => clearInterval(timer), addTask, race, chain, pick, cancel, wt, push, tick, onEnd: (f) => { enders.add(f); return () => enders.delete(f); }, names: NAMES, _data: () => data };
 }
 
 const dur = (s) => (!s ? '–' : s < 60 ? `${s} s` : s < 3600 ? `${Math.round(s / 60)} min` : `${(s / 3600).toFixed(1)} h`);

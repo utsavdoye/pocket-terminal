@@ -1,5 +1,14 @@
 # Changelog
 
+## Next release
+- **Tools for your AI agents (MCP).** Run `claude mcp add pocket-terminal -- npx -y pocket-terminal mcp` once (other agents: add the command `npx -y pocket-terminal mcp` as an MCP server). The agent can then ask you a question on your phone and wait for your answer: Yes, No, or your own words, typed or spoken (`ask_phone`), send you a note (`notify_phone`), see what your terminals are doing (`list_terminals`, `read_terminal`), and start tasks and races (`start_task`, `start_race`, `task_status`). There is no tool to type into a terminal or to answer another agent's question, on purpose.
+- **Review from your phone.** In Changes, tap any changed line and write what should be different. Your notes go to the agent as one message with the file and line of each. It lands in the agent's box for you to read; you press Enter.
+- **Schedules.** Fill in a task, a race or a hand-off in Tasks, tap "Run it on a schedule", pick a time and days. Every run is written to the schedule's log on the phone and to `~/.pocket-terminal/schedule.log`. The computer must be on; asleep is fine (a run up to 6 hours late still starts, older is logged as missed).
+- **Morning summary.** One notification at the time you choose: what finished, what failed, what waits for you. Nothing to say, nothing sent.
+- **Recipes.** "Save as a recipe" keeps the agents, steps and tests as one button above the form. Share one as a link; adding one from a link shows every command in it first.
+- **Cost meter.** Each finished task shows the tokens it used and about what they cost at API prices, read from the agent's own log on your computer (Claude Code, Codex, Gemini CLI). Your own prices: `~/.pocket-terminal/prices.json`.
+- **Start from a GitHub issue.** Tasks → GitHub issues → add a project. Put the label (default `pocket`) on an issue you wrote and a race starts on it (one agent: it works alone in its own copy). Keeping the winner writes `fixes #N` in the commit. Uses GitHub's `gh` tool with your login; only your own issues are picked up, one at a time per project.
+
 ## 7.6.4 (2026-11-14)
 - **Tabs for your terminals.** Each terminal has its own tab over the screen, with a dot for what it is doing. Tap to open one, + for a new one.
 - **Wide lines (the ↔ button).** Long commands and output stay on one line instead of wrapping; drag sideways or use the slider under the terminal to read along them.

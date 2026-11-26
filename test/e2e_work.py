@@ -1,7 +1,8 @@
 # Working with agents from the phone, end to end (phone app in a headless browser ⇄ real agents):
 #   every agent on every computer (answer one on the other computer, through the board), a race
 #   between two agents in their own copies (keep the winner: merged), the task queue, changes →
-#   commit (and push without a remote says so), "tell me when it says …", the terminal holder
+#   recipes (saved, used, added from a link), a schedule with its log, the morning summary, GitHub
+#   issues (a pretend gh), commit (and push without a remote says so), "tell me when it says …", the terminal holder
 #   (a terminal survives a restart of the agent), and the Terminal look's colors.
 #   Run: python3 test/e2e_work.py
 import subprocess, time, os, json, sys, signal
@@ -16,10 +17,12 @@ FAST=dict(POCKET_TASK_IDLE_MS='1500',POCKET_WORK_QUIET_MS='1000',POCKET_SUMMARY_
 def start(name):
     h=S+'/'+name
     agents[name]=subprocess.Popen(['node','agent.js'],cwd=R+'/agent',env=dict(envs[name],POWER_BRAIN='0',HOME=h+'/u',**FAST),stdout=open(h+'/agent.log','a'),stderr=subprocess.STDOUT)
+# a pretend "gh" for the Laptop: one open issue of yours with the label
+GH=S+'/gh.js'; open(GH,'w').write('#!/usr/bin/env node\nprocess.stdout.write(JSON.stringify([{number:3,title:"Pear tree",body:"Plant a pear."}]));\n'); os.chmod(GH,0o755)
 for name in ['Desktop','Laptop']:
     h=S+'/'+name; os.makedirs(h+'/home'); os.makedirs(h+'/u')
     # the Laptop keeps its terminals in the terminal holder (survives agent restarts); the Desktop runs them itself
-    env=dict(os.environ,POCKET_HOLDER='1' if name=='Laptop' else '0',POCKET_HOME=h+'/home',POCKET_APP_URL=APP,SHELL='/bin/bash'); envs[name]=env
+    env=dict(os.environ,POCKET_HOLDER='1' if name=='Laptop' else '0',POCKET_HOME=h+'/home',POCKET_APP_URL=APP,SHELL='/bin/bash',POCKET_GH=GH); envs[name]=env
     ph.setup(R, env, name, BOARD); start(name)
 REPO=S+'/Laptop/u/repo'; os.makedirs(REPO); open(REPO+'/tracked.txt','w').write('one\n')
 for c in (['init','-q','-b','main'],['add','.'],['-c','user.email=t@t','-c','user.name=t','commit','-qm','first']): subprocess.run(['git','-C',REPO]+c,check=True)
@@ -43,7 +46,8 @@ try:
     b=p.chromium.launch(args=['--disable-features=WebRtcHideLocalIpsWithMdns'])
     ctx=b.new_context(**p.devices['Pixel 7']); pg=ctx.new_page()
     errs=[]; pg.on('pageerror', lambda e: errs.append(str(e)))
-    pg.on('dialog', lambda d: d.accept())
+    PROMPT=['']  # what to type into the next "prompt" box
+    pg.on('dialog', lambda d: d.accept(PROMPT[0]) if d.type=='prompt' else d.accept())
     ph.pair(pg, R, envs['Desktop']); check(1, 'paired with the Desktop', wait(lambda: awake(pg) and 'Desktop' in pg.inner_text('#macName'), 40))
     pp, link = ph.start_invite(R, envs['Laptop'])
     pg.goto('about:blank'); ph.open_link(pg, link)
@@ -94,6 +98,33 @@ try:
     pg.fill('#wFolder', '~/repo'); pg.fill('#wText', 'echo queued > q.txt'); pg.click('#wGo')
     check(12, 'a queued command runs and shows done', wait(lambda: os.path.exists(REPO+'/q.txt') and 'done' in pg.inner_text('#workList .wtask').lower(), 20))
 
+    # ---- 3b. recipes: save this way of working, use it, add one from a link ----
+    pg.click('#workSeg [data-v=chain]'); pg.fill('#wTest', 'true'); PROMPT[0]='Write then check'
+    pg.click('#wSaveRecipe')
+    check('12a', 'a recipe is saved from the form', wait(lambda: pg.wait_for_timeout(200) or 'Write then check' in pg.inner_text('#wRecipes'), 10))
+    pg.click('#workSeg [data-v=queue]'); pg.evaluate("document.getElementById('wTest').value = ''")
+    pg.click('#wRecipes [data-r]'); pg.click('#wRecipes .pick.on')
+    check('12b', 'one tap puts it back in the form', wait(lambda: 'on' in pg.get_attribute('#workSeg [data-v=chain]','class') and pg.input_value('#wTest')=='true', 8))
+    link=pg.evaluate("location.origin + location.pathname + '#recipe=' + btoa(JSON.stringify({ n: 'Shared one', w: { kind: 'race', agents: ['fake', 'once'], test: 'echo shared' } })).replace(/=+$/, '')")
+    PROMPT[0]=link; pg.click('#wRecipes [data-paste]')
+    check('12c', 'a recipe from a link: you see every command in it before it is added', wait(lambda: pg.wait_for_timeout(200) or ('Shared one' in pg.inner_text('#wRecipes') and any('echo shared' in d and 'Add the recipe' in d for d in dialogs)), 10))
+    # ---- 3c. a schedule: saved from the form, run now, its log ----
+    pg.click('#workSeg [data-v=queue]'); pg.select_option('#wAgent', '__cmd'); pg.fill('#wFolder', '~/repo'); pg.fill('#wText', 'echo sched > s.txt')
+    pg.click('#wSchedOpen'); pg.fill('#wSchedAt', '03:00'); pg.fill('#wSchedName', 'Night'); pg.click('#wSchedSave')
+    check('12d', 'a schedule is saved (time, every day)', wait(lambda: 'Night' in pg.inner_text('#schedList') and '03:00' in pg.inner_text('#schedList') and 'every day' in pg.inner_text('#schedList'), 10))
+    pg.click('#schedList [data-srun]')
+    check('12e', '"Run now" runs it', wait(lambda: os.path.exists(REPO+'/s.txt'), 20))
+    pg.click('#schedList [data-slog]')
+    check('12f', 'and its log shows the run', wait(lambda: pg.wait_for_timeout(500) or ('done' in pg.inner_text('#schedList .plog') and 'started' in pg.inner_text('#schedList .plog')), 20))
+    # ---- 3d. the morning summary, GitHub issues ----
+    pg.check('#mornOn')
+    check('12g', 'morning summary turned on (saved on the computer)', wait(lambda: json.load(open(S+'/Laptop/home/plans.json'))['morning']['on'], 8))
+    pg.click('#ghAdd'); pg.fill('#ghFolder', '~/repo'); pg.click('#ghForm button.btn:not(.ghost)')
+    check('12h', 'GitHub: the project is saved and its labelled issue starts a race', wait(lambda: 'label' in pg.inner_text('#ghList') and 'Fix GitHub issue #3: Pear tree' in pg.inner_text('#workList'), 30))
+    check('12i', 'and the project says what it started', wait(lambda: 'Started on #3' in pg.inner_text('#ghList'), 15))
+    pg.click('#workList .wgroup [data-cancel]')
+    check('12j', 'that race can be stopped like any other', wait(lambda: not pg.query_selector('#workList .wgroup'), 15))
+
     # ---- 4. changes → commit; push without a remote says so ----
     ph.close_menu(pg); typ(pg, f'cd ~/repo && echo two >> tracked.txt\n'); time.sleep(1)
     ph.nav(pg,'sessions')
@@ -104,6 +135,20 @@ try:
     check(15, 'commit from the phone', wait(lambda: 'Add two from the phone' in subprocess.run(['git','-C',REPO,'log','-1','--format=%s'],capture_output=True,text=True).stdout, 10))
     pg.click('#gitPush')
     check(16, 'push without a remote explains it', wait(lambda: 'no remote' in pg.inner_text('#gitNote').lower(), 15))
+
+    # ---- 4b. review: a note on a changed line goes to the agent's box (not sent for you) ----
+    ph.close_menu(pg); typ(pg, 'echo three >> tracked.txt\n'); time.sleep(1)
+    ph.nav(pg,'sessions'); pg.click('#sessList .agent.cur [data-diff]')
+    wait(lambda: '+three' in pg.inner_text('#diffOut'), 10)
+    pg.click('#diffOut .l.a:has-text("+three")')
+    check('16a', 'tap a changed line: a note box for that file and line', wait(lambda: pg.is_visible('#rvForm') and 'tracked.txt line 3' in pg.get_attribute('#rvIn','placeholder'), 5))
+    pg.fill('#rvIn', 'call it four instead'); pg.click('#rvForm button')
+    check('16b', 'the note is listed and the line is marked', wait(lambda: 'call it four instead' in pg.inner_text('#rvNotes') and pg.locator('#diffOut .l.noted').count()==1 and 'Send 1 note' in pg.inner_text('#rvSend'), 5))
+    pg.click('#rvSend')
+    check('16c', 'sent: it is typed into the terminal as one line, with the file, line and note', wait(lambda: 'Review notes on your changes. (1) tracked.txt line 3 [three]: call it four instead' in pg.evaluate(ROWS).replace('\n',''), 10))
+    time.sleep(0.5)
+    check('16d', 'but not run: you press Enter yourself', 'command not found' not in pg.evaluate(ROWS))
+    pg.click('#term'); pg.keyboard.press('Control+c'); time.sleep(0.5)
 
     # ---- 5. tell me when it says … ----
     ph.nav(pg,'sessions'); pg.click('#sessList .agent.cur [data-watch]')

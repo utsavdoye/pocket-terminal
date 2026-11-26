@@ -74,7 +74,53 @@ function startLocal({ core, log, dir }) {
           } else if (x.t === 'r' && x.cols > 0 && x.rows > 0) { size = { cols: x.cols | 0, rows: x.rows | 0 }; io.resize(size.cols, size.rows); }
         };
       }
+      if (m.t === 'mcp') { mcpCall(m).then((r) => { send(r); c.end(); }, () => { send({ error: 'Something went wrong in Pocket Terminal.' }); c.end(); }); return null; }
       c.destroy(); return null;
+    }
+
+    // An AI agent's tool call, from "npx pocket-terminal mcp" (agent/mcp.js). It can ask you and
+    // tell you things on the phone, look at terminals, and start tasks. It can NOT type into
+    // another terminal or answer another agent's question: an agent must never approve an agent.
+    async function mcpCall(m) {
+      const who = String(m.client || 'An AI agent').replace(/[\x00-\x1f\x7f]/g, ' ').trim().slice(0, 40) || 'An AI agent';
+      const text = (v, n) => String(v == null ? '' : v).replace(/[\x00-\x08\x0b-\x1f\x7f]/g, ' ').trim().slice(0, n);
+      const all = () => [...new Set(core.keys().map((k) => k.slice(0, k.indexOf(':') + 1)).concat('local:'))].flatMap((p) => core.list(p).map((s) => ({ ...s, key: p + s.sid })));
+      switch (m.op) {
+        case 'ask': {
+          const q = text(m.question, 300); if (!q) return { error: 'Write the question.' };
+          const wait = Math.min(60, Math.max(1, Number(m.minutes) || 10)) * 60e3;
+          const a = core.ask({ agent: who, text: q, cwd: m.cwd, words: true });
+          cleanup.push(() => a.cancel());
+          const v = await Promise.race([a.decision, new Promise((r) => { const t = setTimeout(() => r('late'), wait); t.unref && t.unref(); })]);
+          if (v === 'late') { a.cancel(); return { answer: null, note: `No answer after ${Math.round(wait / 60e3)} minutes.` }; }
+          if (v && typeof v === 'object' && v.text) return { answer: 'words', text: v.text };
+          return { answer: v === 'yes' || v === 'no' ? v : null, ...(v === 'yes' || v === 'no' ? {} : { note: 'The question was dropped without an answer.' }) };
+        }
+        case 'notify': {
+          const title = text(m.title, 80), body = text(m.message, 300); if (!title && !body) return { error: 'Write a title or a message.' };
+          core.events.emit('alert', { key: 'local:L-mcp', kind: 'task', title: title || who, body });
+          log('an AI agent sent a note to the phone'); // never what it says
+          return { ok: true };
+        }
+        case 'terminals':
+          return { terminals: all().filter((s) => !s.ask).map((s) => ({ id: s.key, program: s.ext ? s.agent : s.program || null, state: s.waiting ? 'blocked' : s.state || (s.busy ? 'working' : 'idle'), folder: s.cwd || null, question: s.waiting ? s.question : null, task: s.task ? s.task.title : null, branch: s.git ? s.git.branch : null })) };
+        case 'read': {
+          const key = String(m.id || ''); if (!core.isSession(key)) return { error: 'No terminal with that id. See list_terminals.' };
+          const { plain } = require('./rules');
+          const rows = plain(core.session(key).screen()).split('\n').map((l) => l.replace(/\s+$/, '')).filter((l, i, a) => l || (a[i - 1] || '')); // no runs of empty lines
+          return { text: rows.slice(-Math.min(200, Math.max(5, Number(m.lines) || 40))).join('\n').slice(-12000) };
+        }
+        case 'task': { if (!core.tasks) return { error: 'Tasks are not available.' }; const r = await core.tasks.addTask({ agent: m.agent, prompt: m.task, cmd: m.command, cwd: m.folder, worktree: !!m.own_copy, from: { mcp: who } }); return r.error ? r : { ok: true, id: r.id, note: 'Added to the queue. See task_status.' }; }
+        case 'race': { if (!core.tasks) return { error: 'Tasks are not available.' }; const r = await core.tasks.race({ prompt: m.task, cwd: m.folder, agents: m.agents, test: m.test, from: { mcp: who } }); return r.error ? r : { ok: true, id: r.id, note: 'Race started. The person picks the winner on the phone.' }; }
+        case 'status': {
+          if (!core.tasks) return { error: 'Tasks are not available.' };
+          const v = core.tasks.view();
+          return { agents: Object.keys(v.agents),
+            tasks: v.tasks.filter((t) => !t.group).map((t) => ({ id: t.id, title: t.title, status: t.status, why: t.why || undefined, folder: t.where, seconds: t.seconds, changes: t.changes || undefined, cost: t.cost || undefined, last: t.last })),
+            groups: v.groups.map((g) => ({ id: g.id, kind: g.kind === 'chain' ? 'hand-off' : g.kind, task: g.prompt, status: g.status, folder: g.where, lanes: g.lanes.map((id) => v.tasks.find((t) => t.id === id)).filter(Boolean).map((t) => ({ agent: t.title, status: t.status, changes: t.changes || undefined, tests: t.tests ? (t.tests.ok ? 'pass' : 'fail') : undefined, seconds: t.seconds, cost: t.cost || undefined })) })) };
+        }
+      }
+      return { error: 'Unknown request.' };
     }
   });
   server.on('error', (e) => log('local door unavailable: ' + e.message));

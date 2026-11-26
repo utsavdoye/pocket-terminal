@@ -8,8 +8,9 @@ export function setupNeeds(ctx, t) {
   let needsFor = null;
   // Buttons that fit a question: [label, what to type, class]
   const SAY = ['🎤 Say', 'SAY'];
-  function answerBtns(text, menu, ask) {
+  function answerBtns(text, menu, ask, words) {
     text = String(text || '');
+    if (ask && words) return [['Yes', 'yes', 'yes'], ['No', 'no'], SAY]; // an agent's own question (MCP): yes, no, or your words
     if (ask) return [['Allow', 'yes', 'yes'], ['Deny', 'no']]; // an agent outside Pocket Terminal: it only takes allow / deny
     if (ctx.viewer) return [['Yes', { a: 'yes' }, 'yes'], ['No', { a: 'no' }]]; // a teammate's link: Yes / No only, checked on the computer
     if (/password|passphrase/i.test(text)) return [['Type it', null, 'yes'], ['^C', '\x03']];
@@ -50,14 +51,14 @@ export function setupNeeds(ctx, t) {
     if (m.kind !== 'input' || (!m.ask && !ctx.viewer && m.sid && m.sid !== ctx.sid())) return;
     if (m.ask && ctx.viewer) return;
     const text = String(m.text || '');
-    $('needsTitle').textContent = m.ask ? `${m.program || 'Your AI agent'} asks for permission` : `${m.program ? m.program[0].toUpperCase() + m.program.slice(1) : 'Your terminal'} needs you`;
+    $('needsTitle').textContent = m.ask && m.words ? `${m.program || 'Your AI agent'} asks you` : m.ask ? `${m.program || 'Your AI agent'} asks for permission` : `${m.program ? m.program[0].toUpperCase() + m.program.slice(1) : 'Your terminal'} needs you`;
     $('needsLine').textContent = m.ask && m.cwd ? `${text} · ${m.cwd}` : text;
-    const btns = answerBtns(text, m.menu, m.ask);
+    const btns = answerBtns(text, m.menu, m.ask, m.words);
     $('needsBtns').innerHTML = btns.map(([l, d, c], i) => `<button type="button" data-i="${i}"${c ? ` class="${c}"` : ''}>${esc(l)}</button>`).join('');
     $('needsBtns').onclick = (e) => {
       const b = e.target.closest('[data-i]'); if (!b) return;
       const d = btns[+b.dataset.i][1];
-      if (d === 'SAY') return openSay(ctx.sid(), text);
+      if (d === 'SAY') return openSay(m.ask ? m.sid : ctx.sid(), text);
       hideNeeds();
       if (m.ask) return ctx.send({ t: 'answer', sid: m.sid, d }); // allow / deny, checked on the computer
       if (d && typeof d === 'object') return ctx.send({ t: 'answer', ...d }); // teammate link

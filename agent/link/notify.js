@@ -50,7 +50,7 @@ function startNotify(ctx) {
     const prog = ev.program ? ev.program[0].toUpperCase() + ev.program.slice(1) : 'Your terminal';
     const sid = ev.key ? ev.key.split(':').slice(1).join(':') : '';
     const where = ev.cwd ? ` · ${ev.cwd}` : '';
-    const msg = ev.kind === 'input' && ev.ask ? { title: `${prog} asks for permission`, body: (ev.text || 'It is waiting for your answer.') + where }
+    const msg = ev.kind === 'input' && ev.ask ? { title: ev.words ? `${prog} asks you` : `${prog} asks for permission`, body: (ev.text || 'It is waiting for your answer.') + where }
       : ev.kind === 'input' ? { title: `${prog} needs you`, body: ev.text || 'It is waiting for your answer.' }
       : ev.kind === 'done' ? { title: `${prog} finished`, body: `after ${ev.seconds >= 120 ? Math.round(ev.seconds / 60) + ' min' : ev.seconds + ' s'}${ev.changes && ev.changes.files ? ` · ${ev.changes.files} file${ev.changes.files === 1 ? '' : 's'} changed (+${ev.changes.add} −${ev.changes.del})` : ''}.${Array.isArray(ev.last) && ev.last.length ? '\n' + ev.last.join('\n') : ' Tap to see the result.'}` }
       : ev.kind === 'match' ? { title: `${prog}: "${String(ev.pattern || '').slice(0, 40)}"`, body: ev.text || 'It printed what you were waiting for.' }

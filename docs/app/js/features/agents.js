@@ -42,7 +42,7 @@ export function setupAgents(ctx, t) {
       const title = st === 'done' && !s.program ? nice(s.done.program) : label(s);
       let body = '';
       if (st === 'wait') {
-        const btns = (sessBtns[s.sid] = answerBtns(s.question, s.menu, s.ask).filter(([l]) => !['Enter', 'Esc', '^C'].includes(l))); // the dashboard keeps it short
+        const btns = (sessBtns[s.sid] = answerBtns(s.question, s.menu, s.ask, s.words).filter(([l]) => !['Enter', 'Esc', '^C'].includes(l))); // the dashboard keeps it short
         body = `<p class="ag-q">${esc(s.question || 'It is waiting for your answer.')}</p><div class="needs-btns ag-btns">${btns.map(([l, d, c], i) => d ? `<button type="button" data-ans="${esc(s.sid)}" data-i="${i}"${c ? ` class="${c}"` : ''}>${esc(l)}</button>` : '').join('')}</div>`;
       } else if (st === 'done') {
         const ch = s.done.changes;
@@ -170,6 +170,7 @@ export function setupAgents(ctx, t) {
   $('gitForm').onsubmit = (e) => { e.preventDefault(); gitDo('commit'); };
   function openDiff(sid, again = false) {
     diffSid = sid; if (!again) { $('gitNote').textContent = ''; } paintGitBar();
+    notes = []; picked = -1; marks = []; paintReview();
     if (!ctx.live()) return toast('Connect first');
     $('diffInfo').textContent = 'Loading the changes…'; $('diffOut').innerHTML = ''; if (!again) ctx.openSheet('diff');
     const id = ctx.newId();
@@ -178,15 +179,63 @@ export function setupAgents(ctx, t) {
       if (m.error) { $('diffInfo').textContent = m.error; return; }
       const files = (m.diff.match(/^diff --git /gm) || []).length + (m.fresh || []).length;
       $('diffInfo').textContent = `${m.folder} · ${files} file${files === 1 ? '' : 's'} changed${m.cut ? ' (long: showing the start)' : ''}. Compared with your last commit.`;
+      // Each line inside a change knows its file and line number, so a tap can leave a note on it.
+      let file = '', n = 0, inHunk = false; marks = [];
       const lines = m.diff.split('\n').map((l) => {
         const c = /^diff --git /.test(l) ? 'f' : /^@@/.test(l) ? 'h' : /^\+(?!\+\+)/.test(l) ? 'a' : /^-(?!--)/.test(l) ? 'd' : '';
+        if (c === 'f') { const mm = / b\/(.+)$/.exec(l); file = mm ? mm[1] : ''; inHunk = false; }
+        else if (c === 'h') { const mm = /\+(\d+)/.exec(l); n = mm ? +mm[1] : 0; inHunk = true; }
+        else if (inHunk && file && !/^\\/.test(l) && (c || l.startsWith(' '))) {
+          const i = marks.push({ file, n: c === 'd' ? Math.max(1, n) : n, code: l.slice(1).trim().slice(0, 80) }) - 1;
+          if (c !== 'd') n++;
+          return `<span class="l${c ? ' ' + c : ''}" data-l="${i}">${esc(l) || ' '}</span>`;
+        }
         return c ? `<span class="${c}">${esc(l)}</span>` : esc(l);
       });
+      if (marks.length && !ctx.viewer) $('diffInfo').textContent += ' Tap a line to leave a note for the agent.';
       if (m.fresh && m.fresh.length) lines.push('', '<span class="f">New files (not in git yet):</span>', ...m.fresh.map((f) => `<span class="a">+ ${esc(f)}</span>`));
       $('diffOut').innerHTML = lines.join('\n') || 'No changes.';
     });
     ctx.send({ t: 'diff', id, sid });
   }
+  // ---- review: notes on lines of the changes, sent to the agent as one message ----
+  let notes = [], picked = -1, marks = [];
+  function paintReview() {
+    $('review').hidden = picked < 0 && !notes.length;
+    $('rvForm').hidden = picked < 0;
+    if (picked >= 0 && marks[picked]) $('rvIn').placeholder = `${marks[picked].file.split('/').pop()} line ${marks[picked].n}: what should change?`;
+    $('rvNotes').innerHTML = notes.map((x, i) => `<div class="rv-note"><span><b>${esc(x.file.split('/').pop())}:${x.n}</b> ${esc(x.text)}</span><button class="x" data-rvx="${i}" type="button" aria-label="Remove">✕</button></div>`).join('');
+    $('rvSend').hidden = !notes.length; $('rvSend').textContent = `Send ${notes.length} note${notes.length === 1 ? '' : 's'} to the agent`;
+    for (const el of $('diffOut').querySelectorAll('.l.sel, .l.noted')) el.classList.remove('sel', 'noted');
+    for (const x of notes) { const el = $('diffOut').querySelector(`[data-l="${x.i}"]`); if (el) el.classList.add('noted'); }
+    if (picked >= 0) { const el = $('diffOut').querySelector(`[data-l="${picked}"]`); if (el) el.classList.add('sel'); }
+  }
+  $('diffOut').onclick = (e) => {
+    if (ctx.viewer || String(getSelection && getSelection())) return; // selecting text to copy is not a tap
+    const l = e.target.closest('[data-l]'); if (!l) return;
+    picked = picked === +l.dataset.l ? -1 : +l.dataset.l; paintReview();
+    if (picked >= 0) { const old = notes.find((x) => x.i === picked); $('rvIn').value = old ? old.text : ''; $('rvIn').focus(); }
+  };
+  $('rvForm').onsubmit = (e) => {
+    e.preventDefault(); const text = $('rvIn').value.replace(/\s+/g, ' ').trim(); const mk = marks[picked]; if (!mk) return;
+    notes = notes.filter((x) => x.i !== picked); if (text) notes.push({ i: picked, ...mk, text });
+    notes.sort((a, b) => a.i - b.i); picked = -1; $('rvIn').value = ''; $('rvIn').blur(); paintReview();
+  };
+  $('rvNotes').onclick = (e) => { const b = e.target.closest('[data-rvx]'); if (!b) return; notes.splice(+b.dataset.rvx, 1); paintReview(); };
+  // One line, no Enter: it lands in the agent's box for you to read and send. (One line on purpose:
+  // in a plain shell a pasted new line would run what came before it.)
+  const reviewText = () => `Review notes on your changes. ${notes.map((x, i) => `(${i + 1}) ${x.file} line ${x.n}${x.code ? ` [${x.code.replace(/[\x00-\x1f\x7f`$\\]/g, ' ')}]` : ''}: ${x.text}`).join(' ')} Please make these changes.`;
+  $('rvSend').onclick = async () => {
+    if (!notes.length) return; const text = reviewText(), sid = diffSid;
+    if (/^[QC]-/.test(String(sid))) { // an agent in its own window: nothing to type into from here
+      try { await navigator.clipboard.writeText(text); toast('Copied. Paste it to your agent.'); } catch { toast('Could not copy'); }
+      return;
+    }
+    if (!ctx.live()) return toast('Connect first');
+    const go = () => { ctx.paste(text); ctx.focus(); toast('Your notes are in its box. Read them, then press Enter.'); };
+    notes = []; picked = -1; paintReview(); ctx.closeSheet();
+    if (sid !== current) { switchTo(sid); setTimeout(go, 1200); } else go();
+  };
   function switchTo(sid) { if (/^[QC]-/.test(String(sid))) return ctx.openSheet('sessions'); const sz = ctx.size(); ctx.send({ t: 'switch', sid, cols: sz.cols, rows: sz.rows }); }
   $('sessNew').onclick = () => { if (!ctx.live()) return toast('Connect first'); switchTo(ctx.newId()); ctx.closeSheet(); toast('New terminal'); };
   ctx.onPage('sessions', () => { refreshSessions(); ctx.send({ t: 'shares' }); });

@@ -7,6 +7,7 @@
 //   npx pocket-terminal remove N   lock a phone out (number or name, or "all")
 //   npx pocket-terminal run CMD    run a command here AND on your phone (e.g. run claude)
 //   npx pocket-terminal claude on  Claude Code's permission questions reach your phone when you're away
+//   npx pocket-terminal mcp        tools for AI agents (MCP): ask you on the phone, start tasks and races
 //   npx pocket-terminal activity   what your phones did here (connected, files, answers…)
 //   npx pocket-terminal logs       what the agent is doing
 //   npx pocket-terminal doctor     check the setup; prints a report for a bug report
@@ -126,6 +127,7 @@ switch (cmd) {
   case 'remove': need(); if (!rest.length) { console.error('Which phone? See:  npx pocket-terminal list'); process.exit(1); } node(['--remove', ...rest]); break;
   case 'run': needFile('run.js', '"run"'); process.exit(run(process.execPath, [path.join(AGENT, 'run.js'), ...rest]));
   case 'claude': claude(rest[0]); break;
+  case 'mcp': needFile('mcp.js', '"mcp"'); process.exit(run(process.execPath, [path.join(AGENT, 'mcp.js'), ...rest])); // tools for AI agents, over stdin/stdout
   case 'activity': { // what your phones did here (never what was typed)
     needFile('lib/activity.js', '"activity"');
     const a = require(path.join(AGENT, 'lib', 'activity.js'));
@@ -153,6 +155,7 @@ switch (cmd) {
   npx pocket-terminal pair       pair another phone
   npx pocket-terminal run CMD    run a command here and on your phone (e.g. run claude)
   npx pocket-terminal claude on  Claude Code asks your phone when you're away
+  npx pocket-terminal mcp        tools for AI agents (add with: claude mcp add pocket-terminal -- npx -y pocket-terminal mcp)
   npx pocket-terminal list       phones that can connect
   npx pocket-terminal remove N   lock a phone out (number, name or "all")
   npx pocket-terminal activity   what your phones did here

@@ -59,6 +59,8 @@ function onMessage(ctx, L, raw) {
     case 'clip-set': act({ ev: 'clipboard', to: 'computer' }); clipboard.setClip(m.text).then((r) => send({ t: 'clip', id: m.id, ...r })); break;
     case 'tasks': case 'task-add': case 'task-cancel': case 'race': case 'race-pick': case 'race-test': case 'chain': case 'task-cfg': case 'task-clear': case 'wt-merge': case 'wt-discard': case 'task-push':
       if (core.tasks) core.tasks.onPhone(m, send, keyFor, act); else send({ t: 'tasks', id: m.id, error: 'This computer runs an older Pocket Terminal.' }); break;
+    case 'plans': case 'sched-save': case 'sched-del': case 'sched-run': case 'recipe-save': case 'recipe-del': case 'gh-save': case 'gh-del': case 'gh-check': case 'morning-set': case 'morning-now':
+      if (core.plans) core.plans.onPhone(m, send, act); else send({ t: 'plans', id: m.id, error: 'This computer runs an older Pocket Terminal.' }); break;
     case 'auto-get': send({ t: 'auto', ...core.getAuto() }); break;
     case 'auto-set': if (m.cfg && typeof m.cfg === 'object') send({ t: 'auto', ...core.setAuto(m.cfg) }); break;
     case 'answer': { const ok = core.answer(keyFor(m.sid), m.d); send({ t: 'answered', sid: m.sid, ok }); if (ok) { log('answered a waiting terminal from the dashboard'); act({ ev: 'answered' }); } break; }

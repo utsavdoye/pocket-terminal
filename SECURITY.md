@@ -24,6 +24,9 @@ Fixes are released as soon as possible and credited in the [changelog](CHANGELOG
 | gets a live-view link you shared | watch that one terminal until the link expires or you stop it | type, run commands, open files or websites, see other terminals, or keep watching after **Stop sharing** |
 | works at Apple / Google push | see that a notification was sent to your phone, and when | read it: it's encrypted for your phone, and signed by your computer so nobody else can send to that address |
 | uses another account on your computer | see that Pocket Terminal is running | use the local door (`run`, the Claude Code hook): it's a socket in your private folder and needs a token only you can read |
+| is an AI agent you gave the MCP tools to (`npx pocket-terminal mcp`) | ask you a question and send notes to your phone, read your terminals' screens, add tasks and races to the queue (they run as you, like anything the agent could run itself) | type into another terminal, answer its own or another agent's question, or approve anything for you |
+| writes an issue on your public GitHub project | nothing | start your agents with it: only issues written by the account signed in to `gh` on your computer are picked up |
+| sends you a recipe link | show you a recipe to add; the app lists every command in it first | add it or run anything without your tap |
 
 ## What protects you
 

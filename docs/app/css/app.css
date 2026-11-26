@@ -551,3 +551,12 @@ a.btn { text-decoration: none; display: inline-flex; align-items: center; }
 .field.col { flex-direction: column; align-items: stretch; gap: 10px; }
 .seg.wide { width: 100%; }
 .seg.wide button { flex: 1; padding: 7px 4px; white-space: nowrap; }
+
+/* ---------- review: notes on lines of the changes ---------- */
+pre.diff .l { display: inline-block; min-width: 100%; border-radius: 3px; cursor: pointer; }
+pre.diff .l.sel { background: color-mix(in srgb, var(--accent) 22%, transparent); box-shadow: inset 2px 0 0 var(--accent); }
+pre.diff .l.noted { background: color-mix(in srgb, var(--accent) 12%, transparent); box-shadow: inset 2px 0 0 var(--accent); }
+.review { position: sticky; bottom: 0; display: flex; flex-direction: column; gap: 8px; margin-top: 10px; padding: 10px 0 4px; background: var(--bg, var(--panel)); box-shadow: 0 -12px 12px -12px rgba(0, 0, 0, .35); }
+.rv-notes { display: flex; flex-direction: column; gap: 6px; max-height: 30vh; overflow-y: auto; }
+.rv-note { display: flex; align-items: flex-start; gap: 8px; padding: 8px 10px; border-radius: 10px; background: var(--raised); box-shadow: inset 0 0 0 1px var(--line); font-size: 13.5px; line-height: 1.4; }
+.rv-note span { flex: 1; min-width: 0; overflow-wrap: anywhere; } .rv-note b { font: 600 12px var(--mono); color: var(--accent); margin-right: 4px; }

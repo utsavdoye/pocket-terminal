@@ -310,7 +310,7 @@ function createCore({ log, power, dir, host = null }) {
   function list(prefix) {
     checkPrograms();
     const extra = prefix !== 'local:' ? [] : [
-      ...[...asks.values()].map((a) => ({ sid: a.key.slice(6), program: a.agent, ask: true, busy: false, running: true, waiting: true, lastOut: a.at, created: a.at, viewers: 0, line: '',
+      ...[...asks.values()].map((a) => ({ sid: a.key.slice(6), program: a.agent, ask: true, words: a.words || undefined, busy: false, running: true, waiting: true, lastOut: a.at, created: a.at, viewers: 0, line: '',
         question: a.text, menu: false, askedAt: a.at, since: null, done: null, cwd: a.cwd })),
       ...[...ext.values()].map((e) => ({ sid: e.key.slice(6), program: e.busy ? e.agent : null, ext: true, agent: e.agent, busy: e.busy, running: true, waiting: false, lastOut: e.last, created: e.since, viewers: 0, line: '',
         question: null, menu: false, askedAt: null, since: e.busy ? e.since : null, done: e.done, cwd: e.cwd })),
@@ -359,7 +359,7 @@ function createCore({ log, power, dir, host = null }) {
   // Answer a terminal that is waiting for you, without switching to it. Does nothing if it isn't waiting.
   function answer(key, d) {
     const a = asks.get(key);
-    if (a) { if (d !== 'yes' && d !== 'no') return false; log(`${a.agent}: ${d === 'yes' ? 'allowed' : 'denied'} from the phone`); a.done(d); asks.delete(key); events.emit('alert', { key, kind: 'gone' }); return true; }
+    if (a) { if (d !== 'yes' && d !== 'no') return false; log(`${a.agent}: ${a.words ? 'answered ' + d : d === 'yes' ? 'allowed' : 'denied'} from the phone`); a.done(d); asks.delete(key); events.emit('alert', { key, kind: 'gone' }); return true; }
     const s = sessions.get(key);
     if (!s || !s.term || !s.asked || typeof d !== 'string' || !d || d.length > 16) return false;
     session(key).input(d); return true;
@@ -367,6 +367,12 @@ function createCore({ log, power, dir, host = null }) {
   // Answer in your own words (voice or typed). On an AI agent's choice menu, Esc first: that's
   // "No, tell it what to do instead", then your words go in as the instruction.
   function reply(key, text) {
+    const q = asks.get(key);
+    if (q) { // an agent's own question (MCP ask_phone): your words are its answer
+      if (!q.words || typeof text !== 'string') return false;
+      const t = text.replace(/[\x00-\x08\x0b-\x1f\x7f]/g, ' ').trim().slice(0, 500); if (!t) return false;
+      log(`${q.agent}: answered in words from the phone`); q.done({ text: t }); asks.delete(key); events.emit('alert', { key, kind: 'gone' }); return true;
+    }
     const s = sessions.get(key);
     if (!s || !s.term || !s.asked || typeof text !== 'string') return false;
     text = text.replace(/[\x00-\x08\x0b-\x1f\x7f]/g, ' ').trim().slice(0, 500); if (!text) return false;

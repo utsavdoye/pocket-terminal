@@ -26,7 +26,7 @@ async function main() {
   const mode = process.env.POCKET_MODE || (direct ? 'direct' : relay ? 'relay' : null);
   if (!mode) { console.error('Not set up yet. Run:  bash install.sh'); process.exit(1); }
 
-  let transport = null;
+  let transport = null, plans = null;
 
   // POWER_SIM lets tests swap in a fake Mac (see test/sim-mac.js).
   const sim = process.env.POWER_SIM ? require(path.resolve(process.env.POWER_SIM)) : null;
@@ -35,7 +35,7 @@ async function main() {
     power = new PowerBrain(readJson('power.json') || {}, {
       log,
       onStatus: (s) => transport && transport.onPower(s),
-      onWake: (kind) => transport && transport.onWake(kind),
+      onWake: (kind) => { transport && transport.onWake(kind); if (plans) plans.tick(); }, // a schedule that came due while asleep starts now
       usageFile: path.join(DIR, 'usage.json'), // hours you use it, to wake up more often then
       onSleep: async (s) => transport && transport.onSleep(s),
     }, sim || {});
@@ -49,6 +49,8 @@ async function main() {
   // Tasks from the phone: a queue, races between agents, hand-offs (lib/tasks.js).
   const { SHELL } = require('./lib/core');
   core.tasks = require('./lib/tasks').createTasks({ core, log, dir: DIR, shell: SHELL, alert: (ev) => core.events.emit('alert', ev) });
+  // Work that starts by itself: schedules, the morning summary, recipes, GitHub issues (lib/plans.js).
+  plans = core.plans = require('./lib/plans').createPlans({ tasks: core.tasks, log, dir: DIR, tell: (title, body) => core.events.emit('alert', { key: 'local:L-tasks', kind: 'task', title, body }) });
   if (mode === 'direct') {
     transport = require('./devices').startDevices({ core, power, log, dir: DIR });
   } else {
@@ -60,7 +62,7 @@ async function main() {
   log(`agent running in ${mode} mode`);
 
   const stop = async () => {
-    core.tasks.stop(); core.stop({ keep: host.kind === 'holder' }); host.stop(); local.stop();
+    plans.stop(); core.tasks.stop(); core.stop({ keep: host.kind === 'holder' }); host.stop(); local.stop();
     try { transport.stop(); } catch {}
     if (power) await power.stop(); // never leave the Mac stuck awake
     process.exit(0);
