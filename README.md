@@ -79,7 +79,7 @@ npx pocket-terminal
   <img src="docs/screenshots/agent.png" alt="An AI coding agent asks for permission and the phone shows one-tap answers" width="23%">
   <img src="docs/screenshots/agents.png" alt="Agents dashboard: one agent needs you, one is working, one finished with its changes" width="23%">
   <img src="docs/screenshots/localhost.png" alt="The computer's localhost:3000 open on the phone" width="23%">
-  <img src="docs/screenshots/files.png" alt="Files: download from the computer, upload from the phone" width="23%">
+  <img src="docs/screenshots/tasks.png" alt="Tasks: three agents raced on one task, each with its changes, tests, time and cost" width="23%">
 </p>
 
 ## Install

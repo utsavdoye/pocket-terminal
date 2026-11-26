@@ -1,7 +1,7 @@
 {
   "name": "pocket-terminal",
   "version": "7.6.4",
-  "description": "Your computer's terminal on your phone, from anywhere, even with the lid closed. Answer AI coding agents, get notified, open localhost. Direct and end-to-end encrypted.",
+  "description": "Your computer's terminal on your phone, from anywhere, even with the lid closed. Answer and race AI coding agents (Claude Code, Codex, Gemini CLI), schedule tasks, review changes, open localhost. Includes an MCP server. Direct and end-to-end encrypted.",
   "bin": {
     "pocket-terminal": "cli.js"
   },
@@ -36,7 +36,11 @@
     "ai-coding-agent",
     "localhost",
     "pwa",
-    "end-to-end-encryption"
+    "end-to-end-encryption",
+    "mcp",
+    "mcp-server",
+    "ai-agents",
+    "git-worktree"
   ],
   "homepage": "https://pocket-terminal.utsavdoye.com",
   "repository": {

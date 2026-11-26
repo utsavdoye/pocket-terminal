@@ -150,7 +150,7 @@
         <article class="card" data-path="~/features/changes"><span class="num">06 / CHANGES</span>
           <div class="ico"><svg viewBox="0 0 24 24"><path d="M6 3v12M18 9v12"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="6" r="3"/><path d="M6 15a9 9 0 0 0 9-9"/></svg></div>
           <h3>See what it changed</h3>
-          <p>"Finished · 4 files changed (+120 −8)". Tap <em>See changes</em> to read the diff on your phone.</p>
+          <p>"Finished · 4 files changed (+120 −8)". Read the diff on your phone, tap a line to send the agent a note about it, then commit and push.</p>
         </article>
         <article class="card" data-path="~/features/voice"><span class="num">07 / VOICE</span>
           <div class="ico"><svg viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg></div>
@@ -177,7 +177,38 @@
           <h3>Ask in plain English</h3>
           <p>"Free up port 3000" becomes the right command for your system, explained before it runs.</p>
         </article>
-        <article class="card full" data-path="~/features/computers"><span class="num">12 / COMPUTERS</span>
+        <article class="card wide" data-path="~/features/race"><span class="num">12 / RACE</span>
+          <div class="ico"><svg viewBox="0 0 24 24"><path d="M5 21V4M5 4h11l-2 4 2 4H5"/></svg></div>
+          <h3>Race your agents</h3>
+          <p>Give one task to Claude Code, Codex and Gemini CLI at once. Each works in its own copy of the project. Compare changes, tests, time and cost, then keep the winner.</p>
+          <div class="snippet"><span class="g">●</span> Claude Code  4 files  <span class="g">tests ✓</span>  7m  about $0.84
+<span class="g">●</span> Codex        6 files  <span class="a">tests ✗</span>  9m  about $1.12
+<span class="g">●</span> Gemini CLI   3 files  <span class="g">tests ✓</span>  5m  <span class="c">keep this one</span></div>
+        </article>
+        <article class="card wide" data-path="~/features/mcp"><span class="num">13 / MCP</span>
+          <div class="ico"><svg viewBox="0 0 24 24"><path d="M9 7V3M15 7V3M7 7h10v5a5 5 0 0 1-10 0zM12 17v4"/></svg></div>
+          <h3>Your agents can reach you</h3>
+          <p>Add Pocket Terminal to an agent as an MCP server. It can ask you a question on your phone and wait for your answer, send you a note, and start tasks and races.</p>
+          <div class="snippet"><span class="a">$</span> claude mcp add pocket-terminal -- npx -y pocket-terminal mcp
+<span class="a">●</span> Claude Code asks you
+  Delete the old logs?   <span class="g">Yes</span>   No   🎤 Say</div>
+        </article>
+        <article class="card" data-path="~/features/schedules"><span class="num">14 / SCHEDULES</span>
+          <div class="ico"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></div>
+          <h3>Work while you sleep</h3>
+          <p>"Every night at 2:00, run the tests and fix what fails." Every run is logged, and one morning notification tells you what got done.</p>
+        </article>
+        <article class="card" data-path="~/features/recipes"><span class="num">15 / RECIPES</span>
+          <div class="ico"><svg viewBox="0 0 24 24"><path d="M6 4h9l3 3v13H6z"/><path d="M9 10h6M9 14h6"/></svg></div>
+          <h3>Hand-offs and recipes</h3>
+          <p>Codex writes, Claude Code reviews, tests run. Save that as one button and share it as a link.</p>
+        </article>
+        <article class="card" data-path="~/features/github"><span class="num">16 / GITHUB</span>
+          <div class="ico"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 8v4M12 16h.01"/></svg></div>
+          <h3>Start from a GitHub issue</h3>
+          <p>Put the label <code>pocket</code> on an issue you wrote and your agents start on it. Keep the winner and the commit says <code>fixes #12</code>.</p>
+        </article>
+        <article class="card full" data-path="~/features/computers"><span class="num">17 / COMPUTERS</span>
           <div class="ico"><svg viewBox="0 0 24 24"><rect x="2" y="4" width="14" height="10" rx="1.5"/><path d="M5 18h8"/><rect x="17" y="7" width="5" height="12" rx="1"/></svg></div>
           <h3>All your computers</h3>
           <p>Laptop, desktop, a server: pair them all and switch with one tap on the name at the top.</p>
@@ -195,7 +226,7 @@
       <div class="shots">
         <figure><div class="shot"><picture><source srcset="screenshots/agents.webp" type="image/webp"><img src="screenshots/agents.png" alt="Agents dashboard: one agent needs you, one is working, one finished with its changes" loading="lazy" width="390" height="844"></picture></div><figcaption>all your agents</figcaption></figure>
         <figure><div class="shot"><picture><source srcset="screenshots/localhost.webp" type="image/webp"><img src="screenshots/localhost.png" alt="The computer's localhost:3000 open on the phone" loading="lazy" width="390" height="844"></picture></div><figcaption>open your dev server</figcaption></figure>
-        <figure><div class="shot"><picture><source srcset="screenshots/files.webp" type="image/webp"><img src="screenshots/files.png" alt="Files screen: download from the computer, upload from the phone" loading="lazy" width="390" height="844"></picture></div><figcaption>move files either way</figcaption></figure>
+        <figure><div class="shot"><picture><source srcset="screenshots/tasks.webp" type="image/webp"><img src="screenshots/tasks.png" alt="Tasks: three agents raced on one task, each with its changes, tests, time and cost" loading="lazy" width="390" height="844"></picture></div><figcaption>race your agents</figcaption></figure>
       </div>
     </div>
   </section>

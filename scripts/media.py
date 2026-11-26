@@ -1,6 +1,6 @@
 # Rebuild every picture of the app from the app itself (demo mode), so the README and the website
 # never show an old screen:
-#   docs/screenshots/{agent,agents,files,localhost}.png (+ .webp)   README and website
+#   docs/screenshots/{agent,agents,tasks,files,localhost}.png (+ .webp)   README and website
 #   docs/media/demo.{mp4,webm,gif} and poster.webp                  the phone video on the website, the GIF in the README
 #   docs/og.png, brand/social-preview.png, docs/readme/hero.png     share image, GitHub preview, README banner (brand/banner.html)
 #   docs/readme/night-on-battery.svg                                 the wake-up schedule picture in the README
@@ -72,11 +72,15 @@ with sync_playwright() as p:
     pg.screenshot(path=f'{SHOTS}/agent.png')
     pg.tap('[data-dock=sessions]'); pg.wait_for_timeout(900); pg.screenshot(path=f'{SHOTS}/agents.png')
     pg.tap('#sheetClose'); pg.wait_for_timeout(400)
+    pg.tap('[data-dock=work]'); pg.wait_for_timeout(1200)   # Tasks: a race ready to compare, with tests and cost
+    pg.evaluate("document.querySelector('#workList').scrollIntoView({ block: 'start' })"); pg.wait_for_timeout(400)
+    pg.screenshot(path=f'{SHOTS}/tasks.png')
+    pg.tap('#sheetClose'); pg.wait_for_timeout(400)
     pg.tap('[data-dock=files]'); pg.wait_for_timeout(700); pg.click('.fi.dir >> nth=0'); pg.wait_for_timeout(600)
     pg.screenshot(path=f'{SHOTS}/files.png')
     pg.tap('#sheetBack'); pg.wait_for_timeout(300); pg.tap('[data-tab=web]'); pg.wait_for_timeout(600)
     pg.tap('[data-port="3000"]'); pg.wait_for_timeout(2500); pg.screenshot(path=f'{SHOTS}/localhost.png')
-    for n in ['agents', 'files', 'localhost']: webp(f'{SHOTS}/{n}.png')
+    for n in ['agents', 'tasks', 'files', 'localhost']: webp(f'{SHOTS}/{n}.png')
     pg.context.close()
     print('screenshots done')
 
