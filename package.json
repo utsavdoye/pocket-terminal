@@ -1,6 +1,6 @@
 {
   "name": "pocket-terminal",
-  "version": "7.7.0",
+  "version": "7.7.1",
   "description": "Your computer's terminal on your phone, from anywhere, even with the lid closed. Answer and race AI coding agents (Claude Code, Codex, Gemini CLI), schedule tasks, review changes, open localhost. Includes an MCP server. Direct and end-to-end encrypted.",
   "bin": {
     "pocket-terminal": "cli.js"

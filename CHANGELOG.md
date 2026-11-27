@@ -1,6 +1,6 @@
 # Changelog
 
-## Next release
+## 7.7.1 (2026-11-27)
 - 7.7.0 did not reach npm: one test gave up too early on GitHub's slower computers. Same features as 7.7.0.
 
 ## 7.7.0 (2026-11-27)
