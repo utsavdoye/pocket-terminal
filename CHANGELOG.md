@@ -1,6 +1,6 @@
 # Changelog
 
-## Next release
+## 7.7.0 (2026-11-27)
 - **Tools for your AI agents (MCP).** Run `claude mcp add pocket-terminal -- npx -y pocket-terminal mcp` once (other agents: add the command `npx -y pocket-terminal mcp` as an MCP server). The agent can then ask you a question on your phone and wait for your answer: Yes, No, or your own words, typed or spoken (`ask_phone`), send you a note (`notify_phone`), see what your terminals are doing (`list_terminals`, `read_terminal`), and start tasks and races (`start_task`, `start_race`, `task_status`). There is no tool to type into a terminal or to answer another agent's question, on purpose.
 - **Review from your phone.** In Changes, tap any changed line and write what should be different. Your notes go to the agent as one message with the file and line of each. It lands in the agent's box for you to read; you press Enter.
 - **New pictures everywhere.** The README, the website and the share image show the app as it looks now, with a new Tasks screenshot. The website lists races, MCP, schedules, recipes and GitHub issues.
