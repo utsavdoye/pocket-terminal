@@ -133,5 +133,20 @@ if (process.env.TURN_MOCK) {
   ok('other mailboxes still work', (await fetch(`${U}/${rnd()}`, { method: 'POST', body: 'x' })).ok);
   got = lines(await (await fetch(`${U}/${t3}/json?poll=1&since=all`)).text());
   ok('a mailbox keeps at most 200 notes', got.length === 200);
+
+  // The weekly count of computers (agent/lib/stats.js sends one "I'm here" a day)
+  const before = await (await fetch(`${U}/v1/stats`)).json();
+  const n0 = before.weeks.length ? before.weeks[0].computers : 0;
+  const id = require('crypto').randomBytes(16).toString('base64url');
+  const seen = (b) => fetch(`${U}/v1/seen`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(b) });
+  ok('a computer says it is there', (await seen({ id, v: '7.7.2', os: 'darwin' })).status === 204);
+  await seen({ id, v: '7.7.2', os: 'darwin' });
+  let st = await (await fetch(`${U}/v1/stats`)).json();
+  ok('counted once a week, however often it says so', st.weeks[0].computers === n0 + 1 && st.weeks[0].os.darwin >= 1 && st.weeks[0].versions['7.7.2'] >= 1 && /^\d{4}-W\d{2}$/.test(st.weeks[0].week));
+  await seen({ id: require('crypto').randomBytes(16).toString('base64url'), v: 'junk<script>', os: 'evil' });
+  st = await (await fetch(`${U}/v1/stats`)).json();
+  ok('another computer counts too; odd values become "other"', st.weeks[0].computers === n0 + 2 && st.weeks[0].os.other >= 1 && st.weeks[0].versions.other >= 1 && !JSON.stringify(st).includes('script'));
+  ok('a bad id is refused, and no id is ever shown', (await seen({ id: 'x' })).status === 400 && !JSON.stringify(st).includes(id));
+  ok('the totals can be read from a web page (CORS)', (await fetch(`${U}/v1/stats`)).headers.get('access-control-allow-origin') === '*');
   setTimeout(() => process.exit(process.exitCode || 0), 300);
 })();

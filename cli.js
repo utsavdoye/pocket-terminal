@@ -8,6 +8,8 @@
 //   npx pocket-terminal run CMD    run a command here AND on your phone (e.g. run claude)
 //   npx pocket-terminal claude on  Claude Code's permission questions reach your phone when you're away
 //   npx pocket-terminal mcp        tools for AI agents (MCP): ask you on the phone, start tasks and races
+//   npx pocket-terminal report     something wrong? opens a GitHub issue with the doctor's report filled in
+//   npx pocket-terminal stats off  stop the anonymous weekly count (on: stats on)
 //   npx pocket-terminal activity   what your phones did here (connected, files, answers…)
 //   npx pocket-terminal logs       what the agent is doing
 //   npx pocket-terminal doctor     check the setup; prints a report for a bug report
@@ -136,6 +138,15 @@ switch (cmd) {
     console.log('\nNever what you typed or what commands printed. Lock a phone out:  npx pocket-terminal remove N');
     break;
   }
+  case 'stats': { // the anonymous weekly count (agent/lib/stats.js)
+    const st = require(path.join(__dirname, 'agent', 'lib', 'stats.js'));
+    fs.mkdirSync(HOME, { recursive: true });
+    if (rest[0] === 'off' || rest[0] === 'on') st.setOff(HOME, rest[0] === 'off');
+    else if (rest[0]) { console.error('Say on or off:  npx pocket-terminal stats off'); process.exit(1); }
+    console.log(st.isOff(HOME) ? 'The weekly count is off. Nothing is sent.' : 'The weekly count is on: once a day this computer sends a random id, the Pocket Terminal version and the kind of computer. Nothing else.');
+    console.log(`Totals for everyone: ${st.BOARD}/v1/stats\nTurn it ${st.isOff(HOME) ? 'on:   npx pocket-terminal stats on' : 'off:  npx pocket-terminal stats off'}`);
+    break;
+  }
   case 'logs': {
     const log = path.join(HOME, 'agent.log');
     if (!fs.existsSync(log)) { console.error('No log yet.'); process.exit(1); }
@@ -143,6 +154,7 @@ switch (cmd) {
     break;
   }
   case 'doctor': process.exit(run(process.execPath, [path.join(__dirname, 'agent', 'doctor.js')])); break; // works before (and without) an install
+  case 'report': process.exit(run(process.execPath, [path.join(__dirname, 'agent', 'report.js')])); break; // a bug report: opens GitHub's new-issue page, filled in
   case 'uninstall': need(); process.exit(WIN
     ? run('powershell.exe', ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', path.join(AGENT, 'uninstall.ps1'), ...(rest.includes('--purge') ? ['-Purge'] : [])])
     : run('bash', [path.join(AGENT, 'uninstall.sh'), ...rest]));
@@ -156,6 +168,8 @@ switch (cmd) {
   npx pocket-terminal run CMD    run a command here and on your phone (e.g. run claude)
   npx pocket-terminal claude on  Claude Code asks your phone when you're away
   npx pocket-terminal mcp        tools for AI agents (add with: claude mcp add pocket-terminal -- npx -y pocket-terminal mcp)
+  npx pocket-terminal report     something wrong? opens a GitHub issue with the doctor's report
+  npx pocket-terminal stats off  stop the anonymous weekly count of computers
   npx pocket-terminal list       phones that can connect
   npx pocket-terminal remove N   lock a phone out (number, name or "all")
   npx pocket-terminal activity   what your phones did here

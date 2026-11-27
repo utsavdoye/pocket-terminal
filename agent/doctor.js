@@ -150,6 +150,7 @@ function log() {
   }
   await boards(cfg);
   if (have) { await direct(cfg); notifications(); await wakeups(); }
+  if (have) { const st = require('./lib/stats'); ok(st.isOff(DIR) ? 'Weekly count: off' : 'Weekly count: on (a random id, the version and the kind of computer, once a day; npx pocket-terminal stats off)'); }
   const lg = log();
   if (have && lg.last) {
     const min = Math.round((Date.now() - lg.last) / 60e3);
@@ -168,6 +169,8 @@ function log() {
   if (p) out.push(`power: speed=${p.speed || 'smart'} mode=${p.batteryMode || '-'} minBattery=${p.minBattery ?? '-'}`);
   if (lg.errors.length) out.push('recent problems in the log:', ...lg.errors.map((l) => '  ' + l.slice(0, 200)));
   out.push('```');
-  console.log(`\nStill stuck? Open https://github.com/utsavdoye/pocket-terminal/issues/new and paste this\n(no keys, phone names or folder names are in it):\n\n${out.join('\n')}`);
+  if (process.env.POCKET_DOCTOR_OUT) { try { fs.writeFileSync(process.env.POCKET_DOCTOR_OUT, out.join('\n') + '\n', { mode: 0o600 }); } catch {} } // for npx pocket-terminal report
+  if (process.env.POCKET_DOCTOR_QUIET === '1') process.exit(n.bad ? 1 : 0);
+  console.log(`\nStill stuck? Run  npx pocket-terminal report  (it opens a GitHub issue with this report), or open https://github.com/utsavdoye/pocket-terminal/issues/new and paste this\n(no keys, phone names or folder names are in it):\n\n${out.join('\n')}`);
   process.exit(n.bad ? 1 : 0);
 })();

@@ -37,11 +37,12 @@
   <p class="kicker">Privacy</p>
   <h1>What Pocket Terminal knows about you</h1>
   <p class="lede">Short version: <strong>nothing</strong>. There are no accounts, and no server of ours ever sees your commands, files or screens.</p>
-  <p class="updated">Last updated: 3 November 2026</p>
+  <p class="updated">Last updated: 28 November 2026</p>
 
   <h2>The app and the program on your computer</h2>
   <ul>
     <li><b>No accounts, no sign-up, no tracking</b> in the app or the program.</li>
+    <li><b>One anonymous count.</b> Once a day the program on your computer tells Pocket Terminal's board it is running: a random id made on your computer (not linked to you, your phone or your pairing), the version, and whether it is macOS, Windows or Linux. Nothing else. The board keeps only a one-way hash of the week and that id, so one week can't be joined to the next, and anyone can see the <a href="https://pocket-terminal-board.utsavdoye.workers.dev/v1/stats">totals</a>. Turn it off with <code>npx pocket-terminal stats off</code>. The phone app sends nothing.</li>
     <li>Your phone and computer talk <b>directly</b>, end-to-end encrypted. What you type, run, see, download or upload goes only between your own devices.</li>
     <li>Keys stay on your devices: on the phone, locked with your PIN; on the computer, in <code>~/.pocket-terminal</code>, readable only by you.</li>
     <li>The program's log on your computer never records commands, their output or file names.</li>

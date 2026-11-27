@@ -142,6 +142,8 @@ The phone app handles your key, so the most careful setup hosts your own copy: f
 | `npx pocket-terminal activity` | What your phones did here: connected, files, answers (never what you typed) |
 | `npx pocket-terminal logs` | Follow the agent's log |
 | `npx pocket-terminal doctor` | Something not working? Checks the setup and prints a report for a bug report (no keys or names in it) |
+| `npx pocket-terminal report` | Opens a new GitHub issue with that report filled in. Shows you everything first; you press Submit |
+| `npx pocket-terminal stats off` | Stop the anonymous weekly count (see Security) |
 | `npx pocket-terminal uninstall` | Remove it (`--purge` also deletes the pairing key) |
 
 ## How it works
@@ -189,6 +191,7 @@ Change any of this from the phone under **⋯ → Power and battery**.
 - **Least privilege.** Four `pmset` commands on macOS, two `rtcwake` commands on Linux, no admin on Windows.
 - **View-only shares are enforced on the computer** and expire.
 - **AI is opt-in.** Off until you add your own key; it sees only what you type in Ask and never runs anything without your tap.
+- **One anonymous count.** Once a day the program tells our board it is running: a random id made on your computer, the version, and macOS / Windows / Linux. Nothing else. The board keeps only a hash of (week + id), so weeks can't be joined, and anyone can see the [totals](https://pocket-terminal-board.utsavdoye.workers.dev/v1/stats). Turn it off: `npx pocket-terminal stats off`.
 
 See [SECURITY.md](SECURITY.md) for the full threat model, including what it does not protect against, and how to report a vulnerability.
 

@@ -57,12 +57,14 @@ async function main() {
     transport = require('./relay-transport').startRelay({ cfg: relay, core, power, log, dir: DIR });
   }
   if (power) power.start();
+  // One anonymous "I'm here" a day, so we know how many computers use it (lib/stats.js; npx pocket-terminal stats off).
+  const stats = mode === 'direct' ? require('./lib/stats').startStats({ dir: DIR, log, version: require('./package.json').version }) : null;
   // Programs on this computer can reach the agent: "npx pocket-terminal run …" and AI agents' hooks.
   const local = require('./lib/local').startLocal({ core, log, dir: DIR });
   log(`agent running in ${mode} mode`);
 
   const stop = async () => {
-    plans.stop(); core.tasks.stop(); core.stop({ keep: host.kind === 'holder' }); host.stop(); local.stop();
+    if (stats) stats.stop();     plans.stop(); core.tasks.stop(); core.stop({ keep: host.kind === 'holder' }); host.stop(); local.stop();
     try { transport.stop(); } catch {}
     if (power) await power.stop(); // never leave the Mac stuck awake
     process.exit(0);

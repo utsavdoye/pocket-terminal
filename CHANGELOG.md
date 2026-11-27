@@ -1,5 +1,9 @@
 # Changelog
 
+## Next release
+- **`npx pocket-terminal report`.** Something wrong? It runs the doctor, asks what happened in one line, shows you the whole report, and opens a new GitHub issue with it filled in. Nothing is sent until you press Submit on GitHub, and the report has no keys, phone names or folders.
+- **An anonymous weekly count**, so we know how many computers use Pocket Terminal. Once a day the program sends our board a random id, the version and macOS / Windows / Linux. Nothing else; the board keeps only a hash of (week + id). Anyone can see the totals at pocket-terminal-board.utsavdoye.workers.dev/v1/stats. Turn it off: `npx pocket-terminal stats off`. The doctor shows whether it is on.
+
 ## 7.7.1 (2026-11-27)
 - 7.7.0 did not reach npm: one test gave up too early on GitHub's slower computers. Same features as 7.7.0.
 

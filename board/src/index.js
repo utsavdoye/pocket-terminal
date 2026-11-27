@@ -23,6 +23,10 @@
 //                                      The board says {"pipe":"ready"} when both are there, and
 //                                      {"pipe":"closed"} (then closes) when one leaves.
 //   GET  /v1/health                    {"healthy":true}
+//   POST /v1/seen                      {"id","v","os"}: a computer running Pocket Terminal says it is
+//                                      there (once a day; agent/lib/stats.js). Only a hash of
+//                                      (week + id) is kept, so weeks can't be joined.
+//   GET  /v1/stats                     computers seen each week (last 12), by kind and version
 //
 // One Durable Object per mailbox holds its notes. WebSockets hibernate, so a phone or computer
 // that just listens costs nothing while it waits.
@@ -49,6 +53,8 @@ export default {
     const url = new URL(req.url);
     if (req.method === 'OPTIONS') return new Response(null, { status: 204, headers: CORS });
     if (url.pathname === '/v1/health') return json({ healthy: true });
+    if ((url.pathname === '/v1/seen' && req.method === 'POST') || (url.pathname === '/v1/stats' && req.method === 'GET'))
+      return env.BOARD.get(env.BOARD.idFromName('stats')).fetch(new Request('https://board/stats' + (req.method === 'POST' ? '/seen' : ''), { method: req.method, body: req.method === 'POST' ? await req.text() : undefined }));
     if (url.pathname === '/') return new Response('Pocket Terminal message board. It only carries encrypted notes. https://github.com/utsavdoye/pocket-terminal\n', { headers: CORS });
     const [topic, what, extra] = url.pathname.split('/').filter(Boolean);
     // "ptn-…" is for the ntfy phone app, which only reads ntfy.sh: nothing to keep here.
@@ -59,6 +65,14 @@ export default {
     return env.BOARD.get(env.BOARD.idFromName(topic)).fetch(req);
   },
 };
+
+// "2026-W48": the ISO week (Monday to Sunday, UTC).
+function isoWeek(d) {
+  const t = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()));
+  const day = t.getUTCDay() || 7; t.setUTCDate(t.getUTCDate() + 4 - day);
+  const y = t.getUTCFullYear(), n = Math.ceil(((t - Date.UTC(y, 0, 1)) / 864e5 + 1) / 7);
+  return `${y}-W${String(n).padStart(2, '0')}`;
+}
 
 // Notes after "since": an id (everything after that note), a duration ("10m", "12h"), or a time in seconds.
 function after(list, since) {
@@ -84,10 +98,43 @@ export class Mailbox extends DurableObject {
     if (this.notes.length && this.notes[0].ms < cut) this.notes = this.notes.filter((m) => m.ms >= cut);
     return this.notes;
   }
+  // The weekly count of computers. One object holds it ("stats"). Per ISO week: a set of
+  // sha256(week + id), cut to 16 hex, and totals by kind of computer and version.
+  async stats(req, seen) {
+    const week = isoWeek(new Date());
+    if (!seen) {
+      const weeks = (await this.ctx.storage.get('weeks')) || [];
+      const out = [];
+      for (const w of weeks.slice(-12).reverse()) out.push({ week: w, ...((await this.ctx.storage.get('c:' + w)) || { computers: 0, os: {}, versions: {} }) });
+      return json({ weeks: out, note: 'Computers running Pocket Terminal each week. Each sends a random id once a day; only a hash of (week + id) is kept.' });
+    }
+    let b; try { b = JSON.parse(await req.text()); } catch { return json({ error: 'bad' }, 400); }
+    if (!b || !/^[A-Za-z0-9_-]{16,32}$/.test(String(b.id || ''))) return json({ error: 'bad id' }, 400);
+    const os = ['darwin', 'linux', 'win32'].includes(b.os) ? b.os : 'other';
+    const v = /^\d{1,3}\.\d{1,3}\.\d{1,4}$/.test(String(b.v || '')) ? b.v : 'other';
+    const h = [...new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(week + ':' + b.id)))].slice(0, 8).map((x) => x.toString(16).padStart(2, '0')).join('');
+    const key = `s:${week}:${h}`;
+    if (await this.ctx.storage.get(key)) return new Response(null, { status: 204, headers: CORS }); // already counted this week
+    const c = (await this.ctx.storage.get('c:' + week)) || { computers: 0, os: {}, versions: {} };
+    if (c.computers >= 200000) return new Response(null, { status: 204, headers: CORS }); // a cap, so junk can't fill the storage
+    c.computers++; c.os[os] = (c.os[os] || 0) + 1; c.versions[v] = (c.versions[v] || 0) + 1;
+    const weeks = (await this.ctx.storage.get('weeks')) || [];
+    if (!weeks.includes(week)) {
+      weeks.push(week);
+      // Old weeks: keep their totals, drop their hashes (from two weeks back).
+      for (const old of weeks.slice(0, -2)) {
+        for (;;) { const keys = [...(await this.ctx.storage.list({ prefix: `s:${old}:`, limit: 128 })).keys()]; if (!keys.length) break; await this.ctx.storage.delete(keys); }
+      }
+      await this.ctx.storage.put('weeks', weeks.slice(-52));
+    }
+    await this.ctx.storage.put({ [key]: 1, ['c:' + week]: c });
+    return new Response(null, { status: 204, headers: CORS });
+  }
   wire(topic, m) { return JSON.stringify({ id: m.id, time: Math.floor(m.ms / 1000), event: 'message', topic, message: m.message }); }
 
   async fetch(req) {
     const url = new URL(req.url);
+    if (url.pathname === '/stats' || url.pathname === '/stats/seen') return this.stats(req, url.pathname === '/stats/seen'); // the weekly count (only reachable from inside the board)
     if (url.pathname === '/budget') { // the board-wide relay budget (only reachable from inside the board)
       const hour = Math.floor(Date.now() / 3600e3);
       if (this.hour !== hour) { this.hour = hour; this.used = 0; }
