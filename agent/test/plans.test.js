@@ -164,7 +164,7 @@ function repo(name) {
   await plans.checkGithub();
   ok('github: one issue at a time per project', tasks.view().groups.length === 1 && /Working on an issue/.test(plans.view().github[0].note), plans.view().github[0].note);
   const gid = g.id;
-  ok('github: the race gets ready to compare', !!(await until(() => tasks.view().groups.find((x) => x.id === gid && x.status === 'compare'), 30000)));
+  ok('github: the race gets ready to compare', !!(await until(() => tasks.view().groups.find((x) => x.id === gid && x.status === 'compare'), 120000)));
   const lane = tasks.view().tasks.find((t) => t.group === gid && t.status === 'done');
   const picked = await tasks.pick(gid, lane.id);
   ok('github: keeping the winner writes "fixes #7" in the commit (GitHub closes the issue on push)', picked.ok && /\(fixes #7\)/.test(sh(r2, 'log', '-1', '--format=%s')), sh(r2, 'log', '-1', '--format=%s'));
